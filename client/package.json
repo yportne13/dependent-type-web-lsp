@@ -22,14 +22,15 @@
 	"main": "./out/extension",
 	"browser": "./dist/web/extension",
 	"dependencies": {
+		"@vscode/wasm-wasi": "^1.0.1",
 		"@vscode/wasm-wasi-lsp": "0.1.0-pre.6"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.89.0",
-		"@types/node": "^18.14.6"
+		"@types/node": "^18.14.6",
+		"@types/vscode": "1.89.0"
 	},
 	"scripts": {
-		"compile": "tsc -b",
+		"compile": "tsc -b && node ./bin/esbuild",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./src --ext .ts,.tsx",
 		"esbuild": "node ./bin/esbuild"

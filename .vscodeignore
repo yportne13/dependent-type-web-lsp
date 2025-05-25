@@ -4,3 +4,4 @@ server/target/release
 package-lock.json
 tsconfig.json
 *.vsix
+sample
