@@ -22,19 +22,42 @@
 	"main": "./client/out/extension",
 	"browser": "./client/dist/web/extension",
 	"activationEvents": [
-		"onLanguage:plaintext"
+		"onLanguage:nrs"
 	],
 	"extensionDependencies": [
 		"ms-vscode.wasm-wasi-core"
 	],
 	"contributes": {
-		"commands": [
+		"languages": [
 			{
-				"command": "vscode-samples.wasm-language-server.countFiles",
-				"category": "Samples",
-				"title": "Count Files"
+				"id": "nrs",
+				"extensions": [
+					".nrs"
+				]
 			}
-		]
+		],
+		"configuration": {
+			"type": "object",
+			"title": "nrs-language-server",
+			"properties": {
+				"nrs-language-server.trace.server": {
+					"type": "string",
+					"scope": "window",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"enumDescriptions": [
+						"No traces",
+						"Error only",
+						"Full log"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the language server."
+				}
+			}
+		}
 	},
 	"dependencies": {
 	},
