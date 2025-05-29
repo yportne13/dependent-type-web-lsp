@@ -272,7 +272,7 @@
               })(),
               s.commands.executeCommand(
                 'vscode.open',
-                s.Uri.parse('memfs:/sample-folder/large.ts')
+                s.Uri.parse('memfs:/sample-folder/test.nrs')
               );
           }
         };
@@ -328,173 +328,173 @@
           }
           seed() {
             this.createDirectory(n.Uri.parse('memfs:/sample-folder/')),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/large.ts'),
-                a.encode(s.largeTSFile),
-                { create: !0, overwrite: !0 }
-              ),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/large.ts'),
+              //  a.encode(s.largeTSFile),
+              //  { create: !0, overwrite: !0 }
+              //),
               this.writeFile(
                 n.Uri.parse('memfs:/sample-folder/test.nrs'),
                 a.encode(s.nrsFile),
                 { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.txt'),
-                a.encode('foo'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.html'),
-                a.encode('<html><body><h1 class="hd">Hello</h1></body></html>'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.js'),
-                a.encode('console.log("JavaScript")'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.json'),
-                a.encode('{ "json": true }'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.ts'),
-                a.encode('console.log("TypeScript")'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.css'),
-                a.encode('* { color: green; }'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.md'),
-                a.encode(s.debuggableFile),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.xml'),
-                a.encode(
-                  '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-                ),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.py'),
-                a.encode(
-                  'import base64, sys; base64.decode(open(sys.argv[1], "rb"), open(sys.argv[2], "wb"))'
-                ),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.yaml'),
-                a.encode('- just: write something'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.jpg'),
-                s.getImageFile(),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/file.php'),
-                a.encode('<?php echo "Hello World!"; ?>'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.createDirectory(n.Uri.parse('memfs:/sample-folder/folder/')),
-              this.createDirectory(
-                n.Uri.parse('memfs:/sample-folder/workspaces/')
-              ),
-              this.createDirectory(n.Uri.parse('memfs:/sample-folder/large/')),
-              this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/')),
-              this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/abc')),
-              this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/def')),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/folder/empty.txt'),
-                new Uint8Array(0),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/folder/empty.foo'),
-                new Uint8Array(0),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/folder/file.ts'),
-                a.encode('let a:number = true; console.log(a);'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/large/rnd.foo'),
-                (function (t, e = 155) {
-                  let r = [];
-                  for (let n = 0; n < t; n++) {
-                    let t = '';
-                    for (; t.length < e; )
-                      t += Math.random()
-                        .toString(2 + (n % 34))
-                        .substr(2);
-                    r.push(t.substr(0, e));
-                  }
-                  return a.encode(r.join('\n'));
-                })(5e4),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/xyz/UPPER.txt'),
-                a.encode('UPPER'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/xyz/upper.txt'),
-                a.encode('upper'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/xyz/def/foo.md'),
-                a.encode('*MemFS*'),
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/workspaces/mem.code-workspace'),
-                a.encode(
-                  JSON.stringify(
-                    {
-                      folders: [
-                        {
-                          name: 'sample-folder-large',
-                          uri: 'memfs:/sample-folder/large',
-                        },
-                        {
-                          name: 'sample-folder-xyz',
-                          uri: 'memfs:/sample-folder/xyz',
-                        },
-                        {
-                          name: 'sample-folder-folder',
-                          uri: 'memfs:/sample-folder/folder',
-                        },
-                      ],
-                    },
-                    void 0,
-                    '\t'
-                  )
-                ),
-                { create: !0, overwrite: !0 }
-              ),
-              this.createDirectory(
-                n.Uri.parse('memfs:/sample-folder/encodings/')
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/encodings/windows1251.txt'),
-                s.windows1251File,
-                { create: !0, overwrite: !0 }
-              ),
-              this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/encodings/gbk.txt'),
-                s.gbkFile,
-                { create: !0, overwrite: !0 }
               );
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.txt'),
+              //  a.encode('foo'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.html'),
+              //  a.encode('<html><body><h1 class="hd">Hello</h1></body></html>'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.js'),
+              //  a.encode('console.log("JavaScript")'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.json'),
+              //  a.encode('{ "json": true }'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.ts'),
+              //  a.encode('console.log("TypeScript")'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.css'),
+              //  a.encode('* { color: green; }'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.md'),
+              //  a.encode(s.debuggableFile),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.xml'),
+              //  a.encode(
+              //    '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+              //  ),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.py'),
+              //  a.encode(
+              //    'import base64, sys; base64.decode(open(sys.argv[1], "rb"), open(sys.argv[2], "wb"))'
+              //  ),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.yaml'),
+              //  a.encode('- just: write something'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.jpg'),
+              //  s.getImageFile(),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/file.php'),
+              //  a.encode('<?php echo "Hello World!"; ?>'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/folder/')),
+              //this.createDirectory(
+              //  n.Uri.parse('memfs:/sample-folder/workspaces/')
+              //),
+              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/large/')),
+              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/')),
+              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/abc')),
+              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/def')),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/folder/empty.txt'),
+              //  new Uint8Array(0),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/folder/empty.foo'),
+              //  new Uint8Array(0),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/folder/file.ts'),
+              //  a.encode('let a:number = true; console.log(a);'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/large/rnd.foo'),
+              //  (function (t, e = 155) {
+              //    let r = [];
+              //    for (let n = 0; n < t; n++) {
+              //      let t = '';
+              //      for (; t.length < e; )
+              //        t += Math.random()
+              //          .toString(2 + (n % 34))
+              //          .substr(2);
+              //      r.push(t.substr(0, e));
+              //    }
+              //    return a.encode(r.join('\n'));
+              //  })(5e4),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/xyz/UPPER.txt'),
+              //  a.encode('UPPER'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/xyz/upper.txt'),
+              //  a.encode('upper'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/xyz/def/foo.md'),
+              //  a.encode('*MemFS*'),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/workspaces/mem.code-workspace'),
+              //  a.encode(
+              //    JSON.stringify(
+              //      {
+              //        folders: [
+              //          {
+              //            name: 'sample-folder-large',
+              //            uri: 'memfs:/sample-folder/large',
+              //          },
+              //          {
+              //            name: 'sample-folder-xyz',
+              //            uri: 'memfs:/sample-folder/xyz',
+              //          },
+              //          {
+              //            name: 'sample-folder-folder',
+              //            uri: 'memfs:/sample-folder/folder',
+              //          },
+              //        ],
+              //      },
+              //      void 0,
+              //      '\t'
+              //    )
+              //  ),
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.createDirectory(
+              //  n.Uri.parse('memfs:/sample-folder/encodings/')
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/encodings/windows1251.txt'),
+              //  s.windows1251File,
+              //  { create: !0, overwrite: !0 }
+              //),
+              //this.writeFile(
+              //  n.Uri.parse('memfs:/sample-folder/encodings/gbk.txt'),
+              //  s.gbkFile,
+              //  { create: !0, overwrite: !0 }
+              //);
           }
           stat(t) {
             return this._lookup(t, !1);

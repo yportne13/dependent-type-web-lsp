@@ -15,7 +15,7 @@ use client::Client;
 use log::debug;
 use ls::LanguageServer;
 use lsp_server::{Connection, ExtractError, Message, ProtocolError, Request, RequestId, Response};
-use lsp_types::request::{GotoDefinition, HoverRequest, InlayHintRequest};
+use lsp_types::request::{Completion, GotoDefinition, HoverRequest, InlayHintRequest, References, Rename, SemanticTokensFullRequest, SemanticTokensRangeRequest};
 use crate::completion::completion;
 use crate::nrs_lang::{
     parse, type_inference, Ast, ImCompleteSemanticToken, ParserResult,
@@ -88,10 +88,70 @@ impl Backend {
                         Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
                         Err(ExtractError::MethodMismatch(req)) => req,
                     };
-                    match cast::<InlayHintRequest>(req) {
+                    match cast::<InlayHintRequest>(req.clone()) {
                         Ok((id, params)) => {
                             eprintln!("got inlay hint request #{id}: {params:?}");
                             let result = self.inlay_hint(params)?;
+                            let result = serde_json::to_value(&result).unwrap();
+                            let resp = Response { id, result: Some(result), error: None };
+                            self.client.connection.sender.send(Message::Response(resp))?;
+                            continue;
+                        }
+                        Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                        Err(ExtractError::MethodMismatch(req)) => req,
+                    };
+                    match cast::<Completion>(req.clone()) {
+                        Ok((id, params)) => {
+                            eprintln!("got completion request #{id}: {params:?}");
+                            let result = self.completion(params)?;
+                            let result = serde_json::to_value(&result).unwrap();
+                            let resp = Response { id, result: Some(result), error: None };
+                            self.client.connection.sender.send(Message::Response(resp))?;
+                            continue;
+                        }
+                        Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                        Err(ExtractError::MethodMismatch(req)) => req,
+                    };
+                    match cast::<References>(req.clone()) {
+                        Ok((id, params)) => {
+                            eprintln!("got references request #{id}: {params:?}");
+                            let result = self.references(params)?;
+                            let result = serde_json::to_value(&result).unwrap();
+                            let resp = Response { id, result: Some(result), error: None };
+                            self.client.connection.sender.send(Message::Response(resp))?;
+                            continue;
+                        }
+                        Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                        Err(ExtractError::MethodMismatch(req)) => req,
+                    };
+                    match cast::<SemanticTokensFullRequest>(req.clone()) {
+                        Ok((id, params)) => {
+                            eprintln!("got semanticTokensFull request #{id}: {params:?}");
+                            let result = self.semantic_tokens_full(params)?;
+                            let result = serde_json::to_value(&result).unwrap();
+                            let resp = Response { id, result: Some(result), error: None };
+                            self.client.connection.sender.send(Message::Response(resp))?;
+                            continue;
+                        }
+                        Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                        Err(ExtractError::MethodMismatch(req)) => req,
+                    };
+                    match cast::<SemanticTokensRangeRequest>(req.clone()) {
+                        Ok((id, params)) => {
+                            eprintln!("got semanticTokensRange request #{id}: {params:?}");
+                            let result = self.semantic_tokens_range(params)?;
+                            let result = serde_json::to_value(&result).unwrap();
+                            let resp = Response { id, result: Some(result), error: None };
+                            self.client.connection.sender.send(Message::Response(resp))?;
+                            continue;
+                        }
+                        Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                        Err(ExtractError::MethodMismatch(req)) => req,
+                    };
+                    match cast::<Rename>(req.clone()) {
+                        Ok((id, params)) => {
+                            eprintln!("got rename request #{id}: {params:?}");
+                            let result = self.rename(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
                             self.client.connection.sender.send(Message::Response(resp))?;
@@ -433,10 +493,10 @@ impl LanguageServer for Backend {
                     k.start,
                     k.end,
                     match v {
-                        crate::nrs_lang::Value::Null => "null".to_string(),
-                        crate::nrs_lang::Value::Bool(_) => "bool".to_string(),
-                        crate::nrs_lang::Value::Num(_) => "number".to_string(),
-                        crate::nrs_lang::Value::Str(_) => "string".to_string(),
+                        crate::nrs_lang::Value::Null => ": null".to_string(),
+                        crate::nrs_lang::Value::Bool(_) => ": bool".to_string(),
+                        crate::nrs_lang::Value::Num(_) => ": number".to_string(),
+                        crate::nrs_lang::Value::Str(_) => ": string".to_string(),
                     },
                 )
             })

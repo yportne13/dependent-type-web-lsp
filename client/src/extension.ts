@@ -35,8 +35,12 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: [ { language: 'nrs' } ],
+    	documentSelector: [{ language: "nrs" }],
 		outputChannel: channel,
+		synchronize: {
+    	  // Notify the server about file changes to '.clientrc files contained in the workspace
+    	  fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
+    	},
 		uriConverters: createUriConverters(),
 	};
 
