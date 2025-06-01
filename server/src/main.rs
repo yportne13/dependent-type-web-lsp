@@ -1,9 +1,9 @@
-pub mod completion;
-pub mod nrs_lang;
-pub mod semantic_analyze;
-pub mod semantic_token;
-pub mod span;
-pub mod symbol_table;
+#![feature(pattern)]
+mod parser_lib;
+mod list;
+pub mod parser;
+mod typort;
+//pub mod completion;
 pub mod ls;
 pub mod client;
 
@@ -16,13 +16,10 @@ use log::debug;
 use ls::LanguageServer;
 use lsp_server::{Connection, ExtractError, Message, ProtocolError, Request, RequestId, Response};
 use lsp_types::request::{Completion, GotoDefinition, HoverRequest, InlayHintRequest, References, Rename, SemanticTokensFullRequest, SemanticTokensRangeRequest};
-use crate::completion::completion;
-use crate::nrs_lang::{
-    parse, type_inference, Ast, ImCompleteSemanticToken, ParserResult,
-};
-use crate::semantic_analyze::{analyze_program, IdentType, Semantic};
-use crate::semantic_token::LEGEND_TYPE;
-use crate::span::Span;
+use parser::syntax::Decl;
+use typort::{DeclTm, Infer};
+use crate::typort::cxt::Cxt;
+//use crate::completion::completion;
 use ropey::Rope;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -30,12 +27,14 @@ use lsp_types::notification::{DidChangeTextDocument, DidCloseTextDocument, DidOp
 use lsp_types::*;
 use crate::ls::Result;
 
+use crate::parser::parser;
+
 struct Backend {
     client: Client,
-    ast_map: HashMap<String, Ast>,
-    semantic_map: HashMap<String, Semantic>,
+    ast_map: HashMap<String, Vec<Decl>>,
+    type_map: HashMap<String, Vec<DeclTm>>,
     document_map: HashMap<String, Rope>,
-    semantic_token_map: HashMap<String, Vec<ImCompleteSemanticToken>>,
+    document_id: HashMap<String, u32>,
 }
 
 impl Backend {
@@ -43,9 +42,9 @@ impl Backend {
         Backend {
             client,
             ast_map: Default::default(),
-            semantic_map: Default::default(),
+            type_map: Default::default(),
             document_map: Default::default(),
-            semantic_token_map: Default::default(),
+            document_id: Default::default(),
         }
     }
     pub fn init(&self) -> std::result::Result<serde_json::Value, ProtocolError> {
@@ -212,7 +211,7 @@ impl LanguageServer for Backend {
             server_info: None,
             offset_encoding: None,
             capabilities: ServerCapabilities {
-                inlay_hint_provider: Some(OneOf::Left(true)),
+                //inlay_hint_provider: Some(OneOf::Left(true)),
                 text_document_sync: Some(TextDocumentSyncCapability::Options(
                     TextDocumentSyncOptions {
                         open_close: Some(true),
@@ -223,7 +222,7 @@ impl LanguageServer for Backend {
                         ..Default::default()
                     },
                 )),
-                completion_provider: Some(CompletionOptions {
+                /*completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![".".to_string()]),
                     work_done_progress_options: Default::default(),
@@ -233,7 +232,7 @@ impl LanguageServer for Backend {
                 execute_command_provider: Some(ExecuteCommandOptions {
                     commands: vec!["dummy.do_something".to_string()],
                     work_done_progress_options: Default::default(),
-                }),
+                }),*/
 
                 workspace: Some(WorkspaceServerCapabilities {
                     workspace_folders: Some(WorkspaceFoldersServerCapabilities {
@@ -242,7 +241,7 @@ impl LanguageServer for Backend {
                     }),
                     file_operations: None,
                 }),
-                semantic_tokens_provider: Some(
+                /*semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
                         SemanticTokensRegistrationOptions {
                             text_document_registration_options: {
@@ -266,11 +265,11 @@ impl LanguageServer for Backend {
                             static_registration_options: StaticRegistrationOptions::default(),
                         },
                     ),
-                ),
+                ),*/
                 // definition: Some(GotoCapability::default()),
-                definition_provider: Some(OneOf::Left(true)),
-                references_provider: Some(OneOf::Left(true)),
-                rename_provider: Some(OneOf::Left(true)),
+                //definition_provider: Some(OneOf::Left(true)),
+                //references_provider: Some(OneOf::Left(true)),
+                //rename_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -317,7 +316,7 @@ impl LanguageServer for Backend {
         debug!("file closed!");
     }
 
-    fn goto_definition(
+    /*fn goto_definition(
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
@@ -353,9 +352,9 @@ impl LanguageServer for Backend {
             })
         }();
         Ok(definition)
-    }
+    }*/
 
-    fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+    /*fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         let reference_list = || -> Option<Vec<Location>> {
             let uri = params.text_document_position.text_document.uri;
             let semantic = self.semantic_map.get(uri.as_str())?;
@@ -378,9 +377,9 @@ impl LanguageServer for Backend {
             Some(ret)
         }();
         Ok(reference_list)
-    }
+    }*/
 
-    fn semantic_tokens_full(
+    /*fn semantic_tokens_full(
         &mut self,
         params: SemanticTokensParams,
     ) -> Result<Option<SemanticTokensResult>> {
@@ -425,9 +424,9 @@ impl LanguageServer for Backend {
             })));
         }
         Ok(None)
-    }
+    }*/
 
-    fn semantic_tokens_range(
+    /*fn semantic_tokens_range(
         &self,
         params: SemanticTokensRangeParams,
     ) -> Result<Option<SemanticTokensRangeResult>> {
@@ -467,9 +466,9 @@ impl LanguageServer for Backend {
                 data,
             })
         }))
-    }
+    }*/
 
-    fn inlay_hint(
+    /*fn inlay_hint(
         &self,
         params: lsp_types::InlayHintParams,
     ) -> Result<Option<Vec<InlayHint>>> {
@@ -529,9 +528,9 @@ impl LanguageServer for Backend {
             .collect::<Vec<_>>();
 
         Ok(Some(inlay_hint_list))
-    }
+    }*/
 
-    fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+    /*fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         let uri = params.text_document_position.text_document.uri;
         let position = params.text_document_position.position;
         let completions = || -> Option<Vec<CompletionItem>> {
@@ -578,9 +577,9 @@ impl LanguageServer for Backend {
             Some(ret)
         }();
         Ok(completions.map(CompletionResponse::Array))
-    }
+    }*/
 
-    fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+    /*fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
         let workspace_edit = || -> Option<WorkspaceEdit> {
             let uri = params.text_document_position.text_document.uri;
             let semantic = self.semantic_map.get(uri.as_str())?;
@@ -608,7 +607,7 @@ impl LanguageServer for Backend {
             })
         }();
         Ok(workspace_edit)
-    }
+    }*/
 
     fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
         debug!("configuration changed!");
@@ -634,10 +633,6 @@ impl LanguageServer for Backend {
         Ok(None)
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
-struct InlayHintParams {
-    path: String,
-}
 
 #[allow(unused)]
 enum CustomNotification {}
@@ -657,79 +652,53 @@ impl Backend {
         let rope = ropey::Rope::from_str(params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
-        let ParserResult {
-            ast,
-            parse_errors,
-            semantic_tokens,
-        } = parse(params.text);
-        let mut diagnostics = parse_errors
-            .into_iter()
-            .filter_map(|item| {
-                let (message, span) = match item.reason() {
-                    chumsky::error::SimpleReason::Unclosed { span, delimiter } => {
-                        (format!("Unclosed delimiter {}", delimiter), span.clone())
-                    }
-                    chumsky::error::SimpleReason::Unexpected => (
-                        format!(
-                            "{}, expected {}",
-                            if item.found().is_some() {
-                                "Unexpected token in input"
-                            } else {
-                                "Unexpected end of input"
-                            },
-                            if item.expected().len() == 0 {
-                                "something else".to_string()
-                            } else {
-                                item.expected()
-                                    .map(|expected| match expected {
-                                        Some(expected) => expected.to_string(),
-                                        None => "end of input".to_string(),
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            }
-                        ),
-                        item.span(),
-                    ),
-                    chumsky::error::SimpleReason::Custom(msg) => (msg.to_string(), item.span()),
-                };
-
-                let start_position = offset_to_position(span.start, &rope)?;
-                let end_position = offset_to_position(span.end, &rope)?;
-                Some(Diagnostic::new_simple(
-                    Range::new(start_position, end_position),
-                    message,
-                ))
-            })
-            .collect::<Vec<_>>();
-
-        if let Some(ast) = ast {
-            match analyze_program(&ast) {
-                Ok(semantic) => {
-                    self.semantic_map.insert(params.uri.to_string(), semantic);
-                }
-                Err(err) => {
-                    self.semantic_token_map.remove(&params.uri.to_string());
-                    let span = err.span();
-                    let start_position = offset_to_position(span.start, &rope);
-                    let end_position = offset_to_position(span.end, &rope);
-                    let diag = start_position
-                        .and_then(|start| end_position.map(|end| (start, end)))
-                        .map(|(start, end)| {
-                            Diagnostic::new_simple(Range::new(start, end), format!("{:?}", err))
-                        });
-                    if let Some(diag) = diag {
-                        diagnostics.push(diag);
+        let now_id = self.document_id.get(params.uri.as_str())
+            .copied()
+            .unwrap_or(self.document_id.len() as u32);
+        self.document_id.insert(params.uri.to_string(), now_id);
+        if let Some(ast) = parser(params.text, now_id) {
+            let mut err_collect = vec![];
+            self.ast_map.insert(params.uri.to_string(), ast.clone());
+            let mut infer = Infer::new();
+            let mut cxt = Cxt::new();
+            let mut ret = String::new();
+            for tm in ast {
+                match infer.infer(&cxt, tm.clone()) {
+                    Ok((x, _, new_cxt)) => {
+                        cxt = new_cxt;
+                    },
+                    Err(err) => {
+                        
+                        err_collect.push(err);
+                        //Diagnostic::new_simple(Range::new(start, end), format!("{:?}", err))
                     }
                 }
-            };
-            self.ast_map.insert(params.uri.to_string(), ast);
+                /*if let DeclTm::Println(x) = x {
+                    ret += &format!("{:?}", infer.nf(&cxt.env, x));
+                    ret += "\n";
+                }*/
+            }
+            let diag = err_collect
+                .into_iter()
+                .filter_map(|e| {
+                    let start_position = offset_to_position(e.0.start_offset as usize, &rope)?;
+                    let end_position = offset_to_position(e.0.end_offset as usize, &rope)?;
+                    Some(Diagnostic::new_simple(
+                        Range::new(start_position, end_position),
+                        e.0.data,
+                    ))
+                })
+                .collect();
+            self.client
+                .publish_diagnostics(params.uri.clone(), diag, params.version);
+        } else {
+            self.client
+                .publish_diagnostics(params.uri.clone(), vec![Diagnostic::new_simple(
+                    Range::new(
+                        Position { line: 0, character: 0 },
+                        Position { line: 0, character: 1 },
+                    ), "parse error".to_owned())], params.version);
         }
-
-        self.client
-            .publish_diagnostics(params.uri.clone(), diagnostics, params.version);
-        self.semantic_token_map
-            .insert(params.uri.to_string(), semantic_tokens);
     }
 }
 
@@ -746,7 +715,7 @@ fn position_to_offset(position: Position, rope: &Rope) -> Option<usize> {
     Some(slice.len_bytes())
 }
 
-fn get_references(
+/*fn get_references(
     semantic: &Semantic,
     start: usize,
     end: usize,
@@ -773,7 +742,7 @@ fn get_references(
         }
         IdentType::Reference(_) => None,
     }
-}
+}*/
 
 fn main() -> std::result::Result<(), Box<dyn Error + Sync + Send>> {
     // Note that  we must have our logging only write out to stderr.
