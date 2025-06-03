@@ -1,6 +1,6 @@
 .vscode
-server/target/debug
-server/target/release
+server
+client/node_modules
 package-lock.json
 tsconfig.json
 *.vsix
