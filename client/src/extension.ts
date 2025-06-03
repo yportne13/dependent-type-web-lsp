@@ -35,7 +35,7 @@ export async function activate(context: ExtensionContext) {
 	};
 
 	const clientOptions: LanguageClientOptions = {
-    	documentSelector: [{ language: "nrs" }],
+    	documentSelector: [{ language: "typort" }],
 		outputChannel: channel,
 		synchronize: {
     	  // Notify the server about file changes to '.clientrc files contained in the workspace

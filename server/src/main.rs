@@ -222,6 +222,7 @@ impl LanguageServer for Backend {
                         ..Default::default()
                     },
                 )),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 /*completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![".".to_string()]),
@@ -314,6 +315,33 @@ impl LanguageServer for Backend {
     }
     fn did_close(&self, _: DidCloseTextDocumentParams) {
         debug!("file closed!");
+    }
+
+    fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let hover = || -> Option<Hover> {
+            let uri = params.text_document_position_params.text_document.uri;
+            let semantic = self.type_map.get(uri.as_str())?;
+            let rope = self.document_map.get(uri.as_str())?;
+            let position = params.text_document_position_params.position;
+            let offset = position_to_offset(position, rope)?;
+            semantic.iter()
+                .flat_map(|x| match x {
+                    DeclTm::Def { name, typ, body } => Some((name, typ, body)),
+                    _ => None
+                })
+                .find(|x| x.0.contains(offset))
+                .and_then(|x| Some(Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!("{:?}\n\n{:?}", x.1, x.2),
+                    }),
+                    range: Some(Range::new(
+                        offset_to_position(x.0.start_offset as usize, rope)?,
+                        offset_to_position(x.0.end_offset as usize, rope)?,
+                    )),
+                }))
+        };
+         Ok(hover())
     }
 
     /*fn goto_definition(
@@ -660,15 +688,16 @@ impl Backend {
             let mut err_collect = vec![];
             self.ast_map.insert(params.uri.to_string(), ast.clone());
             let mut infer = Infer::new();
+            let mut terms = vec![];
             let mut cxt = Cxt::new();
             let mut ret = String::new();
             for tm in ast {
                 match infer.infer(&cxt, tm.clone()) {
                     Ok((x, _, new_cxt)) => {
+                        terms.push(x);
                         cxt = new_cxt;
                     },
                     Err(err) => {
-                        
                         err_collect.push(err);
                         //Diagnostic::new_simple(Range::new(start, end), format!("{:?}", err))
                     }
@@ -678,6 +707,8 @@ impl Backend {
                     ret += "\n";
                 }*/
             }
+            self.type_map.insert(params.uri.to_string(), terms);
+            eprintln!("{:?}", err_collect);
             let diag = err_collect
                 .into_iter()
                 .filter_map(|e| {

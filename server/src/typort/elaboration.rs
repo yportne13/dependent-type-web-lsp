@@ -178,7 +178,7 @@ impl Infer {
                 let bod = params.iter().rev().fold(body.clone(), |a, b| {
                     Raw::Lam(b.0.clone(), Either::Icit(b.2), Box::new(a))
                 });
-                let ret_cxt = {
+                let (ret_cxt, vty, vt) = {
                     let (typ_tm, _) = self.check_universe(ret_cxt, typ)?;
                     let vtyp = self.eval(&ret_cxt.env, typ_tm.clone());
                     //println!("------------------->");
@@ -190,12 +190,18 @@ impl Infer {
                     //println!("begin vt {}", "------".green());
                     let vt = self.eval(&fake_cxt.env, t_tm.clone());
                     self.global.insert(cxt.lvl, vt.clone());
-                    ret_cxt.define(name.clone(), t_tm, vt, typ_tm, vtyp)
+                    (
+                        ret_cxt.define(name.clone(), t_tm, vt.clone(), typ_tm, vtyp.clone()),
+                        vtyp,
+                        vt,
+                    )
                 };
                 Ok((
                     DeclTm::Def {
-                        /*name: name.clone(),
-                        params: param,
+                        name: name.clone(),
+                        typ: vty,
+                        body: vt,
+                        /*params: param,
                         ret_type: result_u,
                         body: body_u,*/
                     },
@@ -319,9 +325,8 @@ impl Infer {
                 let cxt = {
                     let (typ_tm, _) = self.check_universe(cxt, typ)?;
                     let vtyp = self.eval(&cxt.env, typ_tm.clone());
-                    let fake_cxt = cxt.bind(name.clone(), typ_tm.clone(), vtyp.clone());
-                    let t_tm = self.check(&fake_cxt, bod, vtyp.clone())?;
-                    let vt = self.eval(&fake_cxt.env, t_tm.clone());
+                    let t_tm = self.check(cxt, bod, vtyp.clone())?;
+                    let vt = self.eval(&cxt.env, t_tm.clone());
                     cxt.define(name.clone(), t_tm, vt, typ_tm, vtyp)
                 };
 
@@ -369,7 +374,7 @@ impl Infer {
 
             Raw::Obj(x, t) => {
                 let (tm, a) = self.infer_expr(cxt, *x)?;
-                match (tm, a) {
+                match (tm, self.force(a)) {
                     (tm, Val::StructType(_, _, fields)) => {
                         Ok((
                             Tm::Obj(Box::new(tm), t.clone()),

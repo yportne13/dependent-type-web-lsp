@@ -21,6 +21,41 @@
 	},
 	"main": "./out/extension",
 	"browser": "./dist/web/extension",
+	"contributes": {
+		"configuration": [
+			{
+				"title": "TyportHDL Language Server",
+				"properties": {
+					"typort-hdl.typort-lsp-Binary.path": {
+						"scope": "window",
+						"type": "string",
+						"default": "typort-lsp",
+						"markdownDescription": "Specify typort-lsp binary path."
+					}
+				}
+			}
+		],
+		"languages": [
+			{
+				"id": "typort",
+				"aliases": [
+					"typort",
+					"typort"
+				],
+				"extensions": [
+					".typort"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "typort",
+				"scopeName": "source.typort",
+				"path": "./syntaxes/typort.tmLanguage.json"
+			}
+		]
+	},
 	"dependencies": {
 		"@vscode/wasm-wasi": "^1.0.1",
 		"@vscode/wasm-wasi-lsp": "0.1.0-pre.6"

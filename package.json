@@ -21,26 +21,24 @@
 	},
 	"main": "./client/out/extension",
 	"browser": "./client/dist/web/extension",
-	"activationEvents": [
-		"onLanguage:nrs"
-	],
 	"extensionDependencies": [
 		"ms-vscode.wasm-wasi-core"
 	],
 	"contributes": {
 		"languages": [
 			{
-				"id": "nrs",
+				"id": "typort",
 				"extensions": [
-					".nrs"
-				]
+					".typort"
+				],
+				"configuration": "./language-configuration.json"
 			}
 		],
 		"configuration": {
 			"type": "object",
-			"title": "nrs-language-server",
+			"title": "typort-language-server",
 			"properties": {
-				"nrs-language-server.trace.server": {
+				"typort-language-server.trace.server": {
 					"type": "string",
 					"scope": "window",
 					"enum": [
@@ -57,7 +55,14 @@
 					"description": "Traces the communication between VS Code and the language server."
 				}
 			}
-		}
+		},
+		"grammars": [
+			{
+				"language": "typort",
+				"scopeName": "source.typort",
+				"path": "./syntaxes/typort.tmLanguage.json"
+			}
+		]
 	},
 	"dependencies": {
 	},

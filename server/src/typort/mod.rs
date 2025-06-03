@@ -34,8 +34,10 @@ enum BD {
 #[derive(Clone, Debug)]
 pub enum DeclTm {
     Def {
-        /*name: Span<String>,
-        params: Vec<(Span<String>, Tm, Icit)>,
+        name: Span<String>,
+        typ: Val,
+        body: Val,
+        /*params: Vec<(Span<String>, Tm, Icit)>,
         ret_type: Tm,
         body: Tm,*/
     },
@@ -256,7 +258,9 @@ impl Infer {
         match tm {
             Tm::Var(x) => match env.iter().nth(x.0 as usize) {
                 Some(v) => v.clone(),
-                None => self.global.get(&Lvl(x.0 - 1919810)).unwrap().clone(),
+                None => self.global.get(&Lvl(x.0 - 1919810)).unwrap_or_else(
+                    || panic!("unexpected var {}: {}\n\n\n{:?}", x.0, x.0 - 1919810, env)
+                ).clone(),
             },
             Tm::Obj(tm, name) => {
                 match self.eval(env, *tm) {
@@ -552,6 +556,17 @@ enum HighLvl3[A: Type 2] {
 def test2_2: HighLvl3[HighLvl[Nat]] = case3_1
 
 def test2_3: Type 2 = HighLvl3[HighLvl[Nat]]
+
+def Eq[A](x: A, y: A): Type 1 = (P : A -> Type 0) -> P x -> P y
+
+def refl[A, x: A]: Eq[A] x x = _ => px => px
+
+struct Bits {
+    name: String
+    size: Nat
+}
+
+def get_name(x: Bits) = x.name
 
 "#;
     println!("{}", run(input, 0).unwrap());
