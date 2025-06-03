@@ -5,9 +5,7 @@ use colored::Colorize;
 use crate::{list::List, parser_lib::Span, typort::{pattern_match::Compiler, MetaEntry}};
 
 use super::{
-    Closure, Cxt, DeclTm, Error, Infer, Ix, Tm, VTy, Val,
-    cxt::NameOrigin,
-    empty_span, lvl2ix,
+    cxt::NameOrigin, empty_span, lvl2ix, unification::PartialRenaming, Closure, Cxt, DeclTm, Error, Infer, Ix, Tm, VTy, Val
 };
 
 use crate::parser::syntax::{Decl, Either, Icit, Raw};
@@ -102,7 +100,18 @@ impl Infer {
                         },
                     }
                 } else {
-                    Err(Error(t_span.map(|_| format!("when check universe, get pren {}", pren.dom.0))))
+                    let rhs = self.rename(
+                        &PartialRenaming {
+                            occ: Some(m),
+                            ..pren
+                        },
+                        Val::U(0),
+                    ).map_err(|_| Error(t_span.map(|_| "when check universe, try to rename failed".to_string())))?;
+                    let solution = self.eval(&List::new(), self.lams(pren.dom, mty.clone(), rhs));
+                    self.meta[m.0 as usize] = MetaEntry::Solved(solution, mty);
+
+                    Ok((t_inferred, 0))
+                    //Err(Error(t_span.map(|_| format!("when check universe, get pren {}", pren.dom.0))))
                 }
             }
             _ => Err(Error(t_span.map(|_| format!("expected universe, got {:?}", inferred_type)))),
