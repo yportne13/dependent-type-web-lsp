@@ -1,0 +1,10 @@
+target
+client/node_modules
+client/dist
+client/out
+node_modules
+*.vsix
+sample/vim
+sample/wasm-wasi-core
+sample/wasm-language-server
+client/server.wasm
