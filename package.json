@@ -10,6 +10,9 @@
 	},
 	"publisher": "TyportHDL",
 	"categories": [],
+	"activationEvents": [
+    	"onLanguage:typort"
+  	],
 	"keywords": [
 		"WASM",
 		"Component Model",
