@@ -24,22 +24,19 @@
 	},
 	"additionalBuiltinExtensions": [
 	  {
-		"scheme": "http",
+		"scheme": "https",
 		"path": "/myExt"
 	  },
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
 		"path": "/wasm-language-server"
 	  },
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
 		"path": "/wasm-wasi-core"
 	  },
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
 		"path": "/vim"
 	  }
 	]
