@@ -25,18 +25,22 @@
 	"additionalBuiltinExtensions": [
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp",
 		"path": "/myExt"
 	  },
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp",
 		"path": "/wasm-language-server"
 	  },
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp",
 		"path": "/wasm-wasi-core"
 	  },
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp",
 		"path": "/vim"
 	  }
 	]
