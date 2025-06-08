@@ -16,6 +16,9 @@
 		"LSP",
 		"Language Server"
 	],
+	"activationEvents": [
+    	"onLanguage:typort"
+  	],
 	"engines": {
 		"vscode": "^1.89.0"
 	},
