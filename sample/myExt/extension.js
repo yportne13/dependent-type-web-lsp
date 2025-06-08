@@ -737,6 +737,11 @@ def add(x: Nat, y: Nat): Nat =
         case succ(n) => succ (add n y)
     }
 
+def mul(x: Nat, y: Nat) = match x {
+    case zero => zero
+    case succ(n) => add y (mul n y)
+}
+
 def four = add two two
 
 println four
@@ -800,6 +805,18 @@ struct Bits {
 }
 
 def assign(a: Bits, b: Bits)(eq: Eq[Nat] a.size b.size): String = a.name
+
+def sigA = new Bits("A", four)
+
+def sigB = new Bits("B", four)
+
+def sigC = new Bits("C", two)
+
+def sigD = new Bits("D", two)
+
+def ab = assign sigA sigB refl
+
+def cd = assign sigC sigD refl
 
 `
           ),

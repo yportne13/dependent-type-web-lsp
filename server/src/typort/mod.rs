@@ -74,6 +74,87 @@ pub enum Tm {
     Match(Box<Tm>, Vec<(Pattern, Tm)>),
 }
 
+impl std::fmt::Display for Tm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Tm::Var(ix) => write!(f, "var{}", ix.0),
+            Tm::Obj(tm, span) => write!(f, "{}.{}", tm, span.data),
+            Tm::Lam(span, icit, tm) => {
+                match icit {
+                    Icit::Impl => write!(f, "[{}] => {}", span.data, tm),
+                    Icit::Expl => write!(f, "{} => {}", span.data, tm),
+                }
+            }
+            Tm::App(tm, tm1, icit) => {
+                match icit {
+                    Icit::Impl => write!(f, "{}[{}]", tm, tm1),
+                    Icit::Expl => write!(f, "{}({})", tm, tm1),
+                }
+            }
+            Tm::AppPruning(tm, list) => {
+                write!(f, "({} pruned)", tm)//TODO:
+            }
+            Tm::U(u) => write!(f, "Type{}", u),
+            Tm::Pi(span, icit, dom, cod) => {
+                match icit {
+                    Icit::Impl => write!(f, "[{}:{}] -> {}", span.data, dom, cod),
+                    Icit::Expl => write!(f, "{}:{} -> {}", span.data, dom, cod),
+                }
+            }
+            Tm::Let(span, ty, val, body) => {
+                write!(f, "let {} : {} = {} in {}", span.data, ty, val, body)
+            }
+            Tm::Meta(MetaVar(u)) => write!(f, "?{}", u),
+            Tm::LiteralType => write!(f, "LiteralType"),
+            Tm::LiteralIntro(span) => write!(f, "\"{}\"", span.data),
+            Tm::Prim => write!(f, "Prim"),
+            Tm::Sum(span, params, _) => write!(
+                f,
+                "{}{}",
+                span.data,
+                params
+                    .iter()
+                    .map(|x| format!("{}", x))
+                    .reduce(|a, b| a + ", " + &b)
+                    .map(|x| format!("[{x}]"))
+                    .unwrap_or("".to_string())
+            ),
+            Tm::SumCase { sum_name, case_name, params, .. } => {
+                write!(
+                    f,
+                    "{}::{}{}",
+                    sum_name.data,
+                    case_name.data,
+                    params
+                        .iter()
+                        .map(|x| format!("{}", x))
+                        .reduce(|a, b| a + ", " + &b)
+                        .map(|x| format!("({x})"))
+                        .unwrap_or("".to_string()),
+                )
+            }
+            Tm::StructType(span, params, _) | Tm::StructData(span, params, _) => write!(
+                f,
+                "{}{}",
+                span.data,
+                params
+                    .iter()
+                    .map(|x| format!("{}", x))
+                    .reduce(|a, b| a + ", " + &b)
+                    .map(|x| format!("[{x}]"))
+                    .unwrap_or("".to_string())
+            ),
+            Tm::Match(tm, cases) => {
+                let cases_str = cases.iter()
+                    .map(|(pat, expr)| format!("case {:?} => {}", pat, expr))
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                write!(f, "match {} {{\n{}\n}}", tm, cases_str)
+            }
+        }
+    }
+}
+
 type Ty = Tm;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -436,7 +517,7 @@ impl Infer {
                 //println!("{:?} == {:?}", t, t_prime);
                 //println!("{:?}", self.eval(&cxt.env, self.quote(cxt.lvl, t_prime.clone())));
                 let err = format!(
-                    "can't unify {:?} == {:?}",
+                    "can't unify\n      find: {}\n  expected: {}",
                     self.quote(cxt.lvl, t),
                     self.quote(cxt.lvl, t_prime)
                 );
