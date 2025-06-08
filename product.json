@@ -1,0 +1,47 @@
+{
+	"productConfiguration": {
+	  "nameShort": "VSCode Web Sample",
+	  "nameLong": "VSCode Web sample",
+	  "applicationName": "code-web-sample",
+	  "dataFolderName": ".vscode-web-sample",
+	  "version": "1.91.1",
+	  "extensionsGallery": {
+		"serviceUrl": "https://open-vsx.org/vscode/gallery",
+		"itemUrl": "https://open-vsx.org/vscode/item",
+		"resourceUrlTemplate":
+		  "https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}"
+	  },
+	  "extensionEnabledApiProposals": {
+		"vscode.vscode-web-playground": [
+		  "fileSearchProvider",
+		  "textSearchProvider"
+		]
+	  }
+	},
+	"folderUri": {
+	  "scheme": "memfs",
+	  "path": "/sample-folder"
+	},
+	"additionalBuiltinExtensions": [
+	  {
+		"scheme": "http",
+		"path": "/myExt"
+	  },
+	  {
+		"scheme": "http",
+		"authority": "localhost:8080",
+		"path": "/wasm-language-server"
+	  },
+	  {
+		"scheme": "http",
+		"authority": "localhost:8080",
+		"path": "/wasm-wasi-core"
+	  },
+	  {
+		"scheme": "http",
+		"authority": "localhost:8080",
+		"path": "/vim"
+	  }
+	]
+  }
+  
