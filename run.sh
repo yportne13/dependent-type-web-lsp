@@ -1,6 +1,7 @@
 
 npm install
 npm install -g vsce
+npm run esbuild
 vsce package
 unzip wasm-language-server-1.0.0.vsix -d sample/wasm-language-server-bak
 rm -rf sample/wasm-language-server
