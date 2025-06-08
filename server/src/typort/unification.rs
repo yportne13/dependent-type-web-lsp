@@ -318,6 +318,10 @@ impl Infer {
                     .collect::<Result<_, _>>()?;
                 Ok(Tm::StructData(x, new_params, fields))
             }
+            Val::Match(val, env, cases) => {
+                let val = self.rename(pren, *val)?;
+                Ok(Tm::Match(Box::new(val), cases))
+            }
         }
     }
     fn lams_go(&self, l: Lvl, t: Tm, a: VTy, l_prime: Lvl) -> Tm {
@@ -564,6 +568,35 @@ impl Infer {
                 for (a, b) in params_a.iter().zip(params_b.iter()) {
                     self.unify(l, cxt, a.clone(), b.clone())?;
                 }
+                Ok(())
+            }
+            (Val::Match(s1, env1, cases1), Val::Match(s2, env2, cases2)) => {
+                // 1. 合一 scrutinees
+                self.unify(l, cxt, *s1.clone(), *s2.clone())?;
+
+                // 2. 检查分支数量是否相同
+                if cases1.len() != cases2.len() {
+                    return Err(UnifyError);
+                }
+
+                // 3. 遍历并合一每一个对应的分支
+                for ((p1, clos1), (p2, clos2)) in cases1.iter().zip(cases2.iter()) {
+                    // 3a. 检查模式是否完全相同。
+                    // 这里我们假设 Pattern 可以通过 `PartialEq` 进行比较。
+                    // 如果模式的结构更复杂（例如包含类型信息），你可能需要一个递归的模式合一函数。
+                    // 对于你目前的定义，`PartialEq` 应该是足够的。
+                    if p1 != p2 {
+                        return Err(UnifyError);
+                    }
+
+                    // 3b. 在扩展的上下文中合一分支的 body。这是最关键的一步。
+                    // 我们需要模拟进入 case 分支的作用域。
+                    let num_binders = p1.count_binders();
+                
+                    eprintln!("{:?} == {:?} ?\n{} {}", clos1, clos2, env1.iter().count(), env2.iter().count())
+                }
+
+                // 如果所有检查都通过，则合一成功
                 Ok(())
             }
             _ => Err(UnifyError), // Rigid mismatch error

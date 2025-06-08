@@ -804,7 +804,7 @@ struct Bits {
     size: Nat
 }
 
-def assign(a: Bits, b: Bits)(eq: Eq[Nat] a.size b.size): String = a.name
+def assign(a: Bits, b: Bits)(eq: Eq[Nat] a.size b.size): String = string_concat a.name b.name
 
 def sigA = new Bits("A", four)
 
@@ -817,6 +817,10 @@ def sigD = new Bits("D", two)
 def ab = assign sigA sigB refl
 
 def cd = assign sigC sigD refl
+
+def three = add two (succ zero)
+
+def xy(t: Nat) = assign (new Bits("AA", add t t)) (new Bits("BB", mul two t)) refl
 
 `
           ),

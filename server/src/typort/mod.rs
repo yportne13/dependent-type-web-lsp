@@ -206,6 +206,7 @@ pub enum Val {
     },
     StructType(Span<String>, Vec<Val>, Vec<(Span<String>, Val)>),
     StructData(Span<String>, Vec<Val>, Vec<(Span<String>, Val)>),
+    Match(Box<Val>, Env, Vec<(Pattern, Tm)>),
 }
 
 type VTy = Val;
@@ -404,8 +405,16 @@ impl Infer {
             }
             Tm::Match(tm, cases) => {
                 let val = self.eval(env, *tm);
-                let (tm, env) = Compiler::eval_aux(self, val, env, &cases).unwrap();
-                self.eval(&env, tm)
+                let val = self.force(val);
+                match val {
+                    neutral @ (Val::Rigid(..) | Val::Flex(..)) => {
+                        Val::Match(Box::new(neutral), env.clone(), cases)
+                    }
+                    val => {
+                        let (tm, env) = Compiler::eval_aux(self, val, env, &cases).unwrap();
+                        self.eval(&env, tm)
+                    }
+                }
             }
             Tm::StructType(name, params, fields) => {
                 let new_params = params
@@ -493,6 +502,21 @@ impl Infer {
                     .map(|(f_name, f_val)| (f_name, self.quote(l, f_val)))
                     .collect();
                 Tm::StructData(name, params, fields)
+            }
+            Val::Match(val, env, cases) => {
+                /*TODO:let tm_cases = cases
+                    .into_iter()
+                    .map(|(p, clos)| {
+                        let binders_count = p.count_binders();
+                        let body_tm = self.quote(l + binders_count, self.closure_apply_pats(&clos, l, &p));
+                        (p, body_tm)
+                    })
+                    .collect();*/
+                let tm_cases = cases
+                    .into_iter()
+                    .map(|x| (x.0, x.1))
+                    .collect();
+                Tm::Match(Box::new(self.quote(l, *val)), tm_cases)
             }
         }
     }
