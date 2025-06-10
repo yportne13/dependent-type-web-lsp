@@ -7,4 +7,3 @@ node_modules
 sample/vim
 sample/wasm-wasi-core
 sample/wasm-language-server
-client/server.wasm
