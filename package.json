@@ -81,7 +81,7 @@
 	"scripts": {
 		"postinstall": "cd client && npm install && cd ..",
 		"vscode:prepublish": "npm run build",
-		"build": "cd client && npm run compile && cd ../server && npm run build && cd .. && ls server/target/wasm32-wasip1-threads/release/ && cp -f server/target/wasm32-wasip1-threads/release/server.wasm client/server.wasm",
+		"build": "cd client && npm run compile && cd ../server && npm run build && cd .. && ls server/target/wasm32-wasip1-threads/release/ && cp -f server/target/wasm32-wasip1-threads/release/server.wasm client/server.wasm && sleep 2 && ls client/",
 		"lint": "cd client && npm run lint && cd ..",
 		"esbuild": "node ./bin/esbuild.js",
 		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem"
