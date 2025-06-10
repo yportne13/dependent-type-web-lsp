@@ -1,5 +1,4 @@
 <!-- Copyright (C) Microsoft Corporation. All rights reserved. -->
-<base href="/dependent-type-web-lsp/" />
 <!DOCTYPE html>
 <html>
 	<head>
@@ -29,10 +28,10 @@
 	<script src="./node_modules/vscode-web/dist/out/vs/webPackagePaths.js"></script>
 	<script>
 		Object.keys(self.webPackagePaths).map(function (key, index) {
-			self.webPackagePaths[key] = `${window.location.origin}/node_modules/vscode-web/dist/node_modules/${key}/${self.webPackagePaths[key]}`;
+			self.webPackagePaths[key] = `${window.location.origin + window.location.pathname}/node_modules/vscode-web/dist/node_modules/${key}/${self.webPackagePaths[key]}`;
 		});
 		require.config({
-			baseUrl: `${window.location.origin}/node_modules/vscode-web/dist/out`,
+			baseUrl: `${window.location.origin + window.location.pathname}/node_modules/vscode-web/dist/out`,
 			recordStats: true,
 			trustedTypesPolicy: window.trustedTypes?.createPolicy('amdLoader', {
 				createScriptURL(value) {
