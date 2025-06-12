@@ -1,14 +1,9 @@
 "use strict";
 (() => {
   var __defProp = Object.defineProperty;
-  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
-  };
-  var __publicField = (obj, key, value) => {
-    __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-    return value;
   };
 
   // src/common/ral.ts
@@ -62,7 +57,6 @@
       let msg = `The "${name}" ${type} ${determiner} of type ${expected}`;
       msg += `. Received type ${typeof actual}`;
       super(msg);
-      __publicField(this, "code");
       this.code = "ERR_INVALID_ARG_TYPE";
     }
   };
@@ -589,10 +583,6 @@
   // src/common/wasi.ts
   var StructArray = class {
     constructor(memory, ptr, len, struct) {
-      __publicField(this, "memory");
-      __publicField(this, "ptr");
-      __publicField(this, "len");
-      __publicField(this, "struct");
       this.memory = memory;
       this.ptr = ptr;
       this.len = len;
@@ -626,9 +616,6 @@
   };
   var PointerArray = class {
     constructor(memory, ptr, len) {
-      __publicField(this, "memory");
-      __publicField(this, "ptr");
-      __publicField(this, "len");
       this.memory = memory;
       this.ptr = ptr;
       this.len = len;
@@ -919,7 +906,6 @@
   var WasiError = class extends Error {
     constructor(errno3) {
       super();
-      __publicField(this, "errno");
       this.errno = errno3;
     }
   };
@@ -2468,9 +2454,6 @@
   // src/common/trace.ts
   var Memory = class {
     constructor(raw) {
-      __publicField(this, "raw");
-      __publicField(this, "dataView");
-      __publicField(this, "decoder");
       this.raw = raw;
       this.dataView = new DataView(this.raw);
       this.decoder = ral_default().TextDecoder.create();
@@ -2837,7 +2820,6 @@
   // src/common/host.ts
   var HostConnection = class {
     constructor(timeout) {
-      __publicField(this, "timeout");
       this.timeout = timeout;
     }
     call(func, args, wasmMemory, transfers) {
@@ -3378,7 +3360,6 @@
   var BrowserHostConnection = class extends HostConnection {
     constructor(port) {
       super();
-      __publicField(this, "port");
       this.port = port;
       this.port.onmessage = (event3) => {
         this.handleMessage(event3.data).catch(ral_default().console.error);
@@ -3416,7 +3397,6 @@
   var ThreadBrowserHostConnection = class extends BrowserHostConnection {
     constructor(port) {
       super(port);
-      __publicField(this, "_done");
       this._done = CapturedPromise.create();
     }
     done() {

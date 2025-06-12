@@ -2,7 +2,7 @@
 
 [![Build Status](https://dev.azure.com/vscode/vscode-wasm/_apis/build/status/microsoft.vscode-wasm?branchName=main)](https://dev.azure.com/vscode/vscode-wasm/_build/latest?definitionId=47&branchName=main)
 
-This VS Code library extension provides API to run [WASM](https://webassembly.org/) binaries in VS Code's extension host both in the desktop and the Web. The WASM file needs to be created with a [WASI Preview 1](https://github.com/WebAssembly/WASI) compliant tool chain like the [WASI-SDK](https://github.com/WebAssembly/wasi-sdk) or [Rust](https://www.rust-lang.org/) using the `wasm32-wasip1` target.
+This VS Code library extension provides API to run [WASM](https://webassembly.org/) binaries in VS Code's extension host both in the desktop and the Web. The WASM file needs to be created with a [WASI](https://github.com/WebAssembly/WASI) compliant tool chain like the [WASI-SDK](https://github.com/WebAssembly/wasi-sdk) or [Rust](https://www.rust-lang.org/) using the `wasm32-wasi` target.
 
 The library extension supports the following WASI specifications:
 
@@ -15,7 +15,7 @@ There is also an additional npm module `@vscode/wasm-wasi` that eases the API ac
 
 ## Example
 
-The source code of the example can be found [here](https://github.com/microsoft/vscode-wasm/blob/main/wasm-wasi/example/package.json)
+The source code of the example can be found [here](https://github.com/microsoft/vscode-wasi/blob/dbaeumer/expected-baboon-red/wasm-wasi/example/package.json)
 
 First we need to define a `package.json` for the extension that wants to execute a WASM process:
 

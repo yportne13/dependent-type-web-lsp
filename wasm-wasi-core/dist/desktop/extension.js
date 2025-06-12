@@ -5,7 +5,6 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -27,10 +26,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 
 // src/desktop/extension.ts
 var extension_exports = {};
@@ -41,9 +36,9 @@ __export(extension_exports, {
 module.exports = __toCommonJS(extension_exports);
 
 // src/desktop/ril.ts
-var crypto = __toESM(require("crypto"));
-var path = __toESM(require("path"));
 var import_util = require("util");
+var path = __toESM(require("path"));
+var crypto = __toESM(require("crypto"));
 
 // src/common/ral.ts
 var _ral;
@@ -137,6 +132,473 @@ var ril_default = RIL;
 
 // src/desktop/extension.ts
 var import_vscode13 = require("vscode");
+
+// src/common/terminal.ts
+var import_vscode = require("vscode");
+var LineBuffer = class {
+  constructor() {
+    this.offset = 0;
+    this.cursor = 0;
+    this.content = [];
+  }
+  clear() {
+    this.offset = 0;
+    this.cursor = 0;
+    this.content = [];
+  }
+  setContent(content) {
+    this.content = content.split("");
+    this.cursor = this.content.length;
+  }
+  getOffset() {
+    return this.offset;
+  }
+  setOffset(offset) {
+    this.offset = offset;
+  }
+  getLine() {
+    return this.content.join("");
+  }
+  getCursor() {
+    return this.cursor;
+  }
+  isCursorAtEnd() {
+    return this.cursor === this.content.length;
+  }
+  isCursorAtBeginning() {
+    return this.cursor === 0;
+  }
+  insert(value) {
+    for (const char of value) {
+      this.content.splice(this.cursor, 0, char);
+      this.cursor++;
+    }
+  }
+  del() {
+    if (this.cursor === this.content.length) {
+      return false;
+    }
+    this.content.splice(this.cursor, 1);
+    return true;
+  }
+  backspace() {
+    if (this.cursor === 0) {
+      return false;
+    }
+    this.cursor -= 1;
+    this.content.splice(this.cursor, 1);
+    return true;
+  }
+  moveCursorRelative(characters) {
+    const newValue = this.cursor + characters;
+    if (newValue < 0 || newValue > this.content.length) {
+      return false;
+    }
+    this.cursor = newValue;
+    return true;
+  }
+  moveCursorStartOfLine() {
+    if (this.cursor === 0) {
+      return false;
+    }
+    this.cursor = 0;
+    return true;
+  }
+  moveCursorEndOfLine() {
+    if (this.cursor === this.content.length) {
+      return false;
+    }
+    this.cursor = this.content.length;
+    return true;
+  }
+  moveCursorWordLeft() {
+    if (this.cursor === 0) {
+      return false;
+    }
+    let index;
+    if (this.content[this.cursor - 1] === " ") {
+      index = this.cursor - 2;
+      while (index > 0) {
+        if (this.content[index] === " ") {
+          index--;
+        } else {
+          break;
+        }
+      }
+    } else {
+      index = this.cursor;
+    }
+    if (index === 0) {
+      this.cursor = index;
+      return true;
+    }
+    while (index > 0) {
+      if (this.content[index] === " ") {
+        index++;
+        break;
+      } else {
+        index--;
+      }
+    }
+    this.cursor = index;
+    return true;
+  }
+  moveCursorWordRight() {
+    if (this.cursor === this.content.length) {
+      return false;
+    }
+    let index;
+    if (this.content[this.cursor] === " ") {
+      index = this.cursor + 1;
+      while (index < this.content.length) {
+        if (this.content[index] === " ") {
+          index++;
+        } else {
+          break;
+        }
+      }
+    } else {
+      index = this.cursor;
+    }
+    if (index === this.content.length) {
+      this.cursor = index;
+      return true;
+    }
+    while (index < this.content.length) {
+      if (this.content[index] === " ") {
+        break;
+      } else {
+        index++;
+      }
+    }
+    this.cursor = index;
+    return true;
+  }
+};
+var CommandHistory = class {
+  constructor() {
+    this.history = [""];
+    this.current = 0;
+  }
+  update(command) {
+    this.history[this.history.length - 1] = command;
+  }
+  markExecuted() {
+    if (this.current !== this.history.length - 1) {
+      this.history[this.history.length - 1] = this.history[this.current];
+    }
+    if (this.history[this.history.length - 1] === this.history[this.history.length - 2]) {
+      this.history.pop();
+    }
+    this.history.push("");
+    this.current = this.history.length - 1;
+  }
+  previous() {
+    if (this.current === 0) {
+      return void 0;
+    }
+    return this.history[--this.current];
+  }
+  next() {
+    if (this.current === this.history.length - 1) {
+      return void 0;
+    }
+    return this.history[++this.current];
+  }
+};
+var _WasmPseudoterminalImpl = class _WasmPseudoterminalImpl {
+  constructor(options = {}) {
+    this.options = options;
+    this.commandHistory = this.options.history ? new CommandHistory() : void 0;
+    this.state = 3 /* busy */;
+    this._onDidClose = new import_vscode.EventEmitter();
+    this.onDidClose = this._onDidClose.event;
+    this._onDidWrite = new import_vscode.EventEmitter();
+    this.onDidWrite = this._onDidWrite.event;
+    this._onDidChangeName = new import_vscode.EventEmitter();
+    this.onDidChangeName = this._onDidChangeName.event;
+    this._onDidCtrlC = new import_vscode.EventEmitter();
+    this.onDidCtrlC = this._onDidCtrlC.event;
+    this._onAnyKey = new import_vscode.EventEmitter();
+    this.onAnyKey = this._onAnyKey.event;
+    this._onDidChangeState = new import_vscode.EventEmitter();
+    this.onDidChangeState = this._onDidChangeState.event;
+    this._onDidCloseTerminal = new import_vscode.EventEmitter();
+    this.onDidCloseTerminal = this._onDidCloseTerminal.event;
+    this.encoder = ral_default().TextEncoder.create();
+    this.decoder = ral_default().TextDecoder.create();
+    this.lines = [];
+    this.lineBuffer = new LineBuffer();
+    this.isOpen = false;
+  }
+  get stdio() {
+    return {
+      in: { kind: "terminal", terminal: this },
+      out: { kind: "terminal", terminal: this },
+      err: { kind: "terminal", terminal: this }
+    };
+  }
+  setState(state) {
+    const old = this.state;
+    this.state = state;
+    if (old !== state) {
+      this._onDidChangeState.fire({ old, new: state });
+    }
+  }
+  getState() {
+    return this.state;
+  }
+  setName(name) {
+    if (this.isOpen) {
+      this._onDidChangeName.fire(name);
+    } else {
+      this.nameBuffer = name;
+    }
+  }
+  open() {
+    this.isOpen = true;
+    if (this.nameBuffer !== void 0) {
+      this._onDidChangeName.fire(this.nameBuffer);
+      this.nameBuffer = void 0;
+    }
+    if (this.writeBuffer !== void 0) {
+      for (const item of this.writeBuffer) {
+        this._onDidWrite.fire(item);
+      }
+      this.writeBuffer = void 0;
+    }
+  }
+  close() {
+    this._onDidCloseTerminal.fire();
+  }
+  async read(_maxBytesToRead) {
+    const value = await this.readline();
+    return this.encoder.encode(value);
+  }
+  readline() {
+    if (this.readlineCallback !== void 0) {
+      throw new Error(`Already in readline mode`);
+    }
+    if (this.lines.length > 0) {
+      return Promise.resolve(this.lines.shift());
+    }
+    return new Promise((resolve) => {
+      this.readlineCallback = resolve;
+    });
+  }
+  write(content, encoding) {
+    if (typeof content === "string") {
+      this.writeString(this.replaceNewlines(content));
+      return Promise.resolve();
+    } else {
+      this.writeString(this.getString(content, encoding));
+      return Promise.resolve(content.byteLength);
+    }
+  }
+  writeString(str) {
+    if (this.isOpen) {
+      this._onDidWrite.fire(str);
+    } else {
+      if (this.writeBuffer === void 0) {
+        this.writeBuffer = [];
+      }
+      this.writeBuffer.push(str);
+    }
+  }
+  async prompt(prompt) {
+    await this.write(prompt);
+    this.lineBuffer.setOffset(prompt.length);
+  }
+  handleInput(data) {
+    if (this.state === 1 /* free */) {
+      this._onAnyKey.fire();
+      return;
+    }
+    const previousCursor = this.lineBuffer.getCursor();
+    switch (data) {
+      case "":
+        this.handleInterrupt();
+        break;
+      case "":
+      case "\x1B[C":
+        this.adjustCursor(this.lineBuffer.moveCursorRelative(1), previousCursor, this.lineBuffer.getCursor());
+        break;
+      case "\x1Bf":
+      case "\x1B[1;5C":
+        this.adjustCursor(this.lineBuffer.moveCursorWordRight(), previousCursor, this.lineBuffer.getCursor());
+        break;
+      case "":
+      case "\x1B[D":
+        this.adjustCursor(this.lineBuffer.moveCursorRelative(-1), previousCursor, this.lineBuffer.getCursor());
+        break;
+      case "\x1Bb":
+      case "\x1B[1;5D":
+        this.adjustCursor(this.lineBuffer.moveCursorWordLeft(), previousCursor, this.lineBuffer.getCursor());
+        break;
+      case "":
+      case "\x1B[H":
+        this.adjustCursor(this.lineBuffer.moveCursorStartOfLine(), previousCursor, this.lineBuffer.getCursor());
+        break;
+      case "":
+      case "\x1B[F":
+        this.adjustCursor(this.lineBuffer.moveCursorEndOfLine(), previousCursor, this.lineBuffer.getCursor());
+        break;
+      case "\x1B[A":
+        if (this.commandHistory === void 0) {
+          this.bell();
+        } else {
+          const content = this.commandHistory.previous();
+          if (content !== void 0) {
+            this.eraseLine();
+            this.lineBuffer.setContent(content);
+            this.writeString(content);
+          } else {
+            this.bell();
+          }
+        }
+        break;
+      case "\x1B[B":
+        if (this.commandHistory === void 0) {
+          this.bell();
+        } else {
+          const content = this.commandHistory.next();
+          if (content !== void 0) {
+            this.eraseLine();
+            this.lineBuffer.setContent(content);
+            this.writeString(content);
+          } else {
+            this.bell();
+          }
+        }
+        break;
+      case "\b":
+      case "\x7F":
+        this.lineBuffer.backspace() ? this._onDidWrite.fire("\x1B[D\x1B[P") : this.bell();
+        break;
+      case "\x1B[3~":
+        this.lineBuffer.del() ? this._onDidWrite.fire("\x1B[P") : this.bell();
+        break;
+      case "\r":
+        this.handleEnter();
+        break;
+      default:
+        this.lineBuffer.insert(data);
+        if (!this.lineBuffer.isCursorAtEnd()) {
+          this._onDidWrite.fire("\x1B[@");
+        }
+        this._onDidWrite.fire(data);
+        if (this.commandHistory !== void 0) {
+          this.commandHistory.update(this.lineBuffer.getLine());
+        }
+    }
+  }
+  handleInterrupt() {
+    this._onDidCtrlC.fire();
+    this._onDidWrite.fire("\x1B[31m^C\x1B[0m\r\n");
+    this.lineBuffer.clear();
+    this.lines.length = 0;
+    this.readlineCallback?.("\n");
+    this.readlineCallback = void 0;
+  }
+  handleEnter() {
+    this._onDidWrite.fire("\r\n");
+    const line = this.lineBuffer.getLine();
+    this.lineBuffer.clear();
+    this.lines.push(line);
+    if (this.commandHistory !== void 0) {
+      this.commandHistory.markExecuted();
+    }
+    if (this.readlineCallback !== void 0) {
+      const result = this.lines.shift() + "\n";
+      this.readlineCallback(result);
+      this.readlineCallback = void 0;
+    }
+  }
+  adjustCursor(success, oldCursor, newCursor) {
+    if (!success) {
+      this.bell();
+      return;
+    }
+    const change = oldCursor - newCursor;
+    const code2 = change > 0 ? "D" : "C";
+    const sequence = `\x1B[${code2}`.repeat(Math.abs(change));
+    this._onDidWrite.fire(sequence);
+  }
+  eraseLine() {
+    const cursor = this.lineBuffer.getCursor();
+    this.adjustCursor(true, cursor, 0);
+    this._onDidWrite.fire(`\x1B[0J`);
+  }
+  bell() {
+    this._onDidWrite.fire("\x07");
+  }
+  replaceNewlines(str) {
+    return str.replace(_WasmPseudoterminalImpl.terminalRegExp, (match, m1, m2) => {
+      if (m1) {
+        return m1;
+      } else if (m2) {
+        return "\r\n";
+      } else {
+        return match;
+      }
+    });
+  }
+  getString(bytes, _encoding) {
+    return this.replaceNewlines(this.decoder.decode(bytes.slice()));
+  }
+};
+_WasmPseudoterminalImpl.terminalRegExp = /(\r\n)|(\n)/gm;
+var WasmPseudoterminalImpl = _WasmPseudoterminalImpl;
+
+// node_modules/uuid/dist/esm-node/rng.js
+var import_crypto = __toESM(require("crypto"));
+var rnds8Pool = new Uint8Array(256);
+var poolPtr = rnds8Pool.length;
+function rng() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    import_crypto.default.randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+
+// node_modules/uuid/dist/esm-node/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
+}
+function unsafeStringify(arr, offset = 0) {
+  return byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]];
+}
+
+// node_modules/uuid/dist/esm-node/native.js
+var import_crypto2 = __toESM(require("crypto"));
+var native_default = {
+  randomUUID: import_crypto2.default.randomUUID
+};
+
+// node_modules/uuid/dist/esm-node/v4.js
+function v4(options, buf, offset) {
+  if (native_default.randomUUID && !buf && !options) {
+    return native_default.randomUUID();
+  }
+  options = options || {};
+  const rnds = options.random || (options.rng || rng)();
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return unsafeStringify(rnds);
+}
+var v4_default = v4;
+
+// src/common/memoryFileSystemDriver.ts
+var import_vscode3 = require("vscode");
 
 // src/common/wasiMeta.ts
 var ptr_size = 4;
@@ -331,10 +793,6 @@ var Ptr;
 // src/common/wasi.ts
 var StructArray = class {
   constructor(memory, ptr, len, struct) {
-    __publicField(this, "memory");
-    __publicField(this, "ptr");
-    __publicField(this, "len");
-    __publicField(this, "struct");
     this.memory = memory;
     this.ptr = ptr;
     this.len = len;
@@ -368,9 +826,6 @@ var StructArray = class {
 };
 var PointerArray = class {
   constructor(memory, ptr, len) {
-    __publicField(this, "memory");
-    __publicField(this, "ptr");
-    __publicField(this, "len");
     this.memory = memory;
     this.ptr = ptr;
     this.len = len;
@@ -661,7 +1116,6 @@ var Errno;
 var WasiError = class extends Error {
   constructor(errno3) {
     super();
-    __publicField(this, "errno");
     this.errno = errno3;
   }
 };
@@ -1510,7 +1964,7 @@ var Event_fd_readwrite;
   }
   Event_fd_readwrite2.create = create8;
 })(Event_fd_readwrite || (Event_fd_readwrite = {}));
-var Event;
+var Event2;
 ((Event4) => {
   Event4.size = 32;
   Event4.alignment = 8;
@@ -1537,14 +1991,14 @@ var Event;
     };
   }
   Event4.create = create8;
-})(Event || (Event = {}));
+})(Event2 || (Event2 = {}));
 ((Event4) => {
   Event4.$ptr = Ptr.$param;
   function createTransfer(length) {
     return Bytes.createTransfer(Event4.size * length, 2 /* result */);
   }
   Event4.createTransfer = createTransfer;
-})(Event || (Event = {}));
+})(Event2 || (Event2 = {}));
 var Subclockflags;
 ((Subclockflags2) => {
   Subclockflags2.subscription_clock_abstime = 1 << 0;
@@ -2075,9 +2529,9 @@ var path_unlink_file;
 var poll_oneoff;
 ((poll_oneoff3) => {
   poll_oneoff3.name = "poll_oneoff";
-  poll_oneoff3.signature = WasiFunctionSignature.create([Subscription.$ptr, Event.$ptr, Size.$param, U32.$ptr]);
+  poll_oneoff3.signature = WasiFunctionSignature.create([Subscription.$ptr, Event2.$ptr, Size.$param, U32.$ptr]);
   function transfers(_memory, _input, _output, subscriptions) {
-    return ArgumentsTransfer.create([Subscription.createTransfer(subscriptions), Event.createTransfer(subscriptions), U32.$transfer]);
+    return ArgumentsTransfer.create([Subscription.createTransfer(subscriptions), Event2.createTransfer(subscriptions), U32.$transfer]);
   }
   poll_oneoff3.transfers = transfers;
   WasiFunctions.add(poll_oneoff3);
@@ -2138,193 +2592,6 @@ var thread_exit;
   thread_exit3.signature = WasiFunctionSignature.create([U32.$param]);
   WasiFunctions.add(thread_exit3);
 })(thread_exit || (thread_exit = {}));
-
-// src/common/fileDescriptor.ts
-var BaseFileDescriptor = class {
-  constructor(deviceId, fd11, fileType, rights_base, rights_inheriting, fdflags11, inode6) {
-    __publicField(this, "deviceId");
-    __publicField(this, "fd");
-    __publicField(this, "fileType");
-    __publicField(this, "rights_base");
-    __publicField(this, "rights_inheriting");
-    __publicField(this, "fdflags");
-    __publicField(this, "inode");
-    this.deviceId = deviceId;
-    this.fd = fd11;
-    this.fileType = fileType;
-    this.rights_base = rights_base;
-    this.rights_inheriting = rights_inheriting;
-    this.fdflags = fdflags11;
-    this.inode = inode6;
-  }
-  containsBaseRights(rights12) {
-    return (this.rights_base & rights12) === rights12;
-  }
-  assertRights(rights12) {
-    if (((this.rights_base | this.rights_inheriting) & rights12) === rights12) {
-      return;
-    }
-    throw new WasiError(Errno.perm);
-  }
-  assertBaseRights(rights12) {
-    if ((this.rights_base & rights12) === rights12) {
-      return;
-    }
-    throw new WasiError(Errno.perm);
-  }
-  assertInheritingRights(rights12) {
-    if ((this.rights_inheriting & rights12) === rights12) {
-      return;
-    }
-    throw new WasiError(Errno.perm);
-  }
-  assertFdflags(fdflags11) {
-    if (!Rights.supportFdflags(this.rights_base, fdflags11)) {
-      throw new WasiError(Errno.perm);
-    }
-  }
-  assertOflags(oflags8) {
-    if (!Rights.supportOflags(this.rights_base, oflags8)) {
-      throw new WasiError(Errno.perm);
-    }
-  }
-  assertIsDirectory() {
-    if (this.fileType !== Filetype.directory) {
-      throw new WasiError(Errno.notdir);
-    }
-  }
-};
-var FileDescriptors = class {
-  constructor() {
-    __publicField(this, "descriptors", /* @__PURE__ */ new Map());
-    __publicField(this, "rootDescriptors", /* @__PURE__ */ new Map());
-    __publicField(this, "mode", "init");
-    __publicField(this, "counter", 0);
-    __publicField(this, "firstReal", 3);
-  }
-  get firstRealFileDescriptor() {
-    return this.firstReal;
-  }
-  next() {
-    if (this.mode === "init") {
-      throw new WasiError(Errno.inval);
-    }
-    return this.counter++;
-  }
-  switchToRunning(start) {
-    if (this.mode === "running") {
-      throw new WasiError(Errno.inval);
-    }
-    this.mode = "running";
-    this.counter = start;
-    this.firstReal = start;
-  }
-  add(descriptor) {
-    this.descriptors.set(descriptor.fd, descriptor);
-  }
-  get(fd11) {
-    const descriptor = this.descriptors.get(fd11);
-    if (!descriptor) {
-      throw new WasiError(Errno.badf);
-    }
-    return descriptor;
-  }
-  has(fd11) {
-    return this.descriptors.has(fd11);
-  }
-  delete(descriptor) {
-    return this.descriptors.delete(descriptor.fd);
-  }
-  setRoot(driver, descriptor) {
-    this.rootDescriptors.set(driver.id, descriptor);
-  }
-  getRoot(driver) {
-    return this.rootDescriptors.get(driver.id);
-  }
-  entries() {
-    return this.descriptors.entries();
-  }
-  keys() {
-    return this.descriptors.keys();
-  }
-  values() {
-    return this.descriptors.values();
-  }
-  [Symbol.iterator]() {
-    return this.entries();
-  }
-};
-
-// src/common/service.ts
-var vscode = __toESM(require("vscode"));
-
-// src/common/connection.ts
-var Offsets;
-((Offsets2) => {
-  Offsets2.lock_size = 4;
-  Offsets2.lock_index = 0;
-  Offsets2.method_size = 4;
-  Offsets2.method_index = Offsets2.lock_index + Offsets2.lock_size;
-  Offsets2.errno_size = 2;
-  Offsets2.errno_index = Offsets2.method_index + Offsets2.method_size;
-  Offsets2.params_index = Offsets2.errno_index + Offsets2.errno_size + 2;
-  Offsets2.header_size = Offsets2.params_index;
-})(Offsets || (Offsets = {}));
-var StartMainMessage;
-((StartMainMessage2) => {
-  function is(message) {
-    const candidate = message;
-    return candidate && candidate.method === "startMain";
-  }
-  StartMainMessage2.is = is;
-})(StartMainMessage || (StartMainMessage = {}));
-var StartThreadMessage;
-((StartThreadMessage2) => {
-  function is(message) {
-    const candidate = message;
-    return candidate && candidate.method === "startThread";
-  }
-  StartThreadMessage2.is = is;
-})(StartThreadMessage || (StartThreadMessage = {}));
-var WorkerReadyMessage;
-((WorkerReadyMessage2) => {
-  function is(message) {
-    const candidate = message;
-    return candidate && candidate.method === "workerReady";
-  }
-  WorkerReadyMessage2.is = is;
-})(WorkerReadyMessage || (WorkerReadyMessage = {}));
-var WorkerDoneMessage;
-((WorkerDoneMessage2) => {
-  function is(message) {
-    const candidate = message;
-    return candidate && candidate.method === "workerDone";
-  }
-  WorkerDoneMessage2.is = is;
-})(WorkerDoneMessage || (WorkerDoneMessage = {}));
-var TraceMessage;
-((TraceMessage2) => {
-  function is(message) {
-    const candidate = message;
-    return candidate && candidate.method === "trace";
-  }
-  TraceMessage2.is = is;
-})(TraceMessage || (TraceMessage = {}));
-var TraceSummaryMessage;
-((TraceSummaryMessage2) => {
-  function is(message) {
-    const candidate = message;
-    return candidate && candidate.method === "traceSummary";
-  }
-  TraceSummaryMessage2.is = is;
-})(TraceSummaryMessage || (TraceSummaryMessage = {}));
-var WasiCallMessage;
-((WasiCallMessage2) => {
-  function is(message) {
-    return Array.isArray(message) && message.length === 2 && message[0] instanceof SharedArrayBuffer && message[1] instanceof SharedArrayBuffer;
-  }
-  WasiCallMessage2.is = is;
-})(WasiCallMessage || (WasiCallMessage = {}));
 
 // src/common/deviceDriver.ts
 var FileSystemDeviceDriver;
@@ -2535,6 +2802,186 @@ var BigInts;
   BigInts2.min = min;
 })(BigInts || (BigInts = {}));
 
+// src/common/fileDescriptor.ts
+var BaseFileDescriptor = class {
+  constructor(deviceId, fd11, fileType, rights_base, rights_inheriting, fdflags11, inode6) {
+    this.deviceId = deviceId;
+    this.fd = fd11;
+    this.fileType = fileType;
+    this.rights_base = rights_base;
+    this.rights_inheriting = rights_inheriting;
+    this.fdflags = fdflags11;
+    this.inode = inode6;
+  }
+  containsBaseRights(rights12) {
+    return (this.rights_base & rights12) === rights12;
+  }
+  assertRights(rights12) {
+    if (((this.rights_base | this.rights_inheriting) & rights12) === rights12) {
+      return;
+    }
+    throw new WasiError(Errno.perm);
+  }
+  assertBaseRights(rights12) {
+    if ((this.rights_base & rights12) === rights12) {
+      return;
+    }
+    throw new WasiError(Errno.perm);
+  }
+  assertInheritingRights(rights12) {
+    if ((this.rights_inheriting & rights12) === rights12) {
+      return;
+    }
+    throw new WasiError(Errno.perm);
+  }
+  assertFdflags(fdflags11) {
+    if (!Rights.supportFdflags(this.rights_base, fdflags11)) {
+      throw new WasiError(Errno.perm);
+    }
+  }
+  assertOflags(oflags8) {
+    if (!Rights.supportOflags(this.rights_base, oflags8)) {
+      throw new WasiError(Errno.perm);
+    }
+  }
+  assertIsDirectory() {
+    if (this.fileType !== Filetype.directory) {
+      throw new WasiError(Errno.notdir);
+    }
+  }
+};
+var FileDescriptors = class {
+  constructor() {
+    this.descriptors = /* @__PURE__ */ new Map();
+    this.rootDescriptors = /* @__PURE__ */ new Map();
+    this.mode = "init";
+    this.counter = 0;
+    this.firstReal = 3;
+  }
+  get firstRealFileDescriptor() {
+    return this.firstReal;
+  }
+  next() {
+    if (this.mode === "init") {
+      throw new WasiError(Errno.inval);
+    }
+    return this.counter++;
+  }
+  switchToRunning(start) {
+    if (this.mode === "running") {
+      throw new WasiError(Errno.inval);
+    }
+    this.mode = "running";
+    this.counter = start;
+    this.firstReal = start;
+  }
+  add(descriptor) {
+    this.descriptors.set(descriptor.fd, descriptor);
+  }
+  get(fd11) {
+    const descriptor = this.descriptors.get(fd11);
+    if (!descriptor) {
+      throw new WasiError(Errno.badf);
+    }
+    return descriptor;
+  }
+  has(fd11) {
+    return this.descriptors.has(fd11);
+  }
+  delete(descriptor) {
+    return this.descriptors.delete(descriptor.fd);
+  }
+  setRoot(driver, descriptor) {
+    this.rootDescriptors.set(driver.id, descriptor);
+  }
+  getRoot(driver) {
+    return this.rootDescriptors.get(driver.id);
+  }
+  entries() {
+    return this.descriptors.entries();
+  }
+  keys() {
+    return this.descriptors.keys();
+  }
+  values() {
+    return this.descriptors.values();
+  }
+  [Symbol.iterator]() {
+    return this.entries();
+  }
+};
+
+// src/common/service.ts
+var vscode = __toESM(require("vscode"));
+
+// src/common/connection.ts
+var Offsets;
+((Offsets2) => {
+  Offsets2.lock_size = 4;
+  Offsets2.lock_index = 0;
+  Offsets2.method_size = 4;
+  Offsets2.method_index = Offsets2.lock_index + Offsets2.lock_size;
+  Offsets2.errno_size = 2;
+  Offsets2.errno_index = Offsets2.method_index + Offsets2.method_size;
+  Offsets2.params_index = Offsets2.errno_index + Offsets2.errno_size + 2;
+  Offsets2.header_size = Offsets2.params_index;
+})(Offsets || (Offsets = {}));
+var StartMainMessage;
+((StartMainMessage2) => {
+  function is(message) {
+    const candidate = message;
+    return candidate && candidate.method === "startMain";
+  }
+  StartMainMessage2.is = is;
+})(StartMainMessage || (StartMainMessage = {}));
+var StartThreadMessage;
+((StartThreadMessage2) => {
+  function is(message) {
+    const candidate = message;
+    return candidate && candidate.method === "startThread";
+  }
+  StartThreadMessage2.is = is;
+})(StartThreadMessage || (StartThreadMessage = {}));
+var WorkerReadyMessage;
+((WorkerReadyMessage2) => {
+  function is(message) {
+    const candidate = message;
+    return candidate && candidate.method === "workerReady";
+  }
+  WorkerReadyMessage2.is = is;
+})(WorkerReadyMessage || (WorkerReadyMessage = {}));
+var WorkerDoneMessage;
+((WorkerDoneMessage2) => {
+  function is(message) {
+    const candidate = message;
+    return candidate && candidate.method === "workerDone";
+  }
+  WorkerDoneMessage2.is = is;
+})(WorkerDoneMessage || (WorkerDoneMessage = {}));
+var TraceMessage;
+((TraceMessage2) => {
+  function is(message) {
+    const candidate = message;
+    return candidate && candidate.method === "trace";
+  }
+  TraceMessage2.is = is;
+})(TraceMessage || (TraceMessage = {}));
+var TraceSummaryMessage;
+((TraceSummaryMessage2) => {
+  function is(message) {
+    const candidate = message;
+    return candidate && candidate.method === "traceSummary";
+  }
+  TraceSummaryMessage2.is = is;
+})(TraceSummaryMessage || (TraceSummaryMessage = {}));
+var WasiCallMessage;
+((WasiCallMessage2) => {
+  function is(message) {
+    return Array.isArray(message) && message.length === 2 && message[0] instanceof SharedArrayBuffer && message[1] instanceof SharedArrayBuffer;
+  }
+  WasiCallMessage2.is = is;
+})(WasiCallMessage || (WasiCallMessage = {}));
+
 // src/common/promises.ts
 var CapturedPromise;
 ((CapturedPromise2) => {
@@ -2557,10 +3004,6 @@ var CapturedPromise;
 // src/common/service.ts
 var ServiceConnection = class {
   constructor(wasiService, logChannel) {
-    __publicField(this, "wasiService");
-    __publicField(this, "logChannel");
-    __publicField(this, "_workerReady");
-    __publicField(this, "_workerDone");
     this.wasiService = wasiService;
     this.logChannel = logChannel;
     this._workerReady = CapturedPromise.create();
@@ -3278,13 +3721,13 @@ var DeviceWasiService;
           }
           let event_offset = output;
           for (const item of events) {
-            const event2 = Event.create(view, event_offset);
+            const event2 = Event2.create(view, event_offset);
             event2.userdata = item.userdata;
             event2.type = item.type;
             event2.error = item.error;
             event2.fd_readwrite.nbytes = item.fd_readwrite.nbytes;
             event2.fd_readwrite.flags = item.fd_readwrite.flags;
-            event_offset += Event.size;
+            event_offset += Event2.size;
           }
           view.setUint32(result_size_ptr, events.length, true);
           return Errno.success;
@@ -3534,8 +3977,6 @@ var Filetypes;
 })(Filetypes || (Filetypes = {}));
 var BaseFileSystem = class {
   constructor(root) {
-    __publicField(this, "inodeCounter");
-    __publicField(this, "root");
     this.inodeCounter = 2n;
     this.root = root;
   }
@@ -3591,7 +4032,6 @@ var BaseFileSystem = class {
 var NodeDescriptor = class extends BaseFileDescriptor {
   constructor(deviceId, fd11, filetype5, rights_base, rights_inheriting, fdflags11, inode6, node) {
     super(deviceId, fd11, filetype5, rights_base, rights_inheriting, fdflags11, inode6);
-    __publicField(this, "node");
     this.node = node;
     this.node.refs++;
   }
@@ -3603,7 +4043,6 @@ var NodeDescriptor = class extends BaseFileDescriptor {
 var FileNodeDescriptor = class _FileNodeDescriptor extends NodeDescriptor {
   constructor(deviceId, fd11, rights_base, fdflags11, inode6, node) {
     super(deviceId, fd11, Filetype.regular_file, rights_base, 0n, fdflags11, inode6, node);
-    __publicField(this, "_cursor");
     this._cursor = 0n;
   }
   with(change) {
@@ -3643,12 +4082,6 @@ var DirectoryNodeDescriptor = class _DirectoryNodeDescriptor extends NodeDescrip
 };
 var WasmRootFileSystemImpl = class {
   constructor(info, fileDescriptors) {
-    __publicField(this, "deviceDrivers");
-    __publicField(this, "preOpens");
-    __publicField(this, "fileDescriptors");
-    __publicField(this, "service");
-    __publicField(this, "virtualFileSystem");
-    __publicField(this, "singleFileSystem");
     this.deviceDrivers = info.deviceDrivers;
     this.preOpens = info.preOpens;
     this.fileDescriptors = fileDescriptors;
@@ -3755,11 +4188,666 @@ var WasmRootFileSystemImpl = class {
   }
 };
 
+// src/common/streams.ts
+var import_vscode2 = require("vscode");
+var DestroyError = class extends Error {
+  constructor() {
+    super("Pipe got destroyed");
+  }
+};
+var _Stream = class _Stream {
+  constructor() {
+    this.chunks = [];
+    this.fillLevel = 0;
+    this.awaitForFillLevel = [];
+    this.awaitForData = [];
+  }
+  async write(chunk) {
+    if (this.fillLevel + chunk.byteLength <= _Stream.BufferSize) {
+      this.chunks.push(chunk);
+      this.fillLevel += chunk.byteLength;
+      this.signalData();
+      return;
+    }
+    const targetFillLevel = Math.max(0, _Stream.BufferSize - chunk.byteLength);
+    try {
+      await this.awaitFillLevel(targetFillLevel);
+      if (this.fillLevel > targetFillLevel) {
+        throw new Error(`Invalid state: fillLevel should be <= ${targetFillLevel}`);
+      }
+      this.chunks.push(chunk);
+      this.fillLevel += chunk.byteLength;
+      this.signalData();
+      return;
+    } catch (error) {
+      if (error instanceof DestroyError) {
+        return;
+      }
+      throw error;
+    }
+  }
+  async read(mode, size) {
+    const maxBytes = mode === "max" ? size : void 0;
+    if (this.chunks.length === 0) {
+      try {
+        await this.awaitData();
+      } catch (error) {
+        if (error instanceof DestroyError) {
+          return new Uint8Array(0);
+        }
+        throw error;
+      }
+    }
+    if (this.chunks.length === 0) {
+      throw new Error("Invalid state: no bytes available after awaiting data");
+    }
+    if (maxBytes === void 0 || maxBytes > this.fillLevel) {
+      const result = new Uint8Array(this.fillLevel);
+      let offset = 0;
+      for (const chunk2 of this.chunks) {
+        result.set(chunk2, offset);
+        offset += chunk2.byteLength;
+      }
+      this.chunks = [];
+      this.fillLevel = 0;
+      this.signalSpace();
+      return result;
+    }
+    const chunk = this.chunks[0];
+    if (chunk.byteLength > maxBytes) {
+      const result = chunk.subarray(0, maxBytes);
+      this.chunks[0] = chunk.subarray(maxBytes);
+      this.fillLevel -= maxBytes;
+      this.signalSpace();
+      return result;
+    } else {
+      let resultSize = chunk.byteLength;
+      for (let i = 1; i < this.chunks.length; i++) {
+        if (resultSize + this.chunks[i].byteLength > maxBytes) {
+          break;
+        }
+      }
+      const result = new Uint8Array(resultSize);
+      let offset = 0;
+      for (let i = 0; i < this.chunks.length; i++) {
+        const chunk2 = this.chunks.shift();
+        if (offset + chunk2.byteLength > maxBytes) {
+          break;
+        }
+        result.set(chunk2, offset);
+        offset += chunk2.byteLength;
+        this.fillLevel -= chunk2.byteLength;
+      }
+      this.signalSpace();
+      return result;
+    }
+  }
+  end() {
+  }
+  destroy() {
+    this.chunks = [];
+    this.fillLevel = 0;
+    const error = new DestroyError();
+    for (const { promise } of this.awaitForFillLevel) {
+      promise.reject(error);
+    }
+    this.awaitForFillLevel = [];
+    for (const promise of this.awaitForData) {
+      promise.reject(error);
+    }
+  }
+  awaitFillLevel(targetFillLevel) {
+    const result = CapturedPromise.create();
+    this.awaitForFillLevel.push({ fillLevel: targetFillLevel, promise: result });
+    return result.promise;
+  }
+  awaitData() {
+    const result = CapturedPromise.create();
+    this.awaitForData.push(result);
+    return result.promise;
+  }
+  signalSpace() {
+    if (this.awaitForFillLevel.length === 0) {
+      return;
+    }
+    const { fillLevel, promise } = this.awaitForFillLevel[0];
+    if (this.fillLevel > fillLevel) {
+      return;
+    }
+    this.awaitForFillLevel.shift();
+    promise.resolve();
+  }
+  signalData() {
+    if (this.awaitForData.length === 0) {
+      return;
+    }
+    const promise = this.awaitForData.shift();
+    promise.resolve();
+  }
+};
+_Stream.BufferSize = 16384;
+var Stream = _Stream;
+var WritableStream = class extends Stream {
+  constructor(encoding) {
+    super();
+    this.encoding = encoding ?? "utf-8";
+    this.encoder = ral_default().TextEncoder.create(this.encoding);
+  }
+  async write(chunk) {
+    return super.write(typeof chunk === "string" ? this.encoder.encode(chunk) : chunk);
+  }
+  end() {
+  }
+};
+var ReadableStream = class extends Stream {
+  constructor() {
+    super();
+    this.mode = 0 /* initial */;
+    this._onData = new import_vscode2.EventEmitter();
+    this._onDataEvent = (listener, thisArgs, disposables) => {
+      if (this.mode === 0 /* initial */) {
+        this.mode = 1 /* flowing */;
+      }
+      return this._onData.event(listener, thisArgs, disposables);
+    };
+  }
+  get onData() {
+    return this._onDataEvent;
+  }
+  pause(flush = false) {
+    if (this.mode === 1 /* flowing */) {
+      if (this.timer !== void 0) {
+        this.timer.dispose();
+        this.timer = void 0;
+      }
+      if (flush) {
+        this.emitAll();
+      }
+    }
+    this.mode = 2 /* paused */;
+  }
+  resume() {
+    this.mode = 1 /* flowing */;
+    if (this.chunks.length > 0) {
+      this.signalData();
+    }
+  }
+  async read(mode, size) {
+    if (this.mode === 1 /* flowing */) {
+      throw new Error("Cannot read from stream in flowing mode");
+    }
+    return mode === void 0 ? super.read() : super.read(mode, size);
+  }
+  end() {
+    if (this.mode === 1 /* flowing */) {
+      this.emitAll();
+    }
+    return super.destroy();
+  }
+  signalData() {
+    if (this.mode === 1 /* flowing */) {
+      if (this.timer !== void 0) {
+        return;
+      }
+      this.timer = ral_default().timer.setImmediate(() => this.triggerData());
+    } else {
+      super.signalData();
+    }
+  }
+  emitAll() {
+    if (this.chunks.length > 0) {
+      for (const chunk of this.chunks) {
+        try {
+          this._onData.fire(chunk);
+        } catch (error) {
+          ral_default().console.error(`[ReadableStream]: Error while emitting data event: ${error}`);
+        }
+      }
+      this.chunks = [];
+    }
+  }
+  triggerData() {
+    this.timer = void 0;
+    if (this.chunks.length === 0) {
+      return;
+    }
+    const chunk = this.chunks.shift();
+    this.fillLevel -= chunk.byteLength;
+    this._onData.fire(chunk);
+    this.signalSpace();
+    if (this.chunks.length > 0) {
+      this.timer = ral_default().timer.setImmediate(() => this.triggerData());
+    }
+  }
+};
+
+// src/common/memoryFileSystemDriver.ts
+var paths = ral_default().path;
+function timeInNanoseconds(timeInMilliseconds) {
+  return BigInt(timeInMilliseconds) * 1000000n;
+}
+var FileNode;
+((FileNode4) => {
+  function create8(parent, inode6, name, time, content) {
+    return {
+      filetype: Filetype.regular_file,
+      inode: inode6,
+      name,
+      ctime: time,
+      mtime: time,
+      atime: time,
+      refs: 0,
+      parent,
+      content
+    };
+  }
+  FileNode4.create = create8;
+  function size(node) {
+    if (node.content instanceof Uint8Array) {
+      return BigInt(node.content.length);
+    } else {
+      return node.content.size;
+    }
+  }
+  FileNode4.size = size;
+})(FileNode || (FileNode = {}));
+var DirectoryNode;
+((DirectoryNode4) => {
+  function create8(parent, id, name, time) {
+    return {
+      filetype: Filetype.directory,
+      inode: id,
+      name,
+      ctime: time,
+      mtime: time,
+      atime: time,
+      refs: 0,
+      parent,
+      entries: /* @__PURE__ */ new Map()
+    };
+  }
+  DirectoryNode4.create = create8;
+  function size(node) {
+    return BigInt((Math.trunc(node.entries.size * 24 / 4096) + 1) * 4096);
+  }
+  DirectoryNode4.size = size;
+})(DirectoryNode || (DirectoryNode = {}));
+var CharacterDeviceNode;
+((CharacterDeviceNode2) => {
+  function create8(parent, inode6, name, time, readable, writable) {
+    return {
+      filetype: Filetype.character_device,
+      inode: inode6,
+      name,
+      ctime: time,
+      mtime: time,
+      atime: time,
+      refs: 0,
+      parent,
+      readable,
+      writable
+    };
+  }
+  CharacterDeviceNode2.create = create8;
+})(CharacterDeviceNode || (CharacterDeviceNode = {}));
+var MemoryFileSystem = class extends BaseFileSystem {
+  constructor() {
+    super(DirectoryNode.create(void 0, 1n, "/", timeInNanoseconds(Date.now())));
+    this.uri = import_vscode3.Uri.from({ scheme: "wasi-memfs", authority: v4_default() });
+  }
+  createDirectory(path2) {
+    const dirname = paths.dirname(path2);
+    const basename = paths.basename(path2);
+    const parent = this.getDirectoryNode(dirname);
+    const node = DirectoryNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()));
+    parent.entries.set(basename, node);
+  }
+  createFile(path2, content) {
+    const dirname = paths.dirname(path2);
+    const basename = paths.basename(path2);
+    const parent = this.getDirectoryNode(dirname);
+    const node = FileNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), content);
+    parent.entries.set(basename, node);
+  }
+  createReadable(path2) {
+    const dirname = paths.dirname(path2);
+    const basename = paths.basename(path2);
+    const parent = this.getDirectoryNode(dirname);
+    const node = CharacterDeviceNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), new ReadableStream(), void 0);
+    parent.entries.set(basename, node);
+    return node.readable;
+  }
+  createWritable(path2, encoding) {
+    const dirname = paths.dirname(path2);
+    const basename = paths.basename(path2);
+    const parent = this.getDirectoryNode(dirname);
+    const node = CharacterDeviceNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), void 0, new WritableStream(encoding));
+    parent.entries.set(basename, node);
+    return node.writable;
+  }
+  getDirectoryNode(path2) {
+    const result = this.findNode(path2);
+    if (result === void 0) {
+      throw new Error(`ENOENT: no such directory ${path2}`);
+    }
+    if (result.filetype !== Filetype.directory) {
+      throw new Error(`ENOTDIR: not a directory ${path2}`);
+    }
+    return result;
+  }
+  async readFile(node, offset, buffers) {
+    const content = await this.getContent(node);
+    return this.read(content, offset, buffers);
+  }
+  async readCharacterDevice(node, buffers) {
+    const maxBytes = buffers.reduce((previousValue, current) => {
+      return previousValue + current.byteLength;
+    }, 0);
+    const content = await node.writable.read("max", maxBytes);
+    return this.read(content, 0n, buffers);
+  }
+  async writeFile(node, offset, buffers) {
+    const content = await this.getContent(node);
+    const [newContent, bytesWritten] = this.write(content, offset, buffers);
+    node.content = newContent;
+    return bytesWritten;
+  }
+  async writeCharacterDevice(node, buffers) {
+    const allBytes = buffers.reduce((previousValue, current) => {
+      return previousValue + current.byteLength;
+    }, 0);
+    const buffer = new Uint8Array(allBytes);
+    let offset = 0;
+    for (const b of buffers) {
+      buffer.set(b, offset);
+      offset += b.byteLength;
+    }
+    await node.readable.write(buffer);
+    return allBytes;
+  }
+  async getContent(node) {
+    if (node.content instanceof Uint8Array) {
+      return Promise.resolve(node.content);
+    } else {
+      const result = await node.content.reader();
+      node.content = result;
+      return result;
+    }
+  }
+  read(content, _offset, buffers) {
+    let offset = BigInts.asNumber(_offset);
+    let totalBytesRead = 0;
+    for (const buffer of buffers) {
+      const toRead = Math.min(buffer.length, content.byteLength - offset);
+      buffer.set(content.subarray(offset, offset + toRead));
+      totalBytesRead += toRead;
+      if (toRead < buffer.length) {
+        break;
+      }
+      offset += toRead;
+    }
+    return totalBytesRead;
+  }
+  write(content, _offset, buffers) {
+    let offset = BigInts.asNumber(_offset);
+    let bytesToWrite = 0;
+    for (const bytes of buffers) {
+      bytesToWrite += bytes.byteLength;
+    }
+    if (offset + bytesToWrite > content.byteLength) {
+      const newContent = new Uint8Array(offset + bytesToWrite);
+      newContent.set(content);
+      content = newContent;
+    }
+    for (const bytes of buffers) {
+      content.set(bytes, offset);
+      offset += bytes.length;
+    }
+    return [content, bytesToWrite];
+  }
+};
+var DirectoryBaseRights = Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get | Rights.path_open | Rights.path_create_file | Rights.path_create_directory;
+var FileBaseRights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
+var DirectoryInheritingRights = DirectoryBaseRights | FileBaseRights;
+var DirectoryOnlyBaseRights = DirectoryBaseRights & ~FileBaseRights;
+var FileOnlyBaseRights = FileBaseRights & DirectoryBaseRights;
+function create(deviceId, memfs) {
+  const $fs = memfs;
+  function assertFileDescriptor(fileDescriptor) {
+    if (!(fileDescriptor instanceof FileNodeDescriptor)) {
+      throw new WasiError(Errno.badf);
+    }
+  }
+  function assertReadDescriptor(fileDescriptor) {
+    if (!(fileDescriptor instanceof FileNodeDescriptor) && !(fileDescriptor instanceof CharacterDeviceNodeDescriptor)) {
+      throw new WasiError(Errno.badf);
+    }
+    if (fileDescriptor instanceof CharacterDeviceNodeDescriptor && fileDescriptor.node.writable === void 0) {
+      throw new WasiError(Errno.perm);
+    }
+  }
+  function assertWriteDescriptor(fileDescriptor) {
+    if (!(fileDescriptor instanceof FileNodeDescriptor) && !(fileDescriptor instanceof CharacterDeviceNodeDescriptor)) {
+      throw new WasiError(Errno.badf);
+    }
+    if (fileDescriptor instanceof CharacterDeviceNodeDescriptor && fileDescriptor.node.readable === void 0) {
+      throw new WasiError(Errno.perm);
+    }
+  }
+  function assertDirectoryDescriptor(fileDescriptor) {
+    if (!(fileDescriptor instanceof DirectoryNodeDescriptor)) {
+      throw new WasiError(Errno.badf);
+    }
+  }
+  function assertDescriptor(fileDescriptor) {
+    if (!(fileDescriptor instanceof FileNodeDescriptor) && !(fileDescriptor instanceof DirectoryNodeDescriptor) && !(fileDescriptor instanceof CharacterDeviceNodeDescriptor)) {
+      throw new WasiError(Errno.badf);
+    }
+  }
+  function getSize(node) {
+    switch (node.filetype) {
+      case Filetype.regular_file:
+        return FileNode.size(node);
+      case Filetype.directory:
+        return DirectoryNode.size(node);
+      case Filetype.character_device:
+        return 1n;
+    }
+  }
+  function assignStat(result, node) {
+    result.dev = deviceId;
+    result.ino = node.inode;
+    result.filetype = node.filetype;
+    result.nlink = 1n;
+    result.size = getSize(node);
+    result.atim = node.atime;
+    result.ctim = node.ctime;
+    result.mtim = node.mtime;
+  }
+  const $driver = {
+    kind: "fileSystem" /* fileSystem */,
+    uri: $fs.uri,
+    id: deviceId,
+    joinPath() {
+      return void 0;
+    },
+    createStdioFileDescriptor(_dirflags = Lookupflags.none, _path, _oflags = Oflags.none, _fs_rights_base, _fdflags = Fdflags.none, _fd) {
+      throw new WasiError(Errno.nosys);
+    },
+    fd_create_prestat_fd(fd11) {
+      const root = $fs.getRoot();
+      return Promise.resolve(new DirectoryNodeDescriptor(deviceId, fd11, DirectoryBaseRights, DirectoryInheritingRights, Fdflags.none, root.inode, root));
+    },
+    fd_advise(fileDescriptor, _offset, _length, _advise) {
+      assertFileDescriptor(fileDescriptor);
+      return Promise.resolve();
+    },
+    fd_close(fileDescriptor) {
+      assertDescriptor(fileDescriptor);
+      return Promise.resolve();
+    },
+    fd_fdstat_get(fileDescriptor, result) {
+      result.fs_filetype = fileDescriptor.fileType;
+      result.fs_flags = fileDescriptor.fdflags;
+      result.fs_rights_base = fileDescriptor.rights_base;
+      result.fs_rights_inheriting = fileDescriptor.rights_inheriting;
+      return Promise.resolve();
+    },
+    fd_filestat_get(fileDescriptor, result) {
+      assertFileDescriptor(fileDescriptor);
+      assignStat(result, fileDescriptor.node);
+      return Promise.resolve();
+    },
+    async fd_pread(fileDescriptor, offset, buffers) {
+      if (buffers.length === 0) {
+        return 0;
+      }
+      assertReadDescriptor(fileDescriptor);
+      if (fileDescriptor instanceof FileNodeDescriptor) {
+        return $fs.readFile(fileDescriptor.node, offset, buffers);
+      } else {
+        return $fs.readCharacterDevice(fileDescriptor.node, buffers);
+      }
+    },
+    async fd_read(fileDescriptor, buffers) {
+      if (buffers.length === 0) {
+        return 0;
+      }
+      assertReadDescriptor(fileDescriptor);
+      let totalBytesRead = 0;
+      if (fileDescriptor instanceof FileNodeDescriptor) {
+        totalBytesRead = await $fs.readFile(fileDescriptor.node, fileDescriptor.cursor, buffers);
+        fileDescriptor.cursor = fileDescriptor.cursor + BigInt(totalBytesRead);
+      } else {
+        totalBytesRead = await $fs.readCharacterDevice(fileDescriptor.node, buffers);
+      }
+      return totalBytesRead;
+    },
+    fd_readdir(fileDescriptor) {
+      assertDirectoryDescriptor(fileDescriptor);
+      const result = [];
+      for (const entry of fileDescriptor.node.entries.values()) {
+        result.push({ d_ino: entry.inode, d_type: entry.filetype, d_name: entry.name });
+      }
+      return Promise.resolve(result);
+    },
+    async fd_seek(fileDescriptor, offset, whence3) {
+      assertFileDescriptor(fileDescriptor);
+      switch (whence3) {
+        case Whence.set:
+          fileDescriptor.cursor = offset;
+          break;
+        case Whence.cur:
+          fileDescriptor.cursor = fileDescriptor.cursor + offset;
+          break;
+        case Whence.end:
+          const size = FileNode.size(fileDescriptor.node);
+          fileDescriptor.cursor = BigInts.max(0n, size - offset);
+          break;
+      }
+      return BigInt(fileDescriptor.cursor);
+    },
+    fd_renumber(fileDescriptor, _to) {
+      assertDescriptor(fileDescriptor);
+      return Promise.resolve();
+    },
+    fd_tell(fileDescriptor) {
+      assertFileDescriptor(fileDescriptor);
+      return Promise.resolve(fileDescriptor.cursor);
+    },
+    async fd_pwrite(fileDescriptor, offset, buffers) {
+      assertWriteDescriptor(fileDescriptor);
+      let bytesWritten = 0;
+      if (fileDescriptor instanceof FileNodeDescriptor) {
+        bytesWritten = await $fs.writeFile(fileDescriptor.node, offset, buffers);
+      } else {
+        bytesWritten = await $fs.writeCharacterDevice(fileDescriptor.node, buffers);
+      }
+      return bytesWritten;
+    },
+    async fd_write(fileDescriptor, buffers) {
+      assertWriteDescriptor(fileDescriptor);
+      let bytesWritten = 0;
+      if (fileDescriptor instanceof FileNodeDescriptor) {
+        if (Fdflags.appendOn(fileDescriptor.fdflags)) {
+          fileDescriptor.cursor = BigInt((await $fs.getContent(fileDescriptor.node)).byteLength);
+        }
+        bytesWritten = await $fs.writeFile(fileDescriptor.node, fileDescriptor.cursor, buffers);
+        fileDescriptor.cursor = fileDescriptor.cursor + BigInt(bytesWritten);
+      } else {
+        bytesWritten = await $fs.writeCharacterDevice(fileDescriptor.node, buffers);
+      }
+      return bytesWritten;
+    },
+    async path_filestat_get(fileDescriptor, _flags, path2, result) {
+      assertDirectoryDescriptor(fileDescriptor);
+      const target = $fs.findNode(fileDescriptor.node, path2);
+      if (target === void 0) {
+        throw new WasiError(Errno.noent);
+      }
+      assignStat(result, target);
+    },
+    path_open(fileDescriptor, _dirflags, path2, oflags8, fs_rights_base, fs_rights_inheriting, fdflags11, fdProvider) {
+      assertDirectoryDescriptor(fileDescriptor);
+      const target = $fs.findNode(fileDescriptor.node, path2);
+      if (target === void 0) {
+        if (Oflags.creatOn(oflags8)) {
+          throw new WasiError(Errno.perm);
+        }
+        throw new WasiError(Errno.noent);
+      }
+      if (target.filetype !== Filetype.directory && Oflags.directoryOn(oflags8)) {
+        throw new WasiError(Errno.notdir);
+      }
+      if (Oflags.exclOn(oflags8)) {
+        throw new WasiError(Errno.exist);
+      }
+      if (target.filetype === Filetype.regular_file && (Oflags.truncOn(oflags8) || Fdflags.appendOn(fdflags11) || Fdflags.syncOn(fdflags11))) {
+        throw new WasiError(Errno.perm);
+      }
+      const write = (fs_rights_base & (Rights.fd_write | Rights.fd_datasync | Rights.fd_allocate | Rights.fd_filestat_set_size)) !== 0n;
+      if (target.filetype === Filetype.regular_file && write) {
+        throw new WasiError(Errno.perm);
+      }
+      let descriptor;
+      switch (target.filetype) {
+        case Filetype.regular_file:
+          descriptor = new FileNodeDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base, DirectoryOnlyBaseRights), fdflags11, target.inode, target);
+          break;
+        case Filetype.directory:
+          descriptor = new DirectoryNodeDescriptor(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base, FileOnlyBaseRights), fs_rights_inheriting | DirectoryInheritingRights, fdflags11, target.inode, target);
+          break;
+        case Filetype.character_device:
+          let rights12 = fileDescriptor.childFileRights(fs_rights_base, FileOnlyBaseRights) | Rights.fd_write;
+          descriptor = new CharacterDeviceNodeDescriptor(deviceId, fdProvider.next(), rights12, fdflags11, target.inode, target);
+          break;
+      }
+      if (descriptor === void 0) {
+        throw new WasiError(Errno.noent);
+      }
+      return Promise.resolve(descriptor);
+    },
+    path_readlink(fileDescriptor, path2) {
+      assertDirectoryDescriptor(fileDescriptor);
+      const target = $fs.findNode(fileDescriptor.node, path2);
+      if (target === void 0) {
+        throw new WasiError(Errno.noent);
+      }
+      throw new WasiError(Errno.nolink);
+    },
+    fd_bytesAvailable(fileDescriptor) {
+      assertFileDescriptor(fileDescriptor);
+      return Promise.resolve(BigInts.max(0n, FileNode.size(fileDescriptor.node) - fileDescriptor.cursor));
+    }
+  };
+  return Object.assign({}, NoSysDeviceDriver, WritePermDeniedDeviceDriver, $driver);
+}
+
 // src/common/kernel.ts
-var import_vscode7 = require("vscode");
+var import_vscode8 = require("vscode");
 
 // src/common/consoleDriver.ts
-var import_vscode = require("vscode");
+var import_vscode4 = require("vscode");
 var ConsoleBaseRights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
 var ConsoleInheritingRights = 0n;
 var ConsoleFileDescriptor = class _ConsoleFileDescriptor extends BaseFileDescriptor {
@@ -3770,8 +4858,8 @@ var ConsoleFileDescriptor = class _ConsoleFileDescriptor extends BaseFileDescrip
     return new _ConsoleFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
   }
 };
-var uri = import_vscode.Uri.from({ scheme: "wasi-console", authority: "f36f1dd6-913a-417f-a53c-360730fde485" });
-function create(deviceId) {
+var uri = import_vscode4.Uri.from({ scheme: "wasi-console", authority: "f36f1dd6-913a-417f-a53c-360730fde485" });
+function create2(deviceId) {
   let inodeCounter = 0n;
   const decoder = ral_default().TextDecoder.create();
   function createConsoleFileDescriptor(fd11) {
@@ -3824,7 +4912,7 @@ function create(deviceId) {
 }
 
 // src/common/vscodeFileSystemDriver.ts
-var import_vscode2 = require("vscode");
+var import_vscode5 = require("vscode");
 
 // src/common/linkedMap.ts
 var Touch;
@@ -3838,12 +4926,7 @@ var Touch;
 var _a;
 var LinkedMap = class {
   constructor() {
-    __publicField(this, _a, "LinkedMap");
-    __publicField(this, "_map");
-    __publicField(this, "_head");
-    __publicField(this, "_tail");
-    __publicField(this, "_size");
-    __publicField(this, "_state");
+    this[_a] = "LinkedMap";
     this._map = /* @__PURE__ */ new Map();
     this._head = void 0;
     this._tail = void 0;
@@ -4157,8 +5240,6 @@ var LinkedMap = class {
 var LRUCache = class extends LinkedMap {
   constructor(limit, ratio = 1) {
     super();
-    __publicField(this, "_limit");
-    __publicField(this, "_ratio");
     this._limit = limit;
     this._ratio = Math.min(Math.max(0, ratio), 1);
   }
@@ -4215,17 +5296,13 @@ var _FileInheritingRightsReadonly = _FileInheritingRights & Rights.ReadOnly;
 function getFileInheritingRights(readOnly = false) {
   return readOnly ? _FileInheritingRightsReadonly : _FileInheritingRights;
 }
-var DirectoryOnlyBaseRights = getDirectoryBaseRights() & ~getFileBaseRights();
-var FileOnlyBaseRights = getFileBaseRights() & ~getDirectoryBaseRights();
+var DirectoryOnlyBaseRights2 = getDirectoryBaseRights() & ~getFileBaseRights();
+var FileOnlyBaseRights2 = getFileBaseRights() & ~getDirectoryBaseRights();
 var StdInFileRights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
 var StdoutFileRights = getFileBaseRights() & ~Rights.fd_read;
 var FileFileDescriptor = class _FileFileDescriptor extends BaseFileDescriptor {
   constructor(deviceId, fd11, rights_base, fdflags11, inode6) {
     super(deviceId, fd11, Filetype.regular_file, rights_base, 0n, fdflags11, inode6);
-    /**
-     * The cursor into the file's content;
-     */
-    __publicField(this, "_cursor");
     this._cursor = 0;
   }
   with(change) {
@@ -4249,13 +5326,13 @@ var DirectoryFileDescriptor = class _DirectoryFileDescriptor extends BaseFileDes
     return new _DirectoryFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
   }
   childDirectoryRights(requested_rights) {
-    return this.rights_inheriting & requested_rights & ~FileOnlyBaseRights;
+    return this.rights_inheriting & requested_rights & ~FileOnlyBaseRights2;
   }
   childFileRights(requested_rights) {
-    return this.rights_inheriting & requested_rights & ~DirectoryOnlyBaseRights;
+    return this.rights_inheriting & requested_rights & ~DirectoryOnlyBaseRights2;
   }
 };
-var FileNode;
+var FileNode2;
 ((FileNode4) => {
   function create8(id, parent) {
     return {
@@ -4267,8 +5344,8 @@ var FileNode;
     };
   }
   FileNode4.create = create8;
-})(FileNode || (FileNode = {}));
-var DirectoryNode;
+})(FileNode2 || (FileNode2 = {}));
+var DirectoryNode2;
 ((DirectoryNode4) => {
   function create8(id, parent) {
     return {
@@ -4281,19 +5358,9 @@ var DirectoryNode;
     };
   }
   DirectoryNode4.create = create8;
-})(DirectoryNode || (DirectoryNode = {}));
+})(DirectoryNode2 || (DirectoryNode2 = {}));
 var _FileSystem = class _FileSystem {
   constructor(vscfs) {
-    __publicField(this, "vscfs");
-    __publicField(this, "root");
-    __publicField(this, "inodes");
-    // Cache contents of files
-    __publicField(this, "contents");
-    // Cached stats for deleted files and directories if there is still
-    // an open file descriptor
-    __publicField(this, "stats");
-    __publicField(this, "deletedNodes");
-    __publicField(this, "pathCache");
     this.vscfs = vscfs;
     this.root = {
       kind: 1 /* Directory */,
@@ -4348,12 +5415,12 @@ var _FileSystem = class _FileSystem {
           let entry = current.entries.get(parts[i]);
           if (entry === void 0) {
             if (i === parts.length - 1) {
-              entry = kind === 0 /* File */ ? FileNode.create(_FileSystem.inodeCounter++, current) : DirectoryNode.create(_FileSystem.inodeCounter++, current);
+              entry = kind === 0 /* File */ ? FileNode2.create(_FileSystem.inodeCounter++, current) : DirectoryNode2.create(_FileSystem.inodeCounter++, current);
               if (ref) {
                 entry.refs++;
               }
             } else {
-              entry = DirectoryNode.create(_FileSystem.inodeCounter++, current);
+              entry = DirectoryNode2.create(_FileSystem.inodeCounter++, current);
             }
             current.entries.set(parts[i], entry);
             entry.name = parts[i];
@@ -4518,10 +5585,10 @@ var _FileSystem = class _FileSystem {
     throw new WasiError(Errno.noent);
   }
 };
-__publicField(_FileSystem, "inodeCounter", 1n);
+_FileSystem.inodeCounter = 1n;
 var FileSystem = _FileSystem;
-function create2(deviceId, baseUri, readOnly = false) {
-  const vscode_fs = import_vscode2.workspace.fs;
+function create3(deviceId, baseUri, readOnly = false) {
+  const vscode_fs = import_vscode5.workspace.fs;
   const fs = new FileSystem(baseUri);
   function createFileDescriptor(parentDescriptor, fd11, rights_base, fdflags11, path2) {
     const parentNode = fs.getNode(parentDescriptor.inode, 1 /* Directory */);
@@ -4613,7 +5680,7 @@ function create2(deviceId, baseUri, readOnly = false) {
     uri: baseUri,
     id: deviceId,
     joinPath(...pathSegments) {
-      return import_vscode2.Uri.joinPath(baseUri, ...pathSegments);
+      return import_vscode5.Uri.joinPath(baseUri, ...pathSegments);
     },
     createStdioFileDescriptor(dirflags = Lookupflags.none, path2, _oflags = Oflags.none, _fs_rights_base, fdflags11 = Fdflags.none, fd11) {
       if (path2.length === 0) {
@@ -4780,7 +5847,7 @@ function create2(deviceId, baseUri, readOnly = false) {
       assertDirectoryDescriptor(fileDescriptor);
       const inode6 = fs.getNode(fileDescriptor.inode, 1 /* Directory */);
       const vStat = await vscode_fs.stat(fs.getUri(inode6, path2));
-      assignStat(result, fs.getOrCreateNode(inode6, path2, vStat.type === import_vscode2.FileType.Directory ? 1 /* Directory */ : 0 /* File */, false).inode, vStat);
+      assignStat(result, fs.getOrCreateNode(inode6, path2, vStat.type === import_vscode5.FileType.Directory ? 1 /* Directory */ : 0 /* File */, false).inode, vStat);
     },
     path_filestat_set_times(_fileDescriptor, _flags, _path, _atim, _mtim, _fst_flags) {
       throw new WasiError(Errno.nosys);
@@ -4843,7 +5910,7 @@ function create2(deviceId, baseUri, readOnly = false) {
         try {
           filestat10 = await vscode_fs.stat(fs.getUri(targetNode));
         } catch {
-          filestat10 = { type: import_vscode2.FileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 };
+          filestat10 = { type: import_vscode5.FileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 };
         }
       }
       await vscode_fs.delete(fs.getUri(inode6, path2), { recursive: false, useTrash: ral_default().workbench.hasTrash });
@@ -4874,7 +5941,7 @@ function create2(deviceId, baseUri, readOnly = false) {
             content = await vscode_fs.readFile(uri2);
           }
         } catch {
-          filestat10 = { type: import_vscode2.FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
+          filestat10 = { type: import_vscode5.FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
           content = new Uint8Array(0);
         }
       }
@@ -4900,7 +5967,7 @@ function create2(deviceId, baseUri, readOnly = false) {
           filestat10 = await vscode_fs.stat(uri2);
           content = await vscode_fs.readFile(uri2);
         } catch {
-          filestat10 = { type: import_vscode2.FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
+          filestat10 = { type: import_vscode5.FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
           content = new Uint8Array(0);
         }
       }
@@ -4925,13 +5992,13 @@ function create2(deviceId, baseUri, readOnly = false) {
 }
 
 // src/common/extLocFileSystemDriver.ts
-var import_vscode3 = require("vscode");
-var DirectoryBaseRights = Rights.path_open | Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get;
-var FileBaseRights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
-var DirectoryInheritingRights = DirectoryBaseRights | FileBaseRights;
-var DirectoryOnlyBaseRights2 = DirectoryBaseRights & ~FileBaseRights;
-var FileOnlyBaseRights2 = FileBaseRights & DirectoryBaseRights;
-var FileNode2;
+var import_vscode6 = require("vscode");
+var DirectoryBaseRights2 = Rights.path_open | Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get;
+var FileBaseRights2 = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
+var DirectoryInheritingRights2 = DirectoryBaseRights2 | FileBaseRights2;
+var DirectoryOnlyBaseRights3 = DirectoryBaseRights2 & ~FileBaseRights2;
+var FileOnlyBaseRights3 = FileBaseRights2 & DirectoryBaseRights2;
+var FileNode3;
 ((FileNode4) => {
   function create8(parent, inode6, name, time, size) {
     return {
@@ -4946,8 +6013,8 @@ var FileNode2;
     };
   }
   FileNode4.create = create8;
-})(FileNode2 || (FileNode2 = {}));
-var DirectoryNode2;
+})(FileNode3 || (FileNode3 = {}));
+var DirectoryNode3;
 ((DirectoryNode4) => {
   function create8(parent, id, name, time, size) {
     return {
@@ -4962,11 +6029,9 @@ var DirectoryNode2;
     };
   }
   DirectoryNode4.create = create8;
-})(DirectoryNode2 || (DirectoryNode2 = {}));
+})(DirectoryNode3 || (DirectoryNode3 = {}));
 var FileSystem2 = class {
   constructor(baseUri, dump) {
-    __publicField(this, "baseUri");
-    __publicField(this, "root");
     this.baseUri = baseUri;
     this.root = this.parseDump(dump);
   }
@@ -4988,8 +6053,8 @@ var FileSystem2 = class {
     }
     try {
       const segments = this.getSegmentsFromNode(node);
-      const vscode_fs = import_vscode3.Uri.joinPath(this.baseUri, ...segments);
-      const content = await import_vscode3.workspace.fs.readFile(vscode_fs);
+      const vscode_fs = import_vscode6.Uri.joinPath(this.baseUri, ...segments);
+      const content = await import_vscode6.workspace.fs.readFile(vscode_fs);
       node.content = content;
       return node.content;
     } catch (error) {
@@ -5040,18 +6105,18 @@ var FileSystem2 = class {
   }
   parseDump(dump) {
     let inodeCounter = 1n;
-    const root = DirectoryNode2.create(void 0, inodeCounter++, dump.name, BigInt(dump.ctime), BigInt(dump.size));
+    const root = DirectoryNode3.create(void 0, inodeCounter++, dump.name, BigInt(dump.ctime), BigInt(dump.size));
     this.processDirectoryNode(dump, root, inodeCounter);
     return root;
   }
   processDirectoryNode(dump, fs, inodeCounter) {
     for (const entry of Object.values(dump.children)) {
       if (entry.kind === "directory") {
-        const child = DirectoryNode2.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
+        const child = DirectoryNode3.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
         fs.entries.set(entry.name, child);
         this.processDirectoryNode(entry, child, inodeCounter);
       } else {
-        const child = FileNode2.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
+        const child = FileNode3.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
         fs.entries.set(entry.name, child);
       }
     }
@@ -5060,8 +6125,6 @@ var FileSystem2 = class {
 var FileFileDescriptor2 = class _FileFileDescriptor extends BaseFileDescriptor {
   constructor(deviceId, fd11, rights_base, fdflags11, inode6, node) {
     super(deviceId, fd11, Filetype.regular_file, rights_base, 0n, fdflags11, inode6);
-    __publicField(this, "_cursor");
-    __publicField(this, "node");
     this.node = node;
     this._cursor = 0n;
   }
@@ -5081,20 +6144,19 @@ var FileFileDescriptor2 = class _FileFileDescriptor extends BaseFileDescriptor {
 var DirectoryFileDescriptor2 = class _DirectoryFileDescriptor extends BaseFileDescriptor {
   constructor(deviceId, fd11, rights_base, rights_inheriting, fdflags11, inode6, node) {
     super(deviceId, fd11, Filetype.directory, rights_base, rights_inheriting, fdflags11, inode6);
-    __publicField(this, "node");
     this.node = node;
   }
   with(change) {
     return new _DirectoryFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode, this.node);
   }
   childDirectoryRights(requested_rights) {
-    return this.rights_inheriting & requested_rights & ~FileOnlyBaseRights2;
+    return this.rights_inheriting & requested_rights & ~FileOnlyBaseRights3;
   }
   childFileRights(requested_rights) {
-    return this.rights_inheriting & requested_rights & ~DirectoryOnlyBaseRights2;
+    return this.rights_inheriting & requested_rights & ~DirectoryOnlyBaseRights3;
   }
 };
-function create3(deviceId, baseUri, dump) {
+function create4(deviceId, baseUri, dump) {
   const $fs = new FileSystem2(baseUri, dump);
   function assertFileDescriptor(fileDescriptor) {
     if (!(fileDescriptor instanceof FileFileDescriptor2)) {
@@ -5139,7 +6201,7 @@ function create3(deviceId, baseUri, dump) {
     uri: baseUri,
     id: deviceId,
     joinPath(...pathSegments) {
-      return import_vscode3.Uri.joinPath(baseUri, ...pathSegments);
+      return import_vscode6.Uri.joinPath(baseUri, ...pathSegments);
     },
     createStdioFileDescriptor(_dirflags = Lookupflags.none, _path, _oflags = Oflags.none, _fs_rights_base, _fdflags = Fdflags.none, _fd) {
       throw new WasiError(Errno.nosys);
@@ -5147,7 +6209,7 @@ function create3(deviceId, baseUri, dump) {
     fd_create_prestat_fd(fd11) {
       const root = $fs.getRoot();
       $fs.refNode(root);
-      return Promise.resolve(new DirectoryFileDescriptor2(deviceId, fd11, DirectoryBaseRights, DirectoryInheritingRights, Fdflags.none, root.inode, root));
+      return Promise.resolve(new DirectoryFileDescriptor2(deviceId, fd11, DirectoryBaseRights2, DirectoryInheritingRights2, Fdflags.none, root.inode, root));
     },
     fd_advise(fileDescriptor, _offset, _length, _advise) {
       assertFileDescriptor(fileDescriptor);
@@ -5252,7 +6314,7 @@ function create3(deviceId, baseUri, dump) {
       if (write) {
         throw new WasiError(Errno.perm);
       }
-      const result = target.kind === 1 /* Directory */ ? new DirectoryFileDescriptor2(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags11, target.inode, target) : new FileFileDescriptor2(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base), fdflags11, target.inode, target);
+      const result = target.kind === 1 /* Directory */ ? new DirectoryFileDescriptor2(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights2, fdflags11, target.inode, target) : new FileFileDescriptor2(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base), fdflags11, target.inode, target);
       $fs.refNode(target);
       return Promise.resolve(result);
     },
@@ -5272,733 +6334,8 @@ function create3(deviceId, baseUri, dump) {
   return Object.assign({}, NoSysDeviceDriver, $driver, WritePermDeniedDeviceDriver);
 }
 
-// node_modules/uuid/dist/esm-node/rng.js
-var import_crypto = __toESM(require("crypto"));
-var rnds8Pool = new Uint8Array(256);
-var poolPtr = rnds8Pool.length;
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    import_crypto.default.randomFillSync(rnds8Pool);
-    poolPtr = 0;
-  }
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-// node_modules/uuid/dist/esm-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]];
-}
-
-// node_modules/uuid/dist/esm-node/native.js
-var import_crypto2 = __toESM(require("crypto"));
-var native_default = {
-  randomUUID: import_crypto2.default.randomUUID
-};
-
-// node_modules/uuid/dist/esm-node/v4.js
-function v4(options, buf, offset) {
-  if (native_default.randomUUID && !buf && !options) {
-    return native_default.randomUUID();
-  }
-  options = options || {};
-  const rnds = options.random || (options.rng || rng)();
-  rnds[6] = rnds[6] & 15 | 64;
-  rnds[8] = rnds[8] & 63 | 128;
-  if (buf) {
-    offset = offset || 0;
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-    return buf;
-  }
-  return unsafeStringify(rnds);
-}
-var v4_default = v4;
-
-// src/common/memoryFileSystemDriver.ts
-var import_vscode5 = require("vscode");
-
-// src/common/streams.ts
-var import_vscode4 = require("vscode");
-var DestroyError = class extends Error {
-  constructor() {
-    super("Pipe got destroyed");
-  }
-};
-var _Stream = class _Stream {
-  constructor() {
-    __publicField(this, "chunks");
-    __publicField(this, "fillLevel");
-    __publicField(this, "awaitForFillLevel");
-    __publicField(this, "awaitForData");
-    this.chunks = [];
-    this.fillLevel = 0;
-    this.awaitForFillLevel = [];
-    this.awaitForData = [];
-  }
-  get size() {
-    return this.fillLevel;
-  }
-  async write(chunk) {
-    if (this.fillLevel + chunk.byteLength <= _Stream.BufferSize) {
-      this.chunks.push(chunk);
-      this.fillLevel += chunk.byteLength;
-      this.signalData();
-      return;
-    }
-    const targetFillLevel = Math.max(0, _Stream.BufferSize - chunk.byteLength);
-    try {
-      await this.awaitFillLevel(targetFillLevel);
-      if (this.fillLevel > targetFillLevel) {
-        throw new Error(`Invalid state: fillLevel should be <= ${targetFillLevel}`);
-      }
-      this.chunks.push(chunk);
-      this.fillLevel += chunk.byteLength;
-      this.signalData();
-      return;
-    } catch (error) {
-      if (error instanceof DestroyError) {
-        return;
-      }
-      throw error;
-    }
-  }
-  async read(mode, size) {
-    const maxBytes = mode === "max" ? size : void 0;
-    if (this.chunks.length === 0) {
-      try {
-        await this.awaitData();
-      } catch (error) {
-        if (error instanceof DestroyError) {
-          return new Uint8Array(0);
-        }
-        throw error;
-      }
-    }
-    if (this.chunks.length === 0) {
-      throw new Error("Invalid state: no bytes available after awaiting data");
-    }
-    if (maxBytes === void 0 || maxBytes > this.fillLevel) {
-      const result = new Uint8Array(this.fillLevel);
-      let offset = 0;
-      for (const chunk2 of this.chunks) {
-        result.set(chunk2, offset);
-        offset += chunk2.byteLength;
-      }
-      this.chunks = [];
-      this.fillLevel = 0;
-      this.signalSpace();
-      return result;
-    }
-    const chunk = this.chunks[0];
-    if (chunk.byteLength > maxBytes) {
-      const result = chunk.subarray(0, maxBytes);
-      this.chunks[0] = chunk.subarray(maxBytes);
-      this.fillLevel -= maxBytes;
-      this.signalSpace();
-      return result;
-    } else {
-      let resultSize = chunk.byteLength;
-      for (let i = 1; i < this.chunks.length; i++) {
-        if (resultSize + this.chunks[i].byteLength > maxBytes) {
-          break;
-        }
-        resultSize += this.chunks[i].byteLength;
-      }
-      const result = new Uint8Array(resultSize);
-      let offset = 0;
-      while (offset < resultSize) {
-        const chunk2 = this.chunks.shift();
-        result.set(chunk2, offset);
-        offset += chunk2.byteLength;
-        this.fillLevel -= chunk2.byteLength;
-      }
-      this.signalSpace();
-      return result;
-    }
-  }
-  end() {
-  }
-  destroy() {
-    this.chunks = [];
-    this.fillLevel = 0;
-    const error = new DestroyError();
-    for (const { promise } of this.awaitForFillLevel) {
-      promise.reject(error);
-    }
-    this.awaitForFillLevel = [];
-    for (const promise of this.awaitForData) {
-      promise.reject(error);
-    }
-    this.awaitForData = [];
-  }
-  awaitFillLevel(targetFillLevel) {
-    if (this.awaitForFillLevel.length === 0 && this.fillLevel <= targetFillLevel) {
-      return Promise.resolve();
-    }
-    const result = CapturedPromise.create();
-    this.awaitForFillLevel.push({ fillLevel: targetFillLevel, promise: result });
-    return result.promise;
-  }
-  awaitData() {
-    const result = CapturedPromise.create();
-    this.awaitForData.push(result);
-    return result.promise;
-  }
-  signalSpace() {
-    if (this.awaitForFillLevel.length === 0) {
-      return;
-    }
-    const { fillLevel, promise } = this.awaitForFillLevel[0];
-    if (this.fillLevel > fillLevel) {
-      return;
-    }
-    this.awaitForFillLevel.shift();
-    promise.resolve();
-  }
-  signalData() {
-    if (this.awaitForData.length === 0) {
-      return;
-    }
-    const promise = this.awaitForData.shift();
-    promise.resolve();
-  }
-};
-__publicField(_Stream, "BufferSize", 16384);
-var Stream = _Stream;
-var WritableStream = class extends Stream {
-  constructor(encoding) {
-    super();
-    __publicField(this, "encoding");
-    __publicField(this, "encoder");
-    this.encoding = encoding ?? "utf-8";
-    this.encoder = ral_default().TextEncoder.create(this.encoding);
-  }
-  async write(chunk) {
-    return super.write(typeof chunk === "string" ? this.encoder.encode(chunk) : chunk);
-  }
-  end() {
-  }
-};
-var ReadableStream = class extends Stream {
-  constructor() {
-    super();
-    __publicField(this, "mode");
-    __publicField(this, "_onData");
-    __publicField(this, "_onDataEvent");
-    __publicField(this, "timer");
-    this.mode = 0 /* initial */;
-    this._onData = new import_vscode4.EventEmitter();
-    this._onDataEvent = (listener, thisArgs, disposables) => {
-      if (this.mode === 0 /* initial */) {
-        this.mode = 1 /* flowing */;
-      }
-      return this._onData.event(listener, thisArgs, disposables);
-    };
-  }
-  get onData() {
-    return this._onDataEvent;
-  }
-  pause(flush = false) {
-    if (this.mode === 1 /* flowing */) {
-      if (this.timer !== void 0) {
-        this.timer.dispose();
-        this.timer = void 0;
-      }
-      if (flush) {
-        this.emitAll();
-      }
-    }
-    this.mode = 2 /* paused */;
-  }
-  resume() {
-    this.mode = 1 /* flowing */;
-    if (this.chunks.length > 0) {
-      this.signalData();
-    }
-  }
-  async read(mode, size) {
-    if (this.mode === 1 /* flowing */) {
-      throw new Error("Cannot read from stream in flowing mode");
-    }
-    return mode === void 0 ? super.read() : super.read(mode, size);
-  }
-  end() {
-    if (this.mode === 1 /* flowing */) {
-      if (this.timer !== void 0) {
-        this.timer.dispose();
-        this.timer = void 0;
-      }
-      this.emitAll();
-    }
-    return super.destroy();
-  }
-  signalData() {
-    if (this.mode === 1 /* flowing */) {
-      if (this.timer !== void 0) {
-        return;
-      }
-      this.timer = ral_default().timer.setImmediate(() => this.triggerData());
-    } else {
-      super.signalData();
-    }
-  }
-  emitAll() {
-    if (this.chunks.length > 0) {
-      for (const chunk of this.chunks) {
-        try {
-          this._onData.fire(chunk);
-        } catch (error) {
-          ral_default().console.error(`[ReadableStream]: Error while emitting data event: ${error}`);
-        }
-      }
-      this.chunks = [];
-      this.fillLevel = 0;
-    }
-  }
-  triggerData() {
-    this.timer = void 0;
-    if (this.chunks.length === 0) {
-      return;
-    }
-    const chunk = this.chunks.shift();
-    this.fillLevel -= chunk.byteLength;
-    this._onData.fire(chunk);
-    this.signalSpace();
-    if (this.chunks.length > 0 && this.mode === 1 /* flowing */) {
-      this.timer = ral_default().timer.setImmediate(() => this.triggerData());
-    }
-  }
-};
-
-// src/common/memoryFileSystemDriver.ts
-var paths = ral_default().path;
-function timeInNanoseconds(timeInMilliseconds) {
-  return BigInt(timeInMilliseconds) * 1000000n;
-}
-var FileNode3;
-((FileNode4) => {
-  function create8(parent, inode6, name, time, content) {
-    return {
-      filetype: Filetype.regular_file,
-      inode: inode6,
-      name,
-      ctime: time,
-      mtime: time,
-      atime: time,
-      refs: 0,
-      parent,
-      content
-    };
-  }
-  FileNode4.create = create8;
-  function size(node) {
-    if (node.content instanceof Uint8Array) {
-      return BigInt(node.content.length);
-    } else {
-      return node.content.size;
-    }
-  }
-  FileNode4.size = size;
-})(FileNode3 || (FileNode3 = {}));
-var DirectoryNode3;
-((DirectoryNode4) => {
-  function create8(parent, id, name, time) {
-    return {
-      filetype: Filetype.directory,
-      inode: id,
-      name,
-      ctime: time,
-      mtime: time,
-      atime: time,
-      refs: 0,
-      parent,
-      entries: /* @__PURE__ */ new Map()
-    };
-  }
-  DirectoryNode4.create = create8;
-  function size(node) {
-    return BigInt((Math.trunc(node.entries.size * 24 / 4096) + 1) * 4096);
-  }
-  DirectoryNode4.size = size;
-})(DirectoryNode3 || (DirectoryNode3 = {}));
-var CharacterDeviceNode;
-((CharacterDeviceNode2) => {
-  function create8(parent, inode6, name, time, readable, writable) {
-    return {
-      filetype: Filetype.character_device,
-      inode: inode6,
-      name,
-      ctime: time,
-      mtime: time,
-      atime: time,
-      refs: 0,
-      parent,
-      readable,
-      writable
-    };
-  }
-  CharacterDeviceNode2.create = create8;
-})(CharacterDeviceNode || (CharacterDeviceNode = {}));
-var MemoryFileSystem = class extends BaseFileSystem {
-  constructor() {
-    super(DirectoryNode3.create(void 0, 1n, "/", timeInNanoseconds(Date.now())));
-    __publicField(this, "uri", import_vscode5.Uri.from({ scheme: "wasi-memfs", authority: v4_default() }));
-  }
-  createDirectory(path2) {
-    const dirname = paths.dirname(path2);
-    const basename = paths.basename(path2);
-    const parent = this.getDirectoryNode(dirname);
-    const node = DirectoryNode3.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()));
-    parent.entries.set(basename, node);
-  }
-  createFile(path2, content) {
-    const dirname = paths.dirname(path2);
-    const basename = paths.basename(path2);
-    const parent = this.getDirectoryNode(dirname);
-    const node = FileNode3.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), content);
-    parent.entries.set(basename, node);
-  }
-  createReadable(path2) {
-    const dirname = paths.dirname(path2);
-    const basename = paths.basename(path2);
-    const parent = this.getDirectoryNode(dirname);
-    const node = CharacterDeviceNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), new ReadableStream(), void 0);
-    parent.entries.set(basename, node);
-    return node.readable;
-  }
-  createWritable(path2, encoding) {
-    const dirname = paths.dirname(path2);
-    const basename = paths.basename(path2);
-    const parent = this.getDirectoryNode(dirname);
-    const node = CharacterDeviceNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), void 0, new WritableStream(encoding));
-    parent.entries.set(basename, node);
-    return node.writable;
-  }
-  getDirectoryNode(path2) {
-    const result = this.findNode(path2);
-    if (result === void 0) {
-      throw new Error(`ENOENT: no such directory ${path2}`);
-    }
-    if (result.filetype !== Filetype.directory) {
-      throw new Error(`ENOTDIR: not a directory ${path2}`);
-    }
-    return result;
-  }
-  async readFile(node, offset, buffers) {
-    const content = await this.getContent(node);
-    return this.read(content, offset, buffers);
-  }
-  async readCharacterDevice(node, buffers) {
-    const maxBytes = buffers.reduce((previousValue, current) => {
-      return previousValue + current.byteLength;
-    }, 0);
-    const content = await node.writable.read("max", maxBytes);
-    return this.read(content, 0n, buffers);
-  }
-  async writeFile(node, offset, buffers) {
-    const content = await this.getContent(node);
-    const [newContent, bytesWritten] = this.write(content, offset, buffers);
-    node.content = newContent;
-    return bytesWritten;
-  }
-  async writeCharacterDevice(node, buffers) {
-    const allBytes = buffers.reduce((previousValue, current) => {
-      return previousValue + current.byteLength;
-    }, 0);
-    const buffer = new Uint8Array(allBytes);
-    let offset = 0;
-    for (const b of buffers) {
-      buffer.set(b, offset);
-      offset += b.byteLength;
-    }
-    await node.readable.write(buffer);
-    return allBytes;
-  }
-  async getContent(node) {
-    if (node.content instanceof Uint8Array) {
-      return Promise.resolve(node.content);
-    } else {
-      const result = await node.content.reader();
-      node.content = result;
-      return result;
-    }
-  }
-  read(content, _offset, buffers) {
-    let offset = BigInts.asNumber(_offset);
-    let totalBytesRead = 0;
-    for (const buffer of buffers) {
-      const toRead = Math.min(buffer.length, content.byteLength - offset);
-      buffer.set(content.subarray(offset, offset + toRead));
-      totalBytesRead += toRead;
-      if (toRead < buffer.length) {
-        break;
-      }
-      offset += toRead;
-    }
-    return totalBytesRead;
-  }
-  write(content, _offset, buffers) {
-    let offset = BigInts.asNumber(_offset);
-    let bytesToWrite = 0;
-    for (const bytes of buffers) {
-      bytesToWrite += bytes.byteLength;
-    }
-    if (offset + bytesToWrite > content.byteLength) {
-      const newContent = new Uint8Array(offset + bytesToWrite);
-      newContent.set(content);
-      content = newContent;
-    }
-    for (const bytes of buffers) {
-      content.set(bytes, offset);
-      offset += bytes.length;
-    }
-    return [content, bytesToWrite];
-  }
-};
-var DirectoryBaseRights2 = Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get | Rights.path_open | Rights.path_create_file | Rights.path_create_directory;
-var FileBaseRights2 = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
-var DirectoryInheritingRights2 = DirectoryBaseRights2 | FileBaseRights2;
-var DirectoryOnlyBaseRights3 = DirectoryBaseRights2 & ~FileBaseRights2;
-var FileOnlyBaseRights3 = FileBaseRights2 & DirectoryBaseRights2;
-function create4(deviceId, memfs) {
-  const $fs = memfs;
-  function assertFileDescriptor(fileDescriptor) {
-    if (!(fileDescriptor instanceof FileNodeDescriptor)) {
-      throw new WasiError(Errno.badf);
-    }
-  }
-  function assertReadDescriptor(fileDescriptor) {
-    if (!(fileDescriptor instanceof FileNodeDescriptor) && !(fileDescriptor instanceof CharacterDeviceNodeDescriptor)) {
-      throw new WasiError(Errno.badf);
-    }
-    if (fileDescriptor instanceof CharacterDeviceNodeDescriptor && fileDescriptor.node.writable === void 0) {
-      throw new WasiError(Errno.perm);
-    }
-  }
-  function assertWriteDescriptor(fileDescriptor) {
-    if (!(fileDescriptor instanceof FileNodeDescriptor) && !(fileDescriptor instanceof CharacterDeviceNodeDescriptor)) {
-      throw new WasiError(Errno.badf);
-    }
-    if (fileDescriptor instanceof CharacterDeviceNodeDescriptor && fileDescriptor.node.readable === void 0) {
-      throw new WasiError(Errno.perm);
-    }
-  }
-  function assertDirectoryDescriptor(fileDescriptor) {
-    if (!(fileDescriptor instanceof DirectoryNodeDescriptor)) {
-      throw new WasiError(Errno.badf);
-    }
-  }
-  function assertDescriptor(fileDescriptor) {
-    if (!(fileDescriptor instanceof FileNodeDescriptor) && !(fileDescriptor instanceof DirectoryNodeDescriptor) && !(fileDescriptor instanceof CharacterDeviceNodeDescriptor)) {
-      throw new WasiError(Errno.badf);
-    }
-  }
-  function getSize(node) {
-    switch (node.filetype) {
-      case Filetype.regular_file:
-        return FileNode3.size(node);
-      case Filetype.directory:
-        return DirectoryNode3.size(node);
-      case Filetype.character_device:
-        return 1n;
-    }
-  }
-  function assignStat(result, node) {
-    result.dev = deviceId;
-    result.ino = node.inode;
-    result.filetype = node.filetype;
-    result.nlink = 1n;
-    result.size = getSize(node);
-    result.atim = node.atime;
-    result.ctim = node.ctime;
-    result.mtim = node.mtime;
-  }
-  const $driver = {
-    kind: "fileSystem" /* fileSystem */,
-    uri: $fs.uri,
-    id: deviceId,
-    joinPath() {
-      return void 0;
-    },
-    createStdioFileDescriptor(_dirflags = Lookupflags.none, _path, _oflags = Oflags.none, _fs_rights_base, _fdflags = Fdflags.none, _fd) {
-      throw new WasiError(Errno.nosys);
-    },
-    fd_create_prestat_fd(fd11) {
-      const root = $fs.getRoot();
-      return Promise.resolve(new DirectoryNodeDescriptor(deviceId, fd11, DirectoryBaseRights2, DirectoryInheritingRights2, Fdflags.none, root.inode, root));
-    },
-    fd_advise(fileDescriptor, _offset, _length, _advise) {
-      assertFileDescriptor(fileDescriptor);
-      return Promise.resolve();
-    },
-    fd_close(fileDescriptor) {
-      assertDescriptor(fileDescriptor);
-      return Promise.resolve();
-    },
-    fd_fdstat_get(fileDescriptor, result) {
-      result.fs_filetype = fileDescriptor.fileType;
-      result.fs_flags = fileDescriptor.fdflags;
-      result.fs_rights_base = fileDescriptor.rights_base;
-      result.fs_rights_inheriting = fileDescriptor.rights_inheriting;
-      return Promise.resolve();
-    },
-    fd_filestat_get(fileDescriptor, result) {
-      assertFileDescriptor(fileDescriptor);
-      assignStat(result, fileDescriptor.node);
-      return Promise.resolve();
-    },
-    async fd_pread(fileDescriptor, offset, buffers) {
-      if (buffers.length === 0) {
-        return 0;
-      }
-      assertReadDescriptor(fileDescriptor);
-      if (fileDescriptor instanceof FileNodeDescriptor) {
-        return $fs.readFile(fileDescriptor.node, offset, buffers);
-      } else {
-        return $fs.readCharacterDevice(fileDescriptor.node, buffers);
-      }
-    },
-    async fd_read(fileDescriptor, buffers) {
-      if (buffers.length === 0) {
-        return 0;
-      }
-      assertReadDescriptor(fileDescriptor);
-      let totalBytesRead = 0;
-      if (fileDescriptor instanceof FileNodeDescriptor) {
-        totalBytesRead = await $fs.readFile(fileDescriptor.node, fileDescriptor.cursor, buffers);
-        fileDescriptor.cursor = fileDescriptor.cursor + BigInt(totalBytesRead);
-      } else {
-        totalBytesRead = await $fs.readCharacterDevice(fileDescriptor.node, buffers);
-      }
-      return totalBytesRead;
-    },
-    fd_readdir(fileDescriptor) {
-      assertDirectoryDescriptor(fileDescriptor);
-      const result = [];
-      for (const entry of fileDescriptor.node.entries.values()) {
-        result.push({ d_ino: entry.inode, d_type: entry.filetype, d_name: entry.name });
-      }
-      return Promise.resolve(result);
-    },
-    async fd_seek(fileDescriptor, offset, whence3) {
-      assertFileDescriptor(fileDescriptor);
-      switch (whence3) {
-        case Whence.set:
-          fileDescriptor.cursor = offset;
-          break;
-        case Whence.cur:
-          fileDescriptor.cursor = fileDescriptor.cursor + offset;
-          break;
-        case Whence.end:
-          const size = FileNode3.size(fileDescriptor.node);
-          fileDescriptor.cursor = BigInts.max(0n, size - offset);
-          break;
-      }
-      return BigInt(fileDescriptor.cursor);
-    },
-    fd_renumber(fileDescriptor, _to) {
-      assertDescriptor(fileDescriptor);
-      return Promise.resolve();
-    },
-    fd_tell(fileDescriptor) {
-      assertFileDescriptor(fileDescriptor);
-      return Promise.resolve(fileDescriptor.cursor);
-    },
-    async fd_pwrite(fileDescriptor, offset, buffers) {
-      assertWriteDescriptor(fileDescriptor);
-      let bytesWritten = 0;
-      if (fileDescriptor instanceof FileNodeDescriptor) {
-        bytesWritten = await $fs.writeFile(fileDescriptor.node, offset, buffers);
-      } else {
-        bytesWritten = await $fs.writeCharacterDevice(fileDescriptor.node, buffers);
-      }
-      return bytesWritten;
-    },
-    async fd_write(fileDescriptor, buffers) {
-      assertWriteDescriptor(fileDescriptor);
-      let bytesWritten = 0;
-      if (fileDescriptor instanceof FileNodeDescriptor) {
-        if (Fdflags.appendOn(fileDescriptor.fdflags)) {
-          fileDescriptor.cursor = BigInt((await $fs.getContent(fileDescriptor.node)).byteLength);
-        }
-        bytesWritten = await $fs.writeFile(fileDescriptor.node, fileDescriptor.cursor, buffers);
-        fileDescriptor.cursor = fileDescriptor.cursor + BigInt(bytesWritten);
-      } else {
-        bytesWritten = await $fs.writeCharacterDevice(fileDescriptor.node, buffers);
-      }
-      return bytesWritten;
-    },
-    async path_filestat_get(fileDescriptor, _flags, path2, result) {
-      assertDirectoryDescriptor(fileDescriptor);
-      const target = $fs.findNode(fileDescriptor.node, path2);
-      if (target === void 0) {
-        throw new WasiError(Errno.noent);
-      }
-      assignStat(result, target);
-    },
-    path_open(fileDescriptor, _dirflags, path2, oflags8, fs_rights_base, fs_rights_inheriting, fdflags11, fdProvider) {
-      assertDirectoryDescriptor(fileDescriptor);
-      const target = $fs.findNode(fileDescriptor.node, path2);
-      if (target === void 0) {
-        if (Oflags.creatOn(oflags8)) {
-          throw new WasiError(Errno.perm);
-        }
-        throw new WasiError(Errno.noent);
-      }
-      if (target.filetype !== Filetype.directory && Oflags.directoryOn(oflags8)) {
-        throw new WasiError(Errno.notdir);
-      }
-      if (Oflags.exclOn(oflags8)) {
-        throw new WasiError(Errno.exist);
-      }
-      if (target.filetype === Filetype.regular_file && (Oflags.truncOn(oflags8) || Fdflags.appendOn(fdflags11) || Fdflags.syncOn(fdflags11))) {
-        throw new WasiError(Errno.perm);
-      }
-      const write = (fs_rights_base & (Rights.fd_write | Rights.fd_datasync | Rights.fd_allocate | Rights.fd_filestat_set_size)) !== 0n;
-      if (target.filetype === Filetype.regular_file && write) {
-        throw new WasiError(Errno.perm);
-      }
-      let descriptor;
-      switch (target.filetype) {
-        case Filetype.regular_file:
-          descriptor = new FileNodeDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base, DirectoryOnlyBaseRights3), fdflags11, target.inode, target);
-          break;
-        case Filetype.directory:
-          descriptor = new DirectoryNodeDescriptor(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base, FileOnlyBaseRights3), fs_rights_inheriting | DirectoryInheritingRights2, fdflags11, target.inode, target);
-          break;
-        case Filetype.character_device:
-          let rights12 = fileDescriptor.childFileRights(fs_rights_base, FileOnlyBaseRights3) | Rights.fd_write;
-          descriptor = new CharacterDeviceNodeDescriptor(deviceId, fdProvider.next(), rights12, fdflags11, target.inode, target);
-          break;
-      }
-      if (descriptor === void 0) {
-        throw new WasiError(Errno.noent);
-      }
-      return Promise.resolve(descriptor);
-    },
-    path_readlink(fileDescriptor, path2) {
-      assertDirectoryDescriptor(fileDescriptor);
-      const target = $fs.findNode(fileDescriptor.node, path2);
-      if (target === void 0) {
-        throw new WasiError(Errno.noent);
-      }
-      throw new WasiError(Errno.nolink);
-    },
-    fd_bytesAvailable(fileDescriptor) {
-      assertFileDescriptor(fileDescriptor);
-      return Promise.resolve(BigInts.max(0n, FileNode3.size(fileDescriptor.node) - fileDescriptor.cursor));
-    }
-  };
-  return Object.assign({}, NoSysDeviceDriver, WritePermDeniedDeviceDriver, $driver);
-}
-
 // src/common/rootFileSystemDriver.ts
-var import_vscode6 = require("vscode");
+var import_vscode7 = require("vscode");
 var DirectoryBaseRights3 = Rights.fd_fdstat_set_flags | Rights.path_create_directory | Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open | Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target | Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times | Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file | Rights.path_symlink;
 var FileBaseRights3 = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags | Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get | Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
 var DirectoryInheritingRights3 = DirectoryBaseRights3 | FileBaseRights3;
@@ -6038,11 +6375,6 @@ var MountPointNode;
 })(MountPointNode || (MountPointNode = {}));
 var _VirtualRootFileSystem = class _VirtualRootFileSystem {
   constructor(deviceId) {
-    __publicField(this, "deviceId");
-    __publicField(this, "inodes");
-    __publicField(this, "root");
-    __publicField(this, "deviceDrivers");
-    __publicField(this, "mountPoints");
     this.deviceId = deviceId;
     this.inodes = /* @__PURE__ */ new Map();
     this.root = VirtualDirectoryNode.create(_VirtualRootFileSystem.inodeCounter++, void 0, "/");
@@ -6167,7 +6499,7 @@ var _VirtualRootFileSystem = class _VirtualRootFileSystem {
     return ral_default().path.join(...parts.reverse());
   }
 };
-__publicField(_VirtualRootFileSystem, "inodeCounter", 1n);
+_VirtualRootFileSystem.inodeCounter = 1n;
 var VirtualRootFileSystem = _VirtualRootFileSystem;
 function create5(deviceId, rootFileDescriptors, mountPoints) {
   let $atim = BigInt(Date.now()) * 1000000n;
@@ -6191,7 +6523,7 @@ function create5(deviceId, rootFileDescriptors, mountPoints) {
   const $driver = {
     kind: "fileSystem" /* fileSystem */,
     id: deviceId,
-    uri: import_vscode6.Uri.from({ scheme: "wasi-root", path: "/" }),
+    uri: import_vscode7.Uri.from({ scheme: "wasi-root", path: "/" }),
     makeVirtualPath(deviceDriver, filepath) {
       return $fs.makeVirtualPath(deviceDriver, filepath);
     },
@@ -6304,8 +6636,6 @@ function create5(deviceId, rootFileDescriptors, mountPoints) {
 // src/common/kernel.ts
 var DeviceDriversImpl = class {
   constructor() {
-    __publicField(this, "devices");
-    __publicField(this, "devicesByUri");
     this.devices = /* @__PURE__ */ new Map();
     this.devicesByUri = /* @__PURE__ */ new Map();
   }
@@ -6365,9 +6695,6 @@ var DeviceDriversImpl = class {
 };
 var LocalDeviceDrivers = class {
   constructor(next) {
-    __publicField(this, "nextDrivers");
-    __publicField(this, "devices");
-    __publicField(this, "devicesByUri");
     this.nextDrivers = next;
     this.devices = /* @__PURE__ */ new Map();
     this.devicesByUri = /* @__PURE__ */ new Map();
@@ -6507,7 +6834,7 @@ var MapDirDescriptors;
   }
   MapDirDescriptors2.isVSCodeFileSystemDescriptor = isVSCodeFileSystemDescriptor;
   function getExtensionLocationKey(descriptor) {
-    return import_vscode7.Uri.joinPath(descriptor.extension.extensionUri, ...getSegments(descriptor.path));
+    return import_vscode8.Uri.joinPath(descriptor.extension.extensionUri, ...getSegments(descriptor.path));
   }
   MapDirDescriptors2.getExtensionLocationKey = getExtensionLocationKey;
   function getMemoryKey(descriptor) {
@@ -6540,7 +6867,7 @@ var MapDirDescriptors;
     }
     for (const descriptor of descriptors) {
       if (descriptor.kind === "workspaceFolder") {
-        const folders = import_vscode7.workspace.workspaceFolders;
+        const folders = import_vscode8.workspace.workspaceFolders;
         if (folders !== void 0) {
           if (folders.length === 1) {
             vscodeFileSystems.push(mapWorkspaceFolder(folders[0], true));
@@ -6569,20 +6896,17 @@ var MapDirDescriptors;
 })(MapDirDescriptors || (MapDirDescriptors = {}));
 var FileSystems = class {
   constructor() {
-    __publicField(this, "contributionIdToUri");
-    __publicField(this, "contributedFileSystems");
-    __publicField(this, "fileSystemDeviceDrivers");
     this.contributionIdToUri = /* @__PURE__ */ new Map();
     this.contributedFileSystems = /* @__PURE__ */ new Map();
     this.fileSystemDeviceDrivers = /* @__PURE__ */ new Map();
     this.parseWorkspaceFolders();
-    import_vscode7.workspace.onDidChangeWorkspaceFolders((event2) => this.handleWorkspaceFoldersChanged(event2));
+    import_vscode8.workspace.onDidChangeWorkspaceFolders((event2) => this.handleWorkspaceFoldersChanged(event2));
     const fileSystems = this.parseFileSystems();
     for (const fileSystem of fileSystems) {
       this.contributedFileSystems.set(fileSystem.id.toString(), fileSystem.mapDir);
       this.contributionIdToUri.set(fileSystem.contributionId, fileSystem.id);
     }
-    import_vscode7.extensions.onDidChange(() => this.handleExtensionsChanged());
+    import_vscode8.extensions.onDidChange(() => this.handleExtensionsChanged());
   }
   async getFileSystem(uri2) {
     const key = uri2.toString();
@@ -6624,7 +6948,7 @@ var FileSystems = class {
         const key = MapDirDescriptors.getVScodeFileSystemKey(descriptor);
         let fs = this.fileSystemDeviceDrivers.get(key.toString());
         if (fs === void 0) {
-          fs = create2(WasiKernel.nextDeviceId(), descriptor.uri, !(import_vscode7.workspace.fs.isWritableFileSystem(descriptor.uri.scheme) ?? true));
+          fs = create3(WasiKernel.nextDeviceId(), descriptor.uri, !(import_vscode8.workspace.fs.isWritableFileSystem(descriptor.uri.scheme) ?? true));
           this.fileSystemDeviceDrivers.set(key.toString(), fs);
         }
         fileSystems.push(fs);
@@ -6633,7 +6957,7 @@ var FileSystems = class {
     }
     if (memoryFileSystems.length > 0) {
       for (const descriptor of memoryFileSystems) {
-        const fs = create4(WasiKernel.nextDeviceId(), descriptor.fileSystem);
+        const fs = create(WasiKernel.nextDeviceId(), descriptor.fileSystem);
         fileSystems.push(fs);
         preOpens.set(descriptor.mountPoint, fs);
       }
@@ -6680,12 +7004,12 @@ var FileSystems = class {
         manage = 2 /* yes */;
       }
     } else if (MapDirDescriptors.isMemoryDescriptor(descriptor)) {
-      result = create4(WasiKernel.nextDeviceId(), descriptor.fileSystem);
+      result = create(WasiKernel.nextDeviceId(), descriptor.fileSystem);
       if (manage === 3 /* default */) {
         manage = 1 /* no */;
       }
     } else if (MapDirDescriptors.isVSCodeFileSystemDescriptor(descriptor)) {
-      result = create2(WasiKernel.nextDeviceId(), descriptor.uri, !(import_vscode7.workspace.fs.isWritableFileSystem(descriptor.uri.scheme) ?? true));
+      result = create3(WasiKernel.nextDeviceId(), descriptor.uri, !(import_vscode8.workspace.fs.isWritableFileSystem(descriptor.uri.scheme) ?? true));
       if (manage === 3 /* default */) {
         manage = 2 /* yes */;
       }
@@ -6701,7 +7025,7 @@ var FileSystems = class {
   }
   parseFileSystems() {
     const result = [];
-    for (const extension of import_vscode7.extensions.all) {
+    for (const extension of import_vscode8.extensions.all) {
       const packageJSON = extension.packageJSON;
       const fileSystems = packageJSON?.contributes?.wasm?.fileSystems;
       if (fileSystems !== void 0) {
@@ -6713,7 +7037,7 @@ var FileSystems = class {
               path: contribution.path,
               mountPoint: contribution.mountPoint
             };
-            const id = import_vscode7.Uri.joinPath(extension.extensionUri, ...getSegments(contribution.path));
+            const id = import_vscode8.Uri.joinPath(extension.extensionUri, ...getSegments(contribution.path));
             result.push({ id, contributionId: contribution.id, mapDir });
           }
         }
@@ -6741,12 +7065,12 @@ var FileSystems = class {
     }
   }
   parseWorkspaceFolders() {
-    const folders = import_vscode7.workspace.workspaceFolders;
+    const folders = import_vscode8.workspace.workspaceFolders;
     if (folders !== void 0) {
       for (const folder of folders) {
         const key = folder.uri.toString();
         if (!this.fileSystemDeviceDrivers.has(key)) {
-          const driver = create2(WasiKernel.nextDeviceId(), folder.uri, !(import_vscode7.workspace.fs.isWritableFileSystem(folder.uri.scheme) ?? true));
+          const driver = create3(WasiKernel.nextDeviceId(), folder.uri, !(import_vscode8.workspace.fs.isWritableFileSystem(folder.uri.scheme) ?? true));
           this.fileSystemDeviceDrivers.set(key, driver);
         }
       }
@@ -6756,7 +7080,7 @@ var FileSystems = class {
     for (const added of event2.added) {
       const key = added.uri.toString();
       if (!this.fileSystemDeviceDrivers.has(key)) {
-        const driver = create2(WasiKernel.nextDeviceId(), added.uri, !(import_vscode7.workspace.fs.isWritableFileSystem(added.uri.scheme) ?? true));
+        const driver = create3(WasiKernel.nextDeviceId(), added.uri, !(import_vscode8.workspace.fs.isWritableFileSystem(added.uri.scheme) ?? true));
         this.fileSystemDeviceDrivers.set(key, driver);
       }
     }
@@ -6771,11 +7095,11 @@ var FileSystems = class {
     const paths2 = ral_default().path;
     const basename = paths2.basename(descriptor.path);
     const dirname = paths2.dirname(descriptor.path);
-    const dirDumpFileUri = import_vscode7.Uri.joinPath(descriptor.extension.extensionUri, dirname, `${basename}.dir.json`);
+    const dirDumpFileUri = import_vscode8.Uri.joinPath(descriptor.extension.extensionUri, dirname, `${basename}.dir.json`);
     try {
-      const content = await import_vscode7.workspace.fs.readFile(dirDumpFileUri);
+      const content = await import_vscode8.workspace.fs.readFile(dirDumpFileUri);
       const dirDump = JSON.parse(ral_default().TextDecoder.create().decode(content));
-      const extensionFS = create3(WasiKernel.nextDeviceId(), extensionUri, dirDump);
+      const extensionFS = create4(WasiKernel.nextDeviceId(), extensionUri, dirDump);
       return extensionFS;
     } catch (error) {
       ral_default().console.error(`Failed to read directory dump file ${dirDumpFileUri.toString()}: ${error}`);
@@ -6800,7 +7124,7 @@ var WasiKernel;
   }
   WasiKernel2.createRootFileSystem = createRootFileSystem;
   WasiKernel2.deviceDrivers = new DeviceDriversImpl();
-  WasiKernel2.console = create(nextDeviceId());
+  WasiKernel2.console = create2(nextDeviceId());
   WasiKernel2.deviceDrivers.add(WasiKernel2.console);
   function createLocalDeviceDrivers() {
     return new LocalDeviceDrivers(WasiKernel2.deviceDrivers);
@@ -6809,452 +7133,9 @@ var WasiKernel;
 })(WasiKernel || (WasiKernel = {}));
 var kernel_default = WasiKernel;
 
-// src/common/terminal.ts
-var import_vscode8 = require("vscode");
-var LineBuffer = class {
-  constructor() {
-    __publicField(this, "offset");
-    __publicField(this, "cursor");
-    __publicField(this, "content");
-    this.offset = 0;
-    this.cursor = 0;
-    this.content = [];
-  }
-  clear() {
-    this.offset = 0;
-    this.cursor = 0;
-    this.content = [];
-  }
-  setContent(content) {
-    this.content = content.split("");
-    this.cursor = this.content.length;
-  }
-  getOffset() {
-    return this.offset;
-  }
-  setOffset(offset) {
-    this.offset = offset;
-  }
-  getLine() {
-    return this.content.join("");
-  }
-  getCursor() {
-    return this.cursor;
-  }
-  isCursorAtEnd() {
-    return this.cursor === this.content.length;
-  }
-  isCursorAtBeginning() {
-    return this.cursor === 0;
-  }
-  insert(value) {
-    for (const char of value) {
-      this.content.splice(this.cursor, 0, char);
-      this.cursor++;
-    }
-  }
-  del() {
-    if (this.cursor === this.content.length) {
-      return false;
-    }
-    this.content.splice(this.cursor, 1);
-    return true;
-  }
-  backspace() {
-    if (this.cursor === 0) {
-      return false;
-    }
-    this.cursor -= 1;
-    this.content.splice(this.cursor, 1);
-    return true;
-  }
-  moveCursorRelative(characters) {
-    const newValue = this.cursor + characters;
-    if (newValue < 0 || newValue > this.content.length) {
-      return false;
-    }
-    this.cursor = newValue;
-    return true;
-  }
-  moveCursorStartOfLine() {
-    if (this.cursor === 0) {
-      return false;
-    }
-    this.cursor = 0;
-    return true;
-  }
-  moveCursorEndOfLine() {
-    if (this.cursor === this.content.length) {
-      return false;
-    }
-    this.cursor = this.content.length;
-    return true;
-  }
-  moveCursorWordLeft() {
-    if (this.cursor === 0) {
-      return false;
-    }
-    let index;
-    if (this.content[this.cursor - 1] === " ") {
-      index = this.cursor - 2;
-      while (index > 0) {
-        if (this.content[index] === " ") {
-          index--;
-        } else {
-          break;
-        }
-      }
-    } else {
-      index = this.cursor;
-    }
-    if (index === 0) {
-      this.cursor = index;
-      return true;
-    }
-    while (index > 0) {
-      if (this.content[index] === " ") {
-        index++;
-        break;
-      } else {
-        index--;
-      }
-    }
-    this.cursor = index;
-    return true;
-  }
-  moveCursorWordRight() {
-    if (this.cursor === this.content.length) {
-      return false;
-    }
-    let index;
-    if (this.content[this.cursor] === " ") {
-      index = this.cursor + 1;
-      while (index < this.content.length) {
-        if (this.content[index] === " ") {
-          index++;
-        } else {
-          break;
-        }
-      }
-    } else {
-      index = this.cursor;
-    }
-    if (index === this.content.length) {
-      this.cursor = index;
-      return true;
-    }
-    while (index < this.content.length) {
-      if (this.content[index] === " ") {
-        break;
-      } else {
-        index++;
-      }
-    }
-    this.cursor = index;
-    return true;
-  }
-};
-var CommandHistory = class {
-  constructor() {
-    __publicField(this, "history");
-    __publicField(this, "current");
-    this.history = [""];
-    this.current = 0;
-  }
-  update(command) {
-    this.history[this.history.length - 1] = command;
-  }
-  markExecuted() {
-    if (this.current !== this.history.length - 1) {
-      this.history[this.history.length - 1] = this.history[this.current];
-    }
-    if (this.history[this.history.length - 1] === this.history[this.history.length - 2]) {
-      this.history.pop();
-    }
-    this.history.push("");
-    this.current = this.history.length - 1;
-  }
-  previous() {
-    if (this.current === 0) {
-      return void 0;
-    }
-    return this.history[--this.current];
-  }
-  next() {
-    if (this.current === this.history.length - 1) {
-      return void 0;
-    }
-    return this.history[++this.current];
-  }
-};
-var _WasmPseudoterminalImpl = class _WasmPseudoterminalImpl {
-  constructor(options = {}) {
-    __publicField(this, "options");
-    __publicField(this, "commandHistory");
-    __publicField(this, "state");
-    __publicField(this, "_onDidClose");
-    __publicField(this, "onDidClose");
-    __publicField(this, "_onDidWrite");
-    __publicField(this, "onDidWrite");
-    __publicField(this, "_onDidChangeName");
-    __publicField(this, "onDidChangeName");
-    __publicField(this, "_onDidCtrlC");
-    __publicField(this, "onDidCtrlC");
-    __publicField(this, "_onAnyKey");
-    __publicField(this, "onAnyKey");
-    __publicField(this, "_onDidChangeState");
-    __publicField(this, "onDidChangeState");
-    __publicField(this, "_onDidCloseTerminal");
-    __publicField(this, "onDidCloseTerminal");
-    __publicField(this, "lines");
-    __publicField(this, "lineBuffer");
-    __publicField(this, "readlineCallback");
-    __publicField(this, "isOpen");
-    __publicField(this, "nameBuffer");
-    __publicField(this, "writeBuffer");
-    __publicField(this, "encoder");
-    __publicField(this, "decoder");
-    this.options = options;
-    this.commandHistory = this.options.history ? new CommandHistory() : void 0;
-    this.state = 3 /* busy */;
-    this._onDidClose = new import_vscode8.EventEmitter();
-    this.onDidClose = this._onDidClose.event;
-    this._onDidWrite = new import_vscode8.EventEmitter();
-    this.onDidWrite = this._onDidWrite.event;
-    this._onDidChangeName = new import_vscode8.EventEmitter();
-    this.onDidChangeName = this._onDidChangeName.event;
-    this._onDidCtrlC = new import_vscode8.EventEmitter();
-    this.onDidCtrlC = this._onDidCtrlC.event;
-    this._onAnyKey = new import_vscode8.EventEmitter();
-    this.onAnyKey = this._onAnyKey.event;
-    this._onDidChangeState = new import_vscode8.EventEmitter();
-    this.onDidChangeState = this._onDidChangeState.event;
-    this._onDidCloseTerminal = new import_vscode8.EventEmitter();
-    this.onDidCloseTerminal = this._onDidCloseTerminal.event;
-    this.encoder = ral_default().TextEncoder.create();
-    this.decoder = ral_default().TextDecoder.create();
-    this.lines = [];
-    this.lineBuffer = new LineBuffer();
-    this.isOpen = false;
-  }
-  get stdio() {
-    return {
-      in: { kind: "terminal", terminal: this },
-      out: { kind: "terminal", terminal: this },
-      err: { kind: "terminal", terminal: this }
-    };
-  }
-  setState(state) {
-    const old = this.state;
-    this.state = state;
-    if (old !== state) {
-      this._onDidChangeState.fire({ old, new: state });
-    }
-  }
-  getState() {
-    return this.state;
-  }
-  setName(name) {
-    if (this.isOpen) {
-      this._onDidChangeName.fire(name);
-    } else {
-      this.nameBuffer = name;
-    }
-  }
-  open() {
-    this.isOpen = true;
-    if (this.nameBuffer !== void 0) {
-      this._onDidChangeName.fire(this.nameBuffer);
-      this.nameBuffer = void 0;
-    }
-    if (this.writeBuffer !== void 0) {
-      for (const item of this.writeBuffer) {
-        this._onDidWrite.fire(item);
-      }
-      this.writeBuffer = void 0;
-    }
-  }
-  close() {
-    this._onDidCloseTerminal.fire();
-  }
-  async read(_maxBytesToRead) {
-    const value = await this.readline();
-    return this.encoder.encode(value);
-  }
-  readline() {
-    if (this.readlineCallback !== void 0) {
-      throw new Error(`Already in readline mode`);
-    }
-    if (this.lines.length > 0) {
-      return Promise.resolve(this.lines.shift());
-    }
-    return new Promise((resolve) => {
-      this.readlineCallback = resolve;
-    });
-  }
-  write(content, encoding) {
-    if (typeof content === "string") {
-      this.writeString(this.replaceNewlines(content));
-      return Promise.resolve();
-    } else {
-      this.writeString(this.getString(content, encoding));
-      return Promise.resolve(content.byteLength);
-    }
-  }
-  writeString(str) {
-    if (this.isOpen) {
-      this._onDidWrite.fire(str);
-    } else {
-      if (this.writeBuffer === void 0) {
-        this.writeBuffer = [];
-      }
-      this.writeBuffer.push(str);
-    }
-  }
-  async prompt(prompt) {
-    await this.write(prompt);
-    this.lineBuffer.setOffset(prompt.length);
-  }
-  handleInput(data) {
-    if (this.state === 1 /* free */) {
-      this._onAnyKey.fire();
-      return;
-    }
-    const previousCursor = this.lineBuffer.getCursor();
-    switch (data) {
-      case "":
-        this.handleInterrupt();
-        break;
-      case "":
-      case "\x1B[C":
-        this.adjustCursor(this.lineBuffer.moveCursorRelative(1), previousCursor, this.lineBuffer.getCursor());
-        break;
-      case "\x1Bf":
-      case "\x1B[1;5C":
-        this.adjustCursor(this.lineBuffer.moveCursorWordRight(), previousCursor, this.lineBuffer.getCursor());
-        break;
-      case "":
-      case "\x1B[D":
-        this.adjustCursor(this.lineBuffer.moveCursorRelative(-1), previousCursor, this.lineBuffer.getCursor());
-        break;
-      case "\x1Bb":
-      case "\x1B[1;5D":
-        this.adjustCursor(this.lineBuffer.moveCursorWordLeft(), previousCursor, this.lineBuffer.getCursor());
-        break;
-      case "":
-      case "\x1B[H":
-        this.adjustCursor(this.lineBuffer.moveCursorStartOfLine(), previousCursor, this.lineBuffer.getCursor());
-        break;
-      case "":
-      case "\x1B[F":
-        this.adjustCursor(this.lineBuffer.moveCursorEndOfLine(), previousCursor, this.lineBuffer.getCursor());
-        break;
-      case "\x1B[A":
-        if (this.commandHistory === void 0) {
-          this.bell();
-        } else {
-          const content = this.commandHistory.previous();
-          if (content !== void 0) {
-            this.eraseLine();
-            this.lineBuffer.setContent(content);
-            this.writeString(content);
-          } else {
-            this.bell();
-          }
-        }
-        break;
-      case "\x1B[B":
-        if (this.commandHistory === void 0) {
-          this.bell();
-        } else {
-          const content = this.commandHistory.next();
-          if (content !== void 0) {
-            this.eraseLine();
-            this.lineBuffer.setContent(content);
-            this.writeString(content);
-          } else {
-            this.bell();
-          }
-        }
-        break;
-      case "\b":
-      case "\x7F":
-        this.lineBuffer.backspace() ? this._onDidWrite.fire("\x1B[D\x1B[P") : this.bell();
-        break;
-      case "\x1B[3~":
-        this.lineBuffer.del() ? this._onDidWrite.fire("\x1B[P") : this.bell();
-        break;
-      case "\r":
-        this.handleEnter();
-        break;
-      default:
-        this.lineBuffer.insert(data);
-        if (!this.lineBuffer.isCursorAtEnd()) {
-          this._onDidWrite.fire("\x1B[@");
-        }
-        this._onDidWrite.fire(data);
-        if (this.commandHistory !== void 0) {
-          this.commandHistory.update(this.lineBuffer.getLine());
-        }
-    }
-  }
-  handleInterrupt() {
-    this._onDidCtrlC.fire();
-    this._onDidWrite.fire("\x1B[31m^C\x1B[0m\r\n");
-    this.lineBuffer.clear();
-    this.lines.length = 0;
-    this.readlineCallback?.("\n");
-    this.readlineCallback = void 0;
-  }
-  handleEnter() {
-    this._onDidWrite.fire("\r\n");
-    const line = this.lineBuffer.getLine();
-    this.lineBuffer.clear();
-    this.lines.push(line);
-    if (this.commandHistory !== void 0) {
-      this.commandHistory.markExecuted();
-    }
-    if (this.readlineCallback !== void 0) {
-      const result = this.lines.shift() + "\n";
-      this.readlineCallback(result);
-      this.readlineCallback = void 0;
-    }
-  }
-  adjustCursor(success, oldCursor, newCursor) {
-    if (!success) {
-      this.bell();
-      return;
-    }
-    const change = oldCursor - newCursor;
-    const code2 = change > 0 ? "D" : "C";
-    const sequence = `\x1B[${code2}`.repeat(Math.abs(change));
-    this._onDidWrite.fire(sequence);
-  }
-  eraseLine() {
-    const cursor = this.lineBuffer.getCursor();
-    this.adjustCursor(true, cursor, 0);
-    this._onDidWrite.fire(`\x1B[0J`);
-  }
-  bell() {
-    this._onDidWrite.fire("\x07");
-  }
-  replaceNewlines(str) {
-    return str.replace(_WasmPseudoterminalImpl.terminalRegExp, (match, m1, m2) => {
-      if (m1) {
-        return m1;
-      } else if (m2) {
-        return "\r\n";
-      } else {
-        return match;
-      }
-    });
-  }
-  getString(bytes, _encoding) {
-    return this.replaceNewlines(this.decoder.decode(bytes.slice()));
-  }
-};
-__publicField(_WasmPseudoterminalImpl, "terminalRegExp", /(\r\n)|(\n)/gm);
-var WasmPseudoterminalImpl = _WasmPseudoterminalImpl;
+// src/common/version.ts
+var version = "0.13.3";
+var version_default = version;
 
 // src/common/api.ts
 var OpenFlags;
@@ -7276,13 +7157,8 @@ var MemoryDescriptor;
 var WasiCoreImpl;
 ((WasiCoreImpl2) => {
   function create8(context, processConstructor, compile) {
-    const version = context.extension.packageJSON?.version;
-    if (typeof version !== "string") {
-      throw new Error(`Failed to determine extension version. Found ${version}`);
-    }
     return {
-      version,
-      versions: { api: 1, extension: version },
+      version: version_default,
       createPseudoterminal(options) {
         return new WasmPseudoterminalImpl(options);
       },
@@ -7320,19 +7196,6 @@ var WasiCoreImpl;
   }
   WasiCoreImpl2.create = create8;
 })(WasiCoreImpl || (WasiCoreImpl = {}));
-var APILoader = class {
-  constructor(context, processConstructor, compile) {
-    __publicField(this, "context");
-    __publicField(this, "processConstructor");
-    __publicField(this, "compile");
-    this.context = context;
-    this.processConstructor = processConstructor;
-    this.compile = compile;
-  }
-  load(_apiVersion) {
-    return WasiCoreImpl.create(this.context, this.processConstructor, this.compile);
-  }
-};
 
 // src/desktop/process.ts
 var import_node_worker_threads = require("worker_threads");
@@ -7480,7 +7343,7 @@ function create7(deviceId, stdin, stdout, stderr) {
         throw new WasiError(Errno.badf);
       }
       const maxBytesToRead = buffers.reduce((prev, current) => prev + current.length, 0);
-      const result = await stdin.read("max", maxBytesToRead);
+      const result = await stdin.read(maxBytesToRead);
       let offset = 0;
       let totalBytesRead = 0;
       for (const buffer of buffers) {
@@ -7571,20 +7434,6 @@ function channel() {
 }
 var WasiProcess = class {
   constructor(programName, options = {}) {
-    __publicField(this, "_state");
-    __publicField(this, "programName");
-    __publicField(this, "options");
-    __publicField(this, "localDeviceDrivers");
-    __publicField(this, "resolveCallback");
-    __publicField(this, "threadIdCounter");
-    __publicField(this, "fileDescriptors");
-    __publicField(this, "environmentService");
-    __publicField(this, "processService");
-    __publicField(this, "preOpenDirectories");
-    __publicField(this, "virtualRootFileSystem");
-    __publicField(this, "_stdin");
-    __publicField(this, "_stdout");
-    __publicField(this, "_stderr");
     this.programName = programName;
     let opt = Object.assign({}, options);
     delete opt.trace;
@@ -7911,7 +7760,6 @@ var WasiProcess = class {
 var NodeServiceConnection = class extends ServiceConnection {
   constructor(wasiService, port, logChannel) {
     super(wasiService, logChannel);
-    __publicField(this, "port");
     this.port = port;
     this.port.on("message", (message) => {
       this.handleMessage(message).catch(ral_default().console.error);
@@ -7924,13 +7772,6 @@ var NodeServiceConnection = class extends ServiceConnection {
 var NodeWasiProcess = class extends WasiProcess {
   constructor(baseUri, programName, module2, memory, options = {}) {
     super(programName, options);
-    __publicField(this, "baseUri");
-    __publicField(this, "module");
-    __publicField(this, "importsMemory");
-    __publicField(this, "memoryDescriptor");
-    __publicField(this, "memory");
-    __publicField(this, "mainWorker");
-    __publicField(this, "threadWorkers");
     this.baseUri = baseUri;
     this.threadWorkers = /* @__PURE__ */ new Map();
     this.module = module2 instanceof WebAssembly.Module ? Promise.resolve(module2) : module2;
@@ -8026,7 +7867,7 @@ var NodeWasiProcess = class extends WasiProcess {
 // src/desktop/extension.ts
 ril_default.install();
 async function activate(context) {
-  return new APILoader(context, NodeWasiProcess, async (source) => {
+  return WasiCoreImpl.create(context, NodeWasiProcess, async (source) => {
     const bits = await import_vscode13.workspace.fs.readFile(source);
     return WebAssembly.compile(bits);
   });
