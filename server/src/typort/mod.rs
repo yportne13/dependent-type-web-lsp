@@ -71,7 +71,26 @@ pub enum Tm {
     },
     StructType(Span<String>, Vec<Ty>, Vec<(Span<String>, Tm)>),
     StructData(Span<String>, Vec<Ty>, Vec<(Span<String>, Tm)>),
-    Match(Box<Tm>, Vec<(Pattern, Tm)>),
+    Match(Box<Tm>, Vec<(PatternDetail, Tm)>),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PatternDetail {
+    Any(Span<()>),
+    Bind(Span<String>),
+    Con(Span<String>, Vec<PatternDetail>),
+}
+
+impl PatternDetail {
+    fn bind_count(&self) -> u32 {
+        match self {
+            PatternDetail::Any(_) => 0,
+            PatternDetail::Bind(_) => 1,
+            PatternDetail::Con(_, pattern_details) => {
+                pattern_details.iter().map(|pattern_detail| pattern_detail.bind_count()).sum::<u32>()
+            },
+        }
+    }
 }
 
 impl std::fmt::Display for Tm {
@@ -206,7 +225,7 @@ pub enum Val {
     },
     StructType(Span<String>, Vec<Val>, Vec<(Span<String>, Val)>),
     StructData(Span<String>, Vec<Val>, Vec<(Span<String>, Val)>),
-    Match(Box<Val>, Env, Vec<(Pattern, Tm)>),
+    Match(Box<Val>, Env, Vec<(PatternDetail, Tm)>),
 }
 
 type VTy = Val;
@@ -569,6 +588,7 @@ pub fn run(input: &str, path_id: u32) -> Result<String, Error> {
 
 #[test]
 fn test2() {
+    //unsafe { backtrace_on_stack_overflow::enable() };
     let input = r#"
 enum Bool {
     true
@@ -608,6 +628,11 @@ def add(x: Nat, y: Nat): Nat =
         case zero => y
         case succ(n) => succ (add n y)
     }
+
+def mul(x: Nat, y: Nat) = match x {
+    case zero => zero
+    case succ(n) => add y (mul n y)
+}
 
 def four = add two two
 
@@ -673,9 +698,13 @@ struct Bits {
 
 def get_name(x: Bits) = x.name
 
+def three = add two (succ zero)
+
+def ck(x: Nat): Eq (add x x) (mul two x) = refl
+
 "#;
     println!("{}", run(input, 0).unwrap());
-    let input = r#"
+    /*let input = r#"
 enum Nat {
     zero
     succ(Nat)
@@ -710,7 +739,7 @@ def test2_2: HighLvl3[HighLvl[Nat]] = new HighLvl3(zero, zero)
 
 def test2_3: Type 2 = HighLvl3[HighLvl[Nat]]
 "#;
-    println!("{}", run(input, 0).unwrap());
+    println!("{}", run(input, 0).unwrap());*/
     println!("success");
 }
 

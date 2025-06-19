@@ -2,10 +2,10 @@ use std::{cmp::max, collections::HashMap};
 
 use colored::Colorize;
 
-use crate::{list::List, parser_lib::Span, typort::{pattern_match::Compiler, MetaEntry}};
+use crate::{list::List, parser::syntax::Pattern, parser_lib::Span, typort::{pattern_match::Compiler, MetaEntry}};
 
 use super::{
-    cxt::NameOrigin, empty_span, lvl2ix, unification::PartialRenaming, Closure, Cxt, DeclTm, Error, Infer, Ix, Tm, VTy, Val
+    cxt::NameOrigin, empty_span, lvl2ix, unification::PartialRenaming, Closure, Cxt, DeclTm, Error, Infer, Ix, PatternDetail, Tm, VTy, Val
 };
 
 use crate::parser::syntax::{Decl, Either, Icit, Raw};
@@ -560,7 +560,7 @@ impl Infer {
                     let t = clause
                         .into_iter()
                         .enumerate()
-                        .map(|(idx, x)| (x.0, tree.get(&idx).unwrap().clone()))
+                        .map(|(idx, x)| (pattern_to_detail(cxt, x.0), tree.get(&idx).unwrap().clone()))
                         .collect();
                     Ok((
                         Tm::Match(Box::new(tm), t),
@@ -662,6 +662,23 @@ impl Infer {
                     .collect::<Result<(Vec<_>, Vec<_>), _>>()?;
                 Ok((Tm::StructData(name.clone(), new_params, new_fields_data), Val::StructType(name, params_type, new_fields_type)))
             }
+        }
+    }
+}
+
+fn pattern_to_detail(cxt: &Cxt, pattern: Pattern) -> PatternDetail {
+    //println!("pattern_to_detail: {:?}", pattern);
+    match pattern {
+        Pattern::Any(name) => PatternDetail::Any(name),
+        Pattern::Con(name, params) if params.is_empty() && !cxt.src_names.contains_key(&name.data) => {
+            PatternDetail::Bind(name)
+        },
+        Pattern::Con(name, params) => {
+            let new_params = params
+                .into_iter()
+                .map(|x| pattern_to_detail(cxt, x))
+                .collect();
+            PatternDetail::Con(name, new_params)
         }
     }
 }

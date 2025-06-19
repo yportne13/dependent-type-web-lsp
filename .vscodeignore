@@ -6,3 +6,4 @@ tsconfig.json
 *.vsix
 sample
 .gitignore
+.github/

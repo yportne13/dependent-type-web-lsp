@@ -589,11 +589,24 @@ impl Infer {
                         return Err(UnifyError);
                     }
 
-                    // 3b. 在扩展的上下文中合一分支的 body。这是最关键的一步。
-                    // 我们需要模拟进入 case 分支的作用域。
-                    let num_binders = p1.count_binders();
-                
-                    eprintln!("{:?} == {:?} ?\n{} {}", clos1, clos2, env1.iter().count(), env2.iter().count())
+                    //eprintln!("{:?} == {:?} ?\n{} {}", clos1, clos2, env1.iter().count(), env2.iter().count())
+                    let count = p1.bind_count();
+
+                    let env1 = (0..count).fold(env1.clone(), |env, idx| {
+                        env.prepend(Val::vvar(cxt.lvl + idx))
+                    });
+
+                    let env2 = (0..count).fold(env2.clone(), |env, idx| {
+                        env.prepend(Val::vvar(cxt.lvl + idx))
+                    });
+
+                    //let body1_val = self.eval(&bind_env, clos1.clone());
+                    //let body2_val = self.eval(&bind_env, clos2.clone());
+                    let body1_val = self.eval(&env1, clos1.clone());
+                    let body2_val = self.eval(&env2, clos2.clone());
+
+                    eprintln!("   {:?}\n== {:?}", body1_val, body2_val);
+                    self.unify(l, cxt, body1_val, body2_val)?;
                 }
 
                 // 如果所有检查都通过，则合一成功
