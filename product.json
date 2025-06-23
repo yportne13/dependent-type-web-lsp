@@ -25,23 +25,23 @@
 	"additionalBuiltinExtensions": [
 	  {
 		"scheme": "https",
-		"authority": "yportne13.github.io",
-		"path": "/dependent-type-web-lsp/myExt"
+		"authority": "dependent-type-web-lsp.pages.dev",
+		"path": "/myExt"
 	  },
 	  {
 		"scheme": "https",
-		"authority": "yportne13.github.io",
-		"path": "/dependent-type-web-lsp/wasm-language-server"
+		"authority": "dependent-type-web-lsp.pages.dev",
+		"path": "/wasm-language-server"
 	  },
 	  {
 		"scheme": "https",
-		"authority": "yportne13.github.io",
-		"path": "/dependent-type-web-lsp/wasm-wasi-core"
+		"authority": "dependent-type-web-lsp.pages.dev",
+		"path": "/wasm-wasi-core"
 	  },
 	  {
 		"scheme": "https",
-		"authority": "yportne13.github.io",
-		"path": "/dependent-type-web-lsp/vim"
+		"authority": "dependent-type-web-lsp.pages.dev",
+		"path": "/vim"
 	  }
 	]
   }
