@@ -23,3 +23,4 @@ unzip vim.vsix -d sample/vim-bak
 mv sample/vim-bak/extension sample/vim
 mv sample/vim-bak/extension.vsixmanifest sample/vim/.vsixmanifest
 rm -rf sample/vim-bak
+mv sample/node_modules sample/depend
