@@ -11,13 +11,33 @@ use TokenKind::*;
 //use super::empty_span;
 
 pub fn parser(input: &str, id: u32) -> Option<Vec<Decl>> {
+    let input = preprocess(input);
     super::parser::lex::lex(Span {
-        data: input,
+        data: &input,
         start_offset: 0,
         end_offset: input.len() as u32,
         path_id: id,
     })
     .and_then(|(_, ret)| p_decl.many1_sep(kw(EndLine)).parse(&ret).map(|x| x.1))
+}
+
+pub fn preprocess(s: &str) -> String {
+    let s = s.split("/*")
+        .map(|x| {
+            x.split_once("*/")
+                .map(|(a, b)| a.replace(|c: char| !c.is_whitespace(), " ") + "  " + b)
+                .unwrap_or(x.to_owned())
+        })
+        .reduce(|a, b| a + "  " + &b)
+        .unwrap_or(s.to_owned());
+    s.lines()
+        .map(|x| {
+            x.split_once("//")
+                .map(|(a, b)| a.to_owned() + "  " + &b.replace(|c: char| !c.is_whitespace(), " "))
+                .unwrap_or(x.to_owned())
+        })
+        .reduce(|a, b| a + "\n" + &b)
+        .unwrap_or(s.to_owned())
 }
 
 macro_rules! T {

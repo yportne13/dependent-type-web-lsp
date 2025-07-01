@@ -605,7 +605,7 @@ impl Infer {
                     let body1_val = self.eval(&env1, clos1.clone());
                     let body2_val = self.eval(&env2, clos2.clone());
 
-                    eprintln!("   {:?}\n== {:?}", body1_val, body2_val);
+                    eprintln!("   {:?}\n== {:?}\n\n{:?}", body1_val, body2_val, self.unify(l, cxt, body1_val.clone(), body2_val.clone()));
                     self.unify(l, cxt, body1_val, body2_val)?;
                 }
 

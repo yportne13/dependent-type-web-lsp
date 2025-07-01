@@ -326,14 +326,14 @@ impl LanguageServer for Backend {
             let offset = position_to_offset(position, rope)?;
             semantic.iter()
                 .flat_map(|x| match x {
-                    DeclTm::Def { name, typ, body } => Some((name, typ, body)),
+                    DeclTm::Def { name, typ_pretty, body_pretty, .. } => Some((name, typ_pretty, body_pretty)),
                     _ => None
                 })
                 .find(|x| x.0.contains(offset))
                 .and_then(|x| Some(Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
-                        value: format!("{:?}\n\n{:?}", x.1, x.2),
+                        value: format!("{}\n\n{}", x.1, x.2),
                     }),
                     range: Some(Range::new(
                         offset_to_position(x.0.start_offset as usize, rope)?,
@@ -676,6 +676,7 @@ struct TextDocumentItem<'a> {
 
 impl Backend {
     fn on_change(&mut self, params: TextDocumentItem<'_>) {
+        let start_all = std::time::Instant::now();
         dbg!(&params.version);
         let rope = ropey::Rope::from_str(params.text);
         self.document_map
@@ -684,13 +685,16 @@ impl Backend {
             .copied()
             .unwrap_or(self.document_id.len() as u32);
         self.document_id.insert(params.uri.to_string(), now_id);
+        let start = std::time::Instant::now();
         if let Some(ast) = parser(params.text, now_id) {
+            eprintln!("parser {:?}", start.elapsed().as_secs_f32());
             let mut err_collect = vec![];
             self.ast_map.insert(params.uri.to_string(), ast.clone());
             let mut infer = Infer::new();
             let mut terms = vec![];
             let mut cxt = Cxt::new();
             let mut ret = String::new();
+            let start = std::time::Instant::now();
             for tm in ast {
                 match infer.infer(&cxt, tm.clone()) {
                     Ok((x, _, new_cxt)) => {
@@ -707,6 +711,7 @@ impl Backend {
                     ret += "\n";
                 }*/
             }
+            eprintln!("infer {:?}", start.elapsed().as_secs_f32());
             self.type_map.insert(params.uri.to_string(), terms);
             eprintln!("{:?}", err_collect);
             let diag = err_collect
@@ -730,6 +735,7 @@ impl Backend {
                         Position { line: 0, character: 1 },
                     ), "parse error".to_owned())], params.version);
         }
+        eprintln!("change {:?}", start_all.elapsed().as_secs_f32());
     }
 }
 

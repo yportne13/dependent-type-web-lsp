@@ -5,7 +5,7 @@ use colored::Colorize;
 use crate::{list::List, parser::syntax::Pattern, parser_lib::Span, typort::{pattern_match::Compiler, MetaEntry}};
 
 use super::{
-    cxt::NameOrigin, empty_span, lvl2ix, unification::PartialRenaming, Closure, Cxt, DeclTm, Error, Infer, Ix, PatternDetail, Tm, VTy, Val
+    cxt::NameOrigin, empty_span, lvl2ix, pretty::pretty_tm, unification::PartialRenaming, Closure, Cxt, DeclTm, Error, Infer, Ix, PatternDetail, Tm, VTy, Val
 };
 
 use crate::parser::syntax::{Decl, Either, Icit, Raw};
@@ -187,7 +187,7 @@ impl Infer {
                 let bod = params.iter().rev().fold(body.clone(), |a, b| {
                     Raw::Lam(b.0.clone(), Either::Icit(b.2), Box::new(a))
                 });
-                let (ret_cxt, vty, vt) = {
+                let (ret_cxt, vty, vt, vtyp_pretty, vt_pretty) = {
                     let (typ_tm, _) = self.check_universe(ret_cxt, typ)?;
                     let vtyp = self.eval(&ret_cxt.env, typ_tm.clone());
                     //println!("------------------->");
@@ -196,6 +196,8 @@ impl Infer {
                     let fake_cxt = ret_cxt.fake_bind(name.clone(), typ_tm.clone(), vtyp.clone());
                     self.global.insert(cxt.lvl, Val::vvar(cxt.lvl + 1919810));
                     let t_tm = self.check(&fake_cxt, bod, vtyp.clone())?;
+                    let vtyp_pretty = pretty_tm(0, ret_cxt.names(), &self.nf(&ret_cxt.env, typ_tm.clone()));
+                    let vt_pretty = pretty_tm(0, fake_cxt.names(), &self.nf(&fake_cxt.env, t_tm.clone()));
                     //println!("begin vt {}", "------".green());
                     let vt = self.eval(&fake_cxt.env, t_tm.clone());
                     self.global.insert(cxt.lvl, vt.clone());
@@ -203,6 +205,8 @@ impl Infer {
                         ret_cxt.define(name.clone(), t_tm, vt.clone(), typ_tm, vtyp.clone()),
                         vtyp,
                         vt,
+                        vtyp_pretty,
+                        vt_pretty,
                     )
                 };
                 Ok((
@@ -210,6 +214,8 @@ impl Infer {
                         name: name.clone(),
                         typ: vty,
                         body: vt,
+                        typ_pretty: vtyp_pretty,
+                        body_pretty: vt_pretty,
                         /*params: param,
                         ret_type: result_u,
                         body: body_u,*/

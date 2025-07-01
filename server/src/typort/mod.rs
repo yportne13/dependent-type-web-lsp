@@ -12,6 +12,7 @@ pub mod elaboration;
 mod pattern_match;
 mod syntax;
 mod unification;
+mod pretty;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct MetaVar(u32);
@@ -37,6 +38,8 @@ pub enum DeclTm {
         name: Span<String>,
         typ: Val,
         body: Val,
+        typ_pretty: String,
+        body_pretty: String,
         /*params: Vec<(Span<String>, Tm, Icit)>,
         ret_type: Tm,
         body: Tm,*/
@@ -571,8 +574,13 @@ impl Infer {
 }
 
 pub fn run(input: &str, path_id: u32) -> Result<String, Error> {
+    //let start = std::time::Instant::now();
     let mut infer = Infer::new();
+    //eprintln!("infer {:?}", start.elapsed().as_secs_f32());
+    //let start = std::time::Instant::now();
     let ast = crate::parser::parser(input, path_id).unwrap();
+    //eprintln!("parser {:?}", start.elapsed().as_secs_f32());
+    //let start = std::time::Instant::now();
     let mut cxt = Cxt::new();
     let mut ret = String::new();
     for tm in ast {
@@ -583,6 +591,7 @@ pub fn run(input: &str, path_id: u32) -> Result<String, Error> {
             ret += "\n";
         }
     }
+    //eprintln!("infer {:?}", start.elapsed().as_secs_f32());
     Ok(ret)
 }
 
@@ -700,7 +709,10 @@ def get_name(x: Bits) = x.name
 
 def three = add two (succ zero)
 
-def ck(x: Nat): Eq (add x x) (mul two x) = refl
+def ck(x: Nat): Eq (add x x) (mul two x) = match x {
+    case zero => refl
+    case succ(n) => refl
+}
 
 "#;
     println!("{}", run(input, 0).unwrap());
