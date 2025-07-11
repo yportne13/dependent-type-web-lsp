@@ -501,7 +501,7 @@ impl Infer {
                 self.unify(l, cxt, *a.clone(), *a_prime.clone())?;
                 self.unify(
                     l + 1,
-                    cxt,
+                    &cxt.bind(x.clone(), self.quote(cxt.lvl, *a.clone()), *a.clone()),
                     self.closure_apply(&b, Val::vvar(l)),
                     self.closure_apply(&b_prime, Val::vvar(l)),
                 )
@@ -557,12 +557,12 @@ impl Infer {
                 }
                 Ok(())
             }
-            (Val::Sum(_, _, _), Val::Rigid(_, _)) => {
+            /*(Val::Sum(_, _, _), Val::Rigid(_, _)) => {
                 self.unify(l, cxt, t, self.eval(&cxt.env, self.quote(cxt.lvl, u)))
             }
             (Val::Rigid(_, _), Val::Sum(_, _, _)) => {
                 self.unify(l, cxt, self.eval(&cxt.env, self.quote(cxt.lvl, t)), u)
-            }
+            }*/
             (Val::StructType(a, params_a, _), Val::StructType(b, params_b, _)) if a.data == b.data => {
                 // params_a.len() always equal to params_b.len()?
                 for (a, b) in params_a.iter().zip(params_b.iter()) {
@@ -592,12 +592,14 @@ impl Infer {
                     //eprintln!("{:?} == {:?} ?\n{} {}", clos1, clos2, env1.iter().count(), env2.iter().count())
                     let count = p1.bind_count();
 
+                    let lvl1 = Lvl(env1.iter().count() as u32);
+                    let lvl2 = Lvl(env2.iter().count() as u32);
                     let env1 = (0..count).fold(env1.clone(), |env, idx| {
-                        env.prepend(Val::vvar(cxt.lvl + idx))
+                        env.prepend(Val::vvar(lvl1 + idx))
                     });
 
                     let env2 = (0..count).fold(env2.clone(), |env, idx| {
-                        env.prepend(Val::vvar(cxt.lvl + idx))
+                        env.prepend(Val::vvar(lvl2 + idx))
                     });
 
                     //let body1_val = self.eval(&bind_env, clos1.clone());

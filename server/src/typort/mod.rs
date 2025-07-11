@@ -1,6 +1,6 @@
 use colored::Colorize;
 use cxt::Cxt;
-use crate::parser::syntax::{Either, Icit, Pattern, Raw};
+use crate::{parser::syntax::{Either, Icit, Pattern, Raw}, typort::pretty::pretty_tm};
 use pattern_match::{Compiler, DecisionTree};
 use syntax::{Pruning, close_ty};
 
@@ -563,9 +563,9 @@ impl Infer {
                 //println!("{:?} == {:?}", t, t_prime);
                 //println!("{:?}", self.eval(&cxt.env, self.quote(cxt.lvl, t_prime.clone())));
                 let err = format!(
-                    "can't unify\n      find: {}\n  expected: {}",
-                    self.quote(cxt.lvl, t),
-                    self.quote(cxt.lvl, t_prime)
+                    "can't unify\n  expected: {}\n      find: {}",
+                    pretty_tm(0, cxt.names(), &self.quote(cxt.lvl, t)),
+                    pretty_tm(0, cxt.names(), &self.quote(cxt.lvl, t_prime)),
                 );
                 Error(span.map(|_| err.clone()))
                 //Error(format!("can't unify {:?} == {:?}", t, t_prime))
