@@ -162,6 +162,33 @@ impl Infer {
             // Handle holes
             (Raw::Hole, a) => Ok(self.fresh_meta(cxt, a)),
 
+            (Raw::Match(expr, clause), expected) => {
+                let expr_span = expr.to_span();
+                let (tm, typ) = self.infer_expr(cxt, *expr)?;
+                let mut compiler = Compiler::new();
+                compiler.ret_type = Some(expected);
+                let (ret, error) = compiler.compile(self, tm.clone(), typ, &clause, cxt)?;
+                if !error.is_empty() {
+                    Err(Error(expr_span.map(|_| format!("{error:?}"))))
+                } else {
+                    let tree = ret
+                        .iter()
+                        .map(|x| (x.1, x.0.clone()))
+                        .collect::<HashMap<_, _>>();
+                    let t = clause
+                        .into_iter()
+                        .enumerate()
+                        .map(|(idx, x)| (pattern_to_detail(cxt, x.0), tree.get(&idx).unwrap().clone()))
+                        .collect();
+                    /*if let Some(ret_type) = compiler.ret_type.clone() {
+                        println!("get match ret: {:?}", ret_type);
+                    }*/
+                    Ok(
+                        Tm::Match(Box::new(tm), t)
+                    ) //if there is any posible that has no return type?
+                }
+            }
+
             // General case: infer type and unify
             (t, expected) => {
                 let t_span = t.to_span();
@@ -551,29 +578,7 @@ impl Infer {
 
             Raw::LiteralIntro(literal) => Ok((Tm::LiteralIntro(literal), Val::LiteralType)),
 
-            Raw::Match(expr, clause) => {
-                let expr_span = expr.to_span();
-                let (tm, typ) = self.infer_expr(cxt, *expr)?;
-                let mut compiler = Compiler::new();
-                let (ret, error) = compiler.compile(self, tm.clone(), typ, &clause, cxt)?;
-                if !error.is_empty() {
-                    Err(Error(expr_span.map(|_| format!("{error:?}"))))
-                } else {
-                    let tree = ret
-                        .iter()
-                        .map(|x| (x.1, x.0.clone()))
-                        .collect::<HashMap<_, _>>();
-                    let t = clause
-                        .into_iter()
-                        .enumerate()
-                        .map(|(idx, x)| (pattern_to_detail(cxt, x.0), tree.get(&idx).unwrap().clone()))
-                        .collect();
-                    Ok((
-                        Tm::Match(Box::new(tm), t),
-                        compiler.ret_type.unwrap_or(Val::U(0)),
-                    )) //if there is any posible that has no return type?
-                }
-            }
+            Raw::Match(expr, _) => Err(Error(expr.to_span().map(|_| "cannot infer match".to_owned()))),
 
             Raw::Sum(name, params, cases) => {
                 let mut universe = 0;
