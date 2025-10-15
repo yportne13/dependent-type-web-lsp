@@ -705,12 +705,12 @@ enum Bool {
 
 enum Nat {
     zero
-    succ(Nat)
+    succ(x: Nat)
 }
 
 enum List[A] {
     nil
-    cons(A, List[A])
+    cons(head: A, tail: List[A])
 }
 
 def listid(x: List[Bool]): List[Bool] = x
@@ -737,7 +737,7 @@ def add(x: Nat, y: Nat): Nat =
         case succ(n) => succ (add n y)
     }
 
-def mul(x: Nat, y: Nat) = match x {
+def mul(x: Nat, y: Nat): Nat = match x {
     case zero => zero
     case succ(n) => add y (mul n y)
 }

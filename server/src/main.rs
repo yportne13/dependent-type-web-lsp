@@ -1,6 +1,7 @@
 #![feature(pattern)]
 mod parser_lib;
 mod list;
+mod bimap;
 pub mod parser;
 mod typort;
 //pub mod completion;

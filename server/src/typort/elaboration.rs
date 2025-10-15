@@ -2,13 +2,18 @@ use std::{cmp::max, collections::HashMap};
 
 use colored::Colorize;
 
-use crate::{list::List, parser::syntax::Pattern, parser_lib::Span, typort::{pattern_match::Compiler, MetaEntry}};
+use crate::{list::List, parser_lib::Span};
+
+use crate::parser::syntax::{Decl, Either, Icit, Raw, Pattern};
 
 use super::{
-    cxt::NameOrigin, empty_span, lvl2ix, pretty::pretty_tm, unification::PartialRenaming, Closure, Cxt, DeclTm, Error, Infer, Ix, PatternDetail, Tm, VTy, Val
+    Closure, Cxt, DeclTm, Error, Infer, Tm, VTy, Val,
+    empty_span, lvl2ix,
+    pattern_match::Compiler, MetaEntry,
+    pretty::pretty_tm,
+    PatternDetail,
+    unification::PartialRenaming,
 };
-
-use crate::parser::syntax::{Decl, Either, Icit, Raw};
 
 impl Infer {
     fn insert_go(&mut self, cxt: &Cxt, t: Tm, va: Val) -> (Tm, VTy) {
@@ -67,6 +72,53 @@ impl Infer {
     ) -> Result<(Tm, VTy), Error> {
         act.and_then(|(t, va)| self.insert_until_go(cxt, name, t, va))
     }
+    pub fn check_pm_final(&mut self, cxt: &Cxt, t: Raw, a: Val, ori: Val) -> Result<(Tm, Cxt), Error> {
+        let t_span = t.to_span();
+        let x = self.infer_expr(cxt, t);
+        let (t_inferred, inferred_type) = self.insert(cxt, x)?;
+        let new_cxt = self.unify_pm(cxt, a, inferred_type, t_span)?;
+        let new_cxt = self.unify_pm(&new_cxt, ori, self.eval(&new_cxt.env, t_inferred.clone()), t_span)?;
+        Ok((t_inferred, new_cxt))
+    }
+    pub fn check_pm(&mut self, cxt: &Cxt, t: Raw, a: Val) -> Result<(Tm, Cxt), Error> {
+        let t_span = t.to_span();
+        let x = self.infer_expr(cxt, t);
+        let (t_inferred, inferred_type) = self.insert(cxt, x)?;
+        let new_cxt = self.unify_pm(cxt, a, inferred_type, t_span)?;
+        Ok((t_inferred, new_cxt))
+    }
+    fn unify_pm(&mut self, cxt: &Cxt, t: Val, t_prime: Val, t_span: Span<()>) -> Result<Cxt, Error> {
+        //println!("  {}", self.meta.len());
+        //println!("{:?} == {:?}", t, t_prime);
+        match (self.force(t), self.force(t_prime)) {
+            (Val::Rigid(x, sp), v) if sp.is_empty() => { 
+                Ok(cxt.update_cxt(self, x, v))
+            }
+            (v, Val::Rigid(x, sp)) if sp.is_empty() => { 
+                Ok(cxt.update_cxt(self, x, v))
+            }
+            (
+                //Val::SumCase { case_name: name1, datas: d1, .. },
+                //Val::SumCase { case_name: name2, datas: d2, .. },
+                Val::Sum(name1, d1, ..),
+                Val::Sum(name2, d2, ..),
+            ) => {
+                if name1 == name2 {
+                    let mut cxt = cxt.clone();
+                    for (x, y) in d1.iter().zip(d2.iter()) {
+                        cxt = self.unify_pm(&cxt, x.1.clone(), y.1.clone(), t_span)?;
+                    }
+                    Ok(cxt)
+                } else {
+                    Err(Error(t_span.map(|_| "".to_string())))
+                }
+            }
+            (u, v) => {
+                self.unify_catch(cxt, u, v, t_span)
+                    .map(|_| cxt.clone())
+            }
+        }
+    }
     pub fn check_universe(&mut self, cxt: &Cxt, t: Raw) -> Result<(Tm, u32), Error> {
         let t_span = t.to_span();
         let x = self.infer_expr(cxt, t);
@@ -111,7 +163,7 @@ impl Infer {
                     self.meta[m.0 as usize] = MetaEntry::Solved(solution, mty);
 
                     Ok((t_inferred, 0))
-                    //Err(Error(t_span.map(|_| format!("when check universe, get pren {}", pren.dom.0))))
+                    //Err(Error(format!("when check universe, get pren {}", pren.dom.0)))
                 }
             }
             _ => Err(Error(t_span.map(|_| format!("expected universe, got {:?}", inferred_type)))),
@@ -165,9 +217,8 @@ impl Infer {
             (Raw::Match(expr, clause), expected) => {
                 let expr_span = expr.to_span();
                 let (tm, typ) = self.infer_expr(cxt, *expr)?;
-                let mut compiler = Compiler::new();
-                compiler.ret_type = Some(expected);
-                let (ret, error) = compiler.compile(self, tm.clone(), typ, &clause, cxt)?;
+                let mut compiler = Compiler::new(expected);
+                let (ret, error) = compiler.compile(self, typ, &clause, cxt, self.eval(&cxt.env, tm.clone()))?;
                 if !error.is_empty() {
                     Err(Error(expr_span.map(|_| format!("{error:?}"))))
                 } else {
@@ -220,7 +271,7 @@ impl Infer {
                     //println!("------------------->");
                     //println!("{:?}", vtyp);
                     //println!("-------------------<");
-                    let fake_cxt = ret_cxt.fake_bind(name.clone(), typ_tm.clone(), vtyp.clone());
+                    let fake_cxt = ret_cxt.fake_bind(name.clone(), vtyp.clone());
                     self.global.insert(cxt.lvl, Val::vvar(cxt.lvl + 1919810));
                     let t_tm = self.check(&fake_cxt, bod, vtyp.clone())?;
                     let vtyp_pretty = pretty_tm(0, ret_cxt.names(), &self.nf(&ret_cxt.env, typ_tm.clone()));
@@ -270,13 +321,44 @@ impl Infer {
                 }
                 for case in cases.iter() {
                     for c in case.1.iter() {
-                        if let Ok((_, lvl)) = self.check_universe(cxt, c.clone()) {
+                        if let Ok((_, lvl)) = self.check_universe(cxt, c.1.clone()) {
                             universe_lvl = max(lvl, universe_lvl);
                         }
                     }
                 }
-                let new_params: Vec<_> = params.iter().map(|x| Raw::Var(x.0.clone())).collect();
-                let sum = Raw::Sum(name.clone(), new_params.clone(), cases.clone());
+                let new_params: Vec<_> = params
+                    .iter()
+                    .map(|x| (x.0.clone(), x.2, Raw::Var(x.0.clone())))
+                    .collect();
+                let default_ret = params
+                    .iter()
+                    .filter(|x| x.2 == Icit::Impl)
+                    .rev()
+                    .fold(Raw::Var(name.clone()), |ret, x| {
+                        Raw::App(Box::new(ret), Box::new(Raw::Var(x.0.clone())), Either::Icit(x.2))
+                    });
+                let new_cases = cases
+                    .clone()
+                    .into_iter()
+                    .map(|(case_name, p, bind)| (
+                        case_name,
+                        params
+                            .iter()
+                            .filter(|x| x.2 == Icit::Impl)
+                            .cloned()
+                            .chain(p)
+                            .rev()
+                            .fold(bind.unwrap_or(default_ret.clone()), |ret, x| {
+                                Raw::Pi(x.0.clone(), x.2, Box::new(x.1.clone()), Box::new(ret))
+                            })
+                    ))//TODO: need to check the basic ret is this sum type or not
+                    .collect::<Vec<_>>();
+                let sum = Raw::Sum(
+                    name.clone(),
+                    new_params.clone(),
+                    new_cases.iter().map(|x| x.0.clone()).collect(),
+                    universe_lvl,
+                );
                 let typ = params.iter().rev().fold(Raw::U(universe_lvl), |a, b| {
                     Raw::Pi(b.0.clone(), b.2, Box::new(b.1.clone()), Box::new(a))
                 });
@@ -286,113 +368,53 @@ impl Infer {
                 let mut cxt = {
                     let (typ_tm, _) = self.check_universe(cxt, typ)?;
                     let vtyp = self.eval(&cxt.env, typ_tm.clone());
-                    let fake_cxt = cxt.bind(name.clone(), typ_tm.clone(), vtyp.clone());
+                    let fake_cxt = cxt.fake_bind(name.clone(), vtyp.clone());
+                    self.global.insert(cxt.lvl, Val::vvar(cxt.lvl + 1919810));
                     let t_tm = self.check(&fake_cxt, bod, vtyp.clone())?;
                     let vt = self.eval(&fake_cxt.env, t_tm.clone());
+                    self.global.insert(cxt.lvl, vt.clone());
                     cxt.define(name.clone(), t_tm, vt, typ_tm, vtyp)
                 };
-                for c in cases.clone() {
-                    let typ =
-                        params
+                for (c, typ) in cases.iter().zip(new_cases.clone().into_iter()) {
+                    let body_ret_type = Raw::SumCase {
+                        typ: Box::new(c.2.clone().unwrap_or(default_ret.clone())),
+                        case_name: c.0.clone(),
+                        datas: /*params
                             .iter()
-                            .cloned()
-                            .chain(c.1.iter().enumerate().map(|(idx, x)| {
-                                (empty_span(format!("_{idx}")), x.clone(), Icit::Expl)
-                            }))
-                            .rev()
-                            .fold(sum.clone(), |a, b| {
-                                Raw::Pi(b.0, b.2, Box::new(b.1), Box::new(a))
-                            });
+                            .map(|x| (x.0.clone(), Icit::Impl))*/
+                            //.chain(
+                                c.1.iter()
+                                    .map(|(name, _, icit)| (name.clone(), *icit))
+                            //)
+                            .map(|x| (x.0.clone(), Raw::Var(x.0), x.1))
+                            .collect(),
+                    };
                     let bod =
                         params
                             .iter()
+                            .filter(|x| match x.2 {
+                                Icit::Impl => true,
+                                Icit::Expl => false,
+                            })
                             .cloned()
-                            .chain(c.1.iter().enumerate().map(|(idx, x)| {
+                            .chain(c.1.clone().into_iter()/*.enumerate().map(|(idx, x)| {
                                 (empty_span(format!("_{idx}")), x.clone(), Icit::Expl)
-                            }))
+                            })*/)
                             .rev()
                             .fold(
-                                Raw::SumCase {
-                                    sum_name: name.clone(),
-                                    params: new_params.clone(),
-                                    cases: cases.clone(),
-                                    case_name: c.0.clone(),
-                                    datas: params
-                                        .iter()
-                                        .map(|x| x.0.clone())
-                                        .chain(
-                                            c.1.iter()
-                                                .enumerate()
-                                                .map(|(idx, _)| empty_span(format!("_{idx}"))),
-                                        )
-                                        .map(Raw::Var)
-                                        .collect(),
-                                },
+                                body_ret_type,
                                 |a, b| Raw::Lam(b.0.clone(), Either::Icit(b.2), Box::new(a)),
                             );
+                    let typ = typ.1;
                     cxt = {
                         let (typ_tm, _) = self.check_universe(&cxt, typ)?;
                         let vtyp = self.eval(&cxt.env, typ_tm.clone());
                         let t_tm = self.check(&cxt, bod, vtyp.clone())?;
                         let vt = self.eval(&cxt.env, t_tm.clone());
-                        cxt.define(c.0, t_tm, vt, typ_tm, vtyp)
+                        cxt.define(c.0.clone(), t_tm, vt, typ_tm, vtyp)
                     };
                 }
                 Ok((DeclTm::Enum {}, Val::U(0), cxt))
-            }
-            Decl::Struct {
-                name,
-                params,
-                fields,
-            } => {
-                let mut universe_lvl = 0;
-                for p in params.iter() {
-                    if let Ok((Tm::U(lvl), _)) = self.infer_expr(cxt, p.1.clone()) {
-                        universe_lvl = max(lvl, universe_lvl);
-                    }
-                }
-                for field in fields.iter() {
-                    if let Ok((_, lvl)) = self.check_universe(cxt, field.1.clone()) {
-                        universe_lvl = max(lvl, universe_lvl);
-                    }
-                }
-                let new_params: Vec<_> = params.iter().map(|x| Raw::Var(x.0.clone())).collect();
-                let sum = Raw::StructType(name.clone(), new_params.clone(), fields.clone());
-                let typ = params.iter().rev().fold(Raw::U(universe_lvl), |a, b| {
-                    Raw::Pi(b.0.clone(), b.2, Box::new(b.1.clone()), Box::new(a))
-                });
-                let bod = params.iter().rev().fold(sum.clone(), |a, b| {
-                    Raw::Lam(b.0.clone(), Either::Icit(b.2), Box::new(a))
-                });
-                let cxt = {
-                    let (typ_tm, _) = self.check_universe(cxt, typ)?;
-                    let vtyp = self.eval(&cxt.env, typ_tm.clone());
-                    let t_tm = self.check(cxt, bod, vtyp.clone())?;
-                    let vt = self.eval(&cxt.env, t_tm.clone());
-                    cxt.define(name.clone(), t_tm, vt, typ_tm, vtyp)
-                };
-
-                let new_fields: Vec<_> = fields.iter().map(|x| (x.0.clone(), Raw::Var(x.0.clone()))).collect();
-                let data = Raw::StructData(name.clone(), new_params.clone(), new_fields.clone());
-                let typ = params.iter().cloned().chain(
-                    fields.iter().cloned().map(|(a, b)| (a, b, Icit::Expl))
-                ).rev().fold(sum, |a, b| {
-                    Raw::Pi(b.0.clone(), b.2, Box::new(b.1.clone()), Box::new(a))
-                });
-                let bod = params.iter().cloned().chain(
-                    fields.iter().cloned().map(|(a, b)| (a, b, Icit::Expl))
-                ).rev().fold(data.clone(), |a, b| {
-                    Raw::Lam(b.0.clone(), Either::Icit(b.2), Box::new(a))
-                });
-                let cxt = {
-                    let (typ_tm, _) = self.check_universe(&cxt, typ)?;
-                    let vtyp = self.eval(&cxt.env, typ_tm.clone());
-                    let fake_cxt = cxt.bind(name.clone(), typ_tm.clone(), vtyp.clone());
-                    let t_tm = self.check(&fake_cxt, bod, vtyp.clone())?;
-                    let vt = self.eval(&fake_cxt.env, t_tm.clone());
-                    cxt.define(name.map(|x| format!("{x}.apply")), t_tm, vt, typ_tm, vtyp)
-                };
-                Ok((DeclTm::Struct {}, Val::U(0), cxt))
             }
         }
     }
@@ -407,6 +429,7 @@ impl Infer {
                 .reduce(|a, b| a + "\n" + &b)
                 .unwrap_or(String::new())
         );*/
+        let t_span = t.to_span();
         match t {
             // Infer variable types
             Raw::Var(x) => match cxt.src_names.get(&x.data) {
@@ -416,28 +439,73 @@ impl Infer {
 
             Raw::Obj(x, t) => {
                 let (tm, a) = self.infer_expr(cxt, *x)?;
-                match (tm, self.force(a)) {
-                    (tm, Val::StructType(_, _, fields)) => {
+                match (tm, self.force(a.clone())) {
+                    (tm, Val::Sum(_, params, cases)) => {
+                        let mut c = None;
+                        if cases.len() == 1 {
+                            if let Some(case) = cases.first() {
+                                if case.data.contains(".mk") {
+                                    let (_, case_typ) = self.infer_expr(cxt, Raw::Var(case.clone()))?;
+                                    let mut ret = vec![];
+                                    let mut typ = case_typ;
+                                    let mut param = params.clone();
+                                    param.reverse();
+                                    while let Val::Pi(name, icit, ty, closure) = typ {
+                                        if icit == Icit::Expl {
+                                            ret.push((name, *ty));
+                                            typ = self.closure_apply(&closure, Val::U(0));//TODO:not Val::U(0)
+                                        } else {
+                                            let val = param.pop()
+                                                .map(|x| x.1)
+                                                .unwrap_or(Val::U(0));
+                                            ret.push((name, *ty));
+                                            typ = self.closure_apply(&closure, val);
+                                        }
+                                    }
+                                    c = Some(ret);
+                                }
+                            }
+                        }
                         Ok((
-                            Tm::Obj(Box::new(tm), t.clone()),
-                            fields
+                            Tm::Obj(Box::new(tm.clone()), t.clone()),
+                            c.and_then(|params| {
+                                params.into_iter()
+                                    .find(|(fields_name, _)| fields_name == &t)
+                                    .map(|(_, ty)| ty)
+                            }).or(
+                            params
                                 .into_iter()
-                                .find(|(fields_name, _)| fields_name == &t)
-                                .map(|(_, ty)| ty)
-                                .ok_or_else(|| Error(t.map(|_| "error in obj".to_owned())))?
+                                .find(|(fields_name, _, _, _)| fields_name == &t)
+                                .map(|(_, _, ty, _)| ty)
+                            )
+                                .ok_or_else(|| Error(t.map(|t| format!(
+                                    "`{}`: {:?} has no object `{}`",
+                                    super::pretty_tm(0, cxt.names(), &tm),
+                                    a,
+                                    t,
+                                ))))?
                         ))
                     }
-                    (tm, Val::StructData(_, _, fields)) => {
+                    (tm, Val::SumCase { datas: params, .. }) => {
                         Ok((
-                            Tm::Obj(Box::new(tm), t.clone()),
-                            fields
+                            Tm::Obj(Box::new(tm.clone()), t.clone()),
+                            params
                                 .into_iter()
-                                .find(|(fields_name, _)| fields_name == &t)
-                                .map(|(_, ty)| ty)
-                                .ok_or_else(|| Error(t.map(|_| "error in obj".to_owned())))?
+                                .find(|(fields_name, _, _)| fields_name == &t)
+                                .map(|(_, ty, _)| ty)
+                                .ok_or_else(|| Error(t.map(|t| format!(
+                                    "`{}`: {:?} has no object `{}`",
+                                    super::pretty_tm(0, cxt.names(), &tm),
+                                    a,
+                                    t,
+                                ))))?
                         ))
                     }
-                    _ => Err(Error(t.map(|_| "error in obj".to_owned()))),
+                    (tm, _) => Err(Error(t.map(|t| format!(
+                        "`{}` has no object `{}`",
+                        super::pretty_tm(0, cxt.names(), &tm),
+                        t,
+                    )))),
                 }
             },
 
@@ -578,110 +646,77 @@ impl Infer {
 
             Raw::LiteralIntro(literal) => Ok((Tm::LiteralIntro(literal), Val::LiteralType)),
 
-            Raw::Match(expr, _) => Err(Error(expr.to_span().map(|_| "cannot infer match".to_owned()))),
+            Raw::Match(_, _) => Err(Error(t_span.map(|_| "try to infer match".to_owned()))),
 
-            Raw::Sum(name, params, cases) => {
-                let mut universe = 0;
+            Raw::Sum(name, params, cases, universe) => {
                 let new_params = params
                     .iter()
                     .map(|ty| {
-                        let (ty_checked, lvl) = self.check_universe(cxt, ty.clone())?;
-                        universe = max(universe, lvl);
-                        Ok(ty_checked)
+                        let (ty_checked, lvl) = self.check_universe(cxt, ty.2.clone())?;
+                        Ok((ty.0.clone(), ty_checked, Tm::U(lvl), ty.1))
                     })
                     .collect::<Result<Vec<_>, _>>()?;
-                for case in cases.iter() {
-                    let (_, case_params) = case;
-                    for c in case_params {
-                        let (_, lvl) = self.check_universe(cxt, c.clone())?;
-                        universe = max(universe, lvl);
-                    }
-                }
                 //TODO: universe need to consider cases?
                 Ok((Tm::Sum(name, new_params, cases), Val::U(universe)))
             }
 
             Raw::SumCase {
-                sum_name,
-                params,
-                cases,
+                typ,
                 case_name,
                 datas,
             } => {
-                let new_params = params
-                    .iter()
-                    .map(|ty| {
-                        let (ty_checked, _) = self.check_universe(cxt, ty.clone())?;
-                        let ty_checked = self.eval(&cxt.env, ty_checked);
-                        Ok(ty_checked)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
+                let (typ_checked, _) = self.infer_expr(cxt, *typ)?;
+                let typ_val = self.eval(&cxt.env, typ_checked.clone());
                 let datas = datas
                     .into_iter()
-                    .map(|x| self.infer_expr(cxt, x).map(|x| x.0))
+                    .map(|x| {
+                        let (tm, _) = self.infer_expr(cxt, x.1)?;
+                        Ok((x.0, tm, x.2))
+                    })
                     .collect::<Result<_, _>>()?;
                 Ok((
                     Tm::SumCase {
-                        sum_name: sum_name.clone(),
+                        typ: Box::new(typ_checked),
                         case_name,
-                        params: datas,
-                        cases_name: cases.iter().map(|x| x.0.clone()).collect(),
+                        datas,
                     },
-                    Val::Sum(sum_name, new_params, cases),
+                    typ_val,
                 ))
-            }
-
-            Raw::StructType(name, params, fields) => {
-                let mut universe = 0;
-                let new_params = params
-                    .iter()
-                    .map(|ty| {
-                        let (ty_checked, lvl) = self.check_universe(cxt, ty.clone())?;
-                        universe = max(universe, lvl);
-                        Ok(ty_checked)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                let new_fields = fields
-                    .into_iter()
-                    .map(|(name, ty)| {
-                        let (ty_checked, lvl) = self
-                            .check_universe(cxt, ty)?;
-                        universe = max(universe, lvl);
-                        Ok((name, ty_checked))
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok((Tm::StructType(name, new_params, new_fields), Val::U(universe)))
-            }
-            Raw::StructData(name, params, fields) => {
-                let new_params = params
-                    .iter()
-                    .map(|ty| {
-                        let (ty_checked, _) = self.check_universe(cxt, ty.clone())?;
-                        Ok(ty_checked)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                let params_type = new_params.iter()
-                    .map(|x| self.eval(&cxt.env, x.clone()))
-                    .collect();
-                let (new_fields_data, new_fields_type) = fields
-                    .into_iter()
-                    .map(|(name, ty)| {
-                        let (tm, ty_checked) = self
-                            .infer_expr(cxt, ty)?;
-                        Ok(((name.clone(), tm), (name, ty_checked)))
-                    })
-                    .collect::<Result<(Vec<_>, Vec<_>), _>>()?;
-                Ok((Tm::StructData(name.clone(), new_params, new_fields_data), Val::StructType(name, params_type, new_fields_type)))
             }
         }
     }
 }
 
 fn pattern_to_detail(cxt: &Cxt, pattern: Pattern) -> PatternDetail {
-    //println!("pattern_to_detail: {:?}", pattern);
+    let mut all_constr_name = cxt.env.iter()
+        .flat_map(|x| match x {
+            Val::Sum(_, _, x) => Some(
+                x.iter().map(|x| x.data.clone()).collect::<Vec<_>>()
+            ),
+            Val::Lam(_, _, c) => {
+                let mut tm = &c.1;
+                let mut ret = None;
+                loop {
+                    match tm.as_ref() {
+                        Tm::Sum(_, _, x) => {
+                            ret = Some(x.iter().map(|x| x.data.clone()).collect::<Vec<_>>());
+                            break;
+                        }
+                        Tm::Lam(_, _, c) => {
+                            tm = c;
+                        }
+                        _ => {break;}
+                    }
+                }
+                ret
+            }
+            _ => None,
+        })
+        .flatten()
+        .collect::<std::collections::HashSet<_>>();
     match pattern {
         Pattern::Any(name) => PatternDetail::Any(name),
-        Pattern::Con(name, params) if params.is_empty() && !cxt.src_names.contains_key(&name.data) => {
+        Pattern::Con(name, params) if params.is_empty() && !all_constr_name.contains(&name.data) => {
             PatternDetail::Bind(name)
         },
         Pattern::Con(name, params) => {

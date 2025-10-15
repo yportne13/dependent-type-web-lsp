@@ -15,16 +15,16 @@ mod unification;
 mod pretty;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct MetaVar(u32);
+pub struct MetaVar(u32);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum MetaEntry {
     Solved(Val, VTy),
     Unsolved(VTy),
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Ix(u32);
+pub struct Ix(u32);
 
 #[derive(Debug, Clone)]
 enum BD {
@@ -48,7 +48,6 @@ pub enum DeclTm {
     Enum {
         //TODO:
     },
-    Struct {},
 }
 
 #[derive(Debug, Clone)]
@@ -65,15 +64,12 @@ pub enum Tm {
     LiteralType,
     LiteralIntro(Span<String>),
     Prim,
-    Sum(Span<String>, Vec<Ty>, Vec<(Span<String>, Vec<Raw>)>),
+    Sum(Span<String>, Vec<(Span<String>, Tm, Ty, Icit)>, Vec<Span<String>>),
     SumCase {
-        sum_name: Span<String>,
+        typ: Box<Tm>,
         case_name: Span<String>,
-        params: Vec<Tm>,
-        cases_name: Vec<Span<String>>,
+        datas: Vec<(Span<String>, Tm, Icit)>,
     },
-    StructType(Span<String>, Vec<Ty>, Vec<(Span<String>, Tm)>),
-    StructData(Span<String>, Vec<Ty>, Vec<(Span<String>, Tm)>),
     Match(Box<Tm>, Vec<(PatternDetail, Tm)>),
 }
 
@@ -96,90 +92,9 @@ impl PatternDetail {
     }
 }
 
-impl std::fmt::Display for Tm {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Tm::Var(ix) => write!(f, "var{}", ix.0),
-            Tm::Obj(tm, span) => write!(f, "{}.{}", tm, span.data),
-            Tm::Lam(span, icit, tm) => {
-                match icit {
-                    Icit::Impl => write!(f, "[{}] => {}", span.data, tm),
-                    Icit::Expl => write!(f, "{} => {}", span.data, tm),
-                }
-            }
-            Tm::App(tm, tm1, icit) => {
-                match icit {
-                    Icit::Impl => write!(f, "{}[{}]", tm, tm1),
-                    Icit::Expl => write!(f, "{}({})", tm, tm1),
-                }
-            }
-            Tm::AppPruning(tm, list) => {
-                write!(f, "({} pruned)", tm)//TODO:
-            }
-            Tm::U(u) => write!(f, "Type{}", u),
-            Tm::Pi(span, icit, dom, cod) => {
-                match icit {
-                    Icit::Impl => write!(f, "[{}:{}] -> {}", span.data, dom, cod),
-                    Icit::Expl => write!(f, "{}:{} -> {}", span.data, dom, cod),
-                }
-            }
-            Tm::Let(span, ty, val, body) => {
-                write!(f, "let {} : {} = {} in {}", span.data, ty, val, body)
-            }
-            Tm::Meta(MetaVar(u)) => write!(f, "?{}", u),
-            Tm::LiteralType => write!(f, "LiteralType"),
-            Tm::LiteralIntro(span) => write!(f, "\"{}\"", span.data),
-            Tm::Prim => write!(f, "Prim"),
-            Tm::Sum(span, params, _) => write!(
-                f,
-                "{}{}",
-                span.data,
-                params
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .reduce(|a, b| a + ", " + &b)
-                    .map(|x| format!("[{x}]"))
-                    .unwrap_or("".to_string())
-            ),
-            Tm::SumCase { sum_name, case_name, params, .. } => {
-                write!(
-                    f,
-                    "{}::{}{}",
-                    sum_name.data,
-                    case_name.data,
-                    params
-                        .iter()
-                        .map(|x| format!("{}", x))
-                        .reduce(|a, b| a + ", " + &b)
-                        .map(|x| format!("({x})"))
-                        .unwrap_or("".to_string()),
-                )
-            }
-            Tm::StructType(span, params, _) | Tm::StructData(span, params, _) => write!(
-                f,
-                "{}{}",
-                span.data,
-                params
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .reduce(|a, b| a + ", " + &b)
-                    .map(|x| format!("[{x}]"))
-                    .unwrap_or("".to_string())
-            ),
-            Tm::Match(tm, cases) => {
-                let cases_str = cases.iter()
-                    .map(|(pat, expr)| format!("case {:?} => {}", pat, expr))
-                    .collect::<Vec<String>>()
-                    .join("\n");
-                write!(f, "match {} {{\n{}\n}}", tm, cases_str)
-            }
-        }
-    }
-}
-
 type Ty = Tm;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
 pub struct Lvl(u32);
 
 impl Add<u32> for Lvl {
@@ -200,7 +115,7 @@ type Env = List<Val>;
 type Spine = List<(Val, Icit)>;
 
 #[derive(Clone)]
-struct Closure(Env, Box<Tm>);
+pub struct Closure(Env, Box<Tm>);
 
 impl std::fmt::Debug for Closure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -219,15 +134,16 @@ pub enum Val {
     LiteralType,
     LiteralIntro(Span<String>),
     Prim,
-    Sum(Span<String>, Vec<Val>, Vec<(Span<String>, Vec<Raw>)>),
+    Sum(
+        Span<String>,
+        Vec<(Span<String>, Val, VTy, Icit)>,
+        Vec<Span<String>>
+    ),
     SumCase {
-        sum_name: Span<String>,
+        typ: Box<Val>,
         case_name: Span<String>,
-        params: Vec<Val>,
-        cases_name: Vec<Span<String>>,
+        datas: Vec<(Span<String>, Val, Icit)>,
     },
-    StructType(Span<String>, Vec<Val>, Vec<(Span<String>, Val)>),
-    StructData(Span<String>, Vec<Val>, Vec<(Span<String>, Val)>),
     Match(Box<Val>, Env, Vec<(PatternDetail, Tm)>),
 }
 
@@ -271,6 +187,7 @@ pub fn empty_span<T>(data: T) -> Span<T> {
 #[derive(Debug)]
 pub struct Error(pub Span<String>);
 
+#[derive(Clone)]
 pub struct Infer {
     meta: Vec<MetaEntry>,
     global: HashMap<Lvl, VTy>,
@@ -368,14 +285,20 @@ impl Infer {
             },
             Tm::Obj(tm, name) => {
                 match self.eval(env, *tm) {
-                    Val::StructType(_, _, fields) => {
-                        fields.into_iter()
-                            .find(|(f_name, _)| f_name == &name)
+                    Val::Sum(_, params, cases) => {
+                        params.into_iter()
+                            .find(|(f_name, _, _, _)| f_name == &name)
                             .unwrap().1
                     },
-                    Val::StructData(_, _, fields) => {
-                        fields.into_iter()
-                            .find(|(f_name, _)| f_name == &name)
+                    Val::SumCase { datas, typ, .. } => {
+                        (match *typ {
+                            Val::Sum(_, params, _) => params,
+                            _ => panic!("impossible {typ:?}"),
+                        }).into_iter()
+                            .map(|x| (x.0, x.1, x.3))
+                            .chain(datas)
+                        //datas.into_iter()
+                            .find(|(f_name, _, _)| f_name == &name)
                             .unwrap().1
                     },
                     x @ Val::Rigid(_, _) => {
@@ -407,22 +330,24 @@ impl Infer {
             Tm::Sum(name, params, cases) => {
                 let new_params = params
                     .into_iter()
-                    .map(|x| self.eval(&env.clone(), x))
+                    .map(|x| (x.0, self.eval(env, x.1), self.eval(env, x.2), x.3))
                     .collect();
                 Val::Sum(name, new_params, cases)
             }
             Tm::SumCase {
-                sum_name,
+                typ,
                 case_name,
-                params,
-                cases_name,
+                datas,
             } => {
-                let params = params.into_iter().map(|p| self.eval(env, p)).collect();
+                let datas = datas
+                    .into_iter()
+                    .map(|p| (p.0, self.eval(env, p.1), p.2))
+                    .collect();
+                let typ = self.eval(env, *typ);
                 Val::SumCase {
-                    sum_name,
+                    typ: Box::new(typ),
                     case_name,
-                    params,
-                    cases_name,
+                    datas,
                 }
             }
             Tm::Match(tm, cases) => {
@@ -437,28 +362,6 @@ impl Infer {
                         self.eval(&env, tm)
                     }
                 }
-            }
-            Tm::StructType(name, params, fields) => {
-                let new_params = params
-                    .into_iter()
-                    .map(|x| self.eval(&env.clone(), x))
-                    .collect();
-                let fields = fields
-                    .into_iter()
-                    .map(|(f_name, f_val)| (f_name, self.eval(&env.clone(), f_val)))
-                    .collect();
-                Val::StructType(name, new_params, fields)
-            }
-            Tm::StructData(name, params, fields) => {
-                let new_params = params
-                    .into_iter()
-                    .map(|x| self.eval(&env.clone(), x))
-                    .collect();
-                let new_fields = fields
-                    .into_iter()
-                    .map(|(f_name, f_val)| (f_name, self.eval(&env.clone(), f_val)))
-                    .collect();
-                Val::StructData(name, new_params, new_fields)
             }
         }
     }
@@ -492,38 +395,29 @@ impl Infer {
             Val::LiteralType => Tm::LiteralType,
             Val::Prim => Tm::Prim,
             Val::Sum(name, params, cases) => {
-                let new_params = params.into_iter().map(|x| self.quote(l, x)).collect();
+                let new_params = params.into_iter()
+                    .map(|x| {
+                        (x.0, self.quote(l, x.1), self.quote(l, x.2), x.3)
+                    })
+                    .collect();
                 Tm::Sum(name, new_params, cases)
             }
             Val::SumCase {
-                sum_name,
+                typ,
                 case_name,
-                params,
-                cases_name,
+                datas,
             } => {
-                let params = params.into_iter().map(|p| self.quote(l, p)).collect();
+                let datas = datas
+                    .into_iter()
+                    .map(|p| {
+                        (p.0, self.quote(l, p.1), p.2)
+                    })
+                    .collect();
                 Tm::SumCase {
-                    sum_name,
+                    typ: Box::new(self.quote(l, *typ)),
                     case_name,
-                    params,
-                    cases_name,
+                    datas,
                 }
-            }
-            Val::StructType(name, params, fields) => {
-                let params = params.into_iter().map(|x| self.quote(l, x)).collect();
-                let fields = fields
-                    .into_iter()
-                    .map(|(f_name, f_val)| (f_name, self.quote(l, f_val)))
-                    .collect();
-                Tm::StructType(name, params, fields)
-            }
-            Val::StructData(name, params, fields) => {
-                let params = params.into_iter().map(|x| self.quote(l, x)).collect();
-                let fields = fields
-                    .into_iter()
-                    .map(|(f_name, f_val)| (f_name, self.quote(l, f_val)))
-                    .collect();
-                Tm::StructData(name, params, fields)
             }
             Val::Match(val, env, cases) => {
                 /*TODO:let tm_cases = cases
@@ -536,7 +430,19 @@ impl Infer {
                     .collect();*/
                 let tm_cases = cases
                     .into_iter()
-                    .map(|x| (x.0, x.1))
+                    .map(|x| (
+                        x.0.clone(),
+                        {
+                            let env = (0..x.0.bind_count())
+                                .fold(env.clone(), |env, _| env.prepend(Val::vvar(Lvl(env.len() as u32))));
+                            let mut avoid_recursive = self.clone();
+                            avoid_recursive.global
+                                .iter_mut()
+                                .for_each(|x| *x.1 = Val::Rigid(*x.0 + 1919810, List::new()));
+                            let tm = avoid_recursive.eval(&env, x.1);
+                            self.quote(l+x.0.bind_count(), tm)
+                        }
+                    ))
                     .collect();
                 Tm::Match(Box::new(self.quote(l, *val)), tm_cases)
             }
@@ -578,7 +484,7 @@ pub fn run(input: &str, path_id: u32) -> Result<String, Error> {
     let mut infer = Infer::new();
     //eprintln!("infer {:?}", start.elapsed().as_secs_f32());
     //let start = std::time::Instant::now();
-    let ast = crate::parser::parser(input, path_id).unwrap();
+    let ast = crate::parser::parser(&preprocess(input), path_id).unwrap();
     //eprintln!("parser {:?}", start.elapsed().as_secs_f32());
     //let start = std::time::Instant::now();
     let mut cxt = Cxt::new();
@@ -587,12 +493,32 @@ pub fn run(input: &str, path_id: u32) -> Result<String, Error> {
         let (x, _, new_cxt) = infer.infer(&cxt, tm.clone())?;
         cxt = new_cxt;
         if let DeclTm::Println(x) = x {
-            ret += &format!("{:?}", infer.nf(&cxt.env, x));
+            //ret += &format!("{:?}", infer.nf(&cxt.env, x));
+            ret += &pretty::pretty_tm(0, cxt.names(), &infer.nf(&cxt.env, x));
             ret += "\n";
         }
     }
     //eprintln!("infer {:?}", start.elapsed().as_secs_f32());
     Ok(ret)
+}
+
+pub fn preprocess(s: &str) -> String {
+    let s = s.split("/*")
+        .map(|x| {
+            x.split_once("*/")
+                .map(|(a, b)| a.replace(|c: char| !c.is_whitespace(), " ") + "  " + b)
+                .unwrap_or(x.to_owned())
+        })
+        .reduce(|a, b| a + "  " + &b)
+        .unwrap_or(s.to_owned());
+    s.lines()
+        .map(|x| {
+            x.split_once("//")
+                .map(|(a, b)| a.to_owned() + "  " + &b.replace(|c: char| !c.is_whitespace(), " "))
+                .unwrap_or(x.to_owned())
+        })
+        .reduce(|a, b| a + "\n" + &b)
+        .unwrap_or(s.to_owned())
 }
 
 #[test]

@@ -138,28 +138,29 @@ pub fn pretty_tm(prec: i32, ns: List<String>, tm: &Tm) -> String {
         Tm::LiteralType => "String".to_owned(),
         Tm::LiteralIntro(span) => span.data.clone(),
         Tm::Prim => "Prim Func".to_owned(),
-        Tm::Sum(span, tms, _)
-        | Tm::StructType(span, tms, _)
-        | Tm::StructData(span, tms, _) => format!(
-                "{}{}",
-                span.data,
-                tms.iter()
-                    .map(|tm| pretty_tm(prec, ns.clone(), tm))
-                    .reduce(|acc, x| acc + ", " + &x)
-                    .map(|x| format!("[{x}]"))
-                    .unwrap_or("".to_owned()),
-            ),
-        Tm::SumCase { sum_name, case_name, params, cases_name: _ } => format!(
-                "{}::{}{}",
-                sum_name.data,
-                case_name.data,
-                params
-                    .iter()
-                    .map(|tm| pretty_tm(prec, ns.clone(), tm))
-                    .reduce(|acc, x| acc + ", " + &x)
-                    .map(|x| format!("({x})"))
-                    .unwrap_or("".to_owned()),
-            ),
+        Tm::Sum(span, tms, items) => format!(
+            "{}{}",
+            span.data,
+            tms.iter()
+                .map(|tm| pretty_tm(prec, ns.clone(), &tm.1))
+                .reduce(|acc, x| acc + ", " + &x)
+                .map(|x| format!("[{x}]"))
+                .unwrap_or("".to_owned()),
+        ),
+        Tm::SumCase { typ, case_name, datas: params } => format!(
+            "{}::{}{}",
+            match typ.as_ref() {
+                Tm::Sum(name, _, _) => &name.data,
+                _ => panic!("Sum case must be applied to a sum"),
+            },
+            case_name.data,
+            params
+                .iter()
+                .map(|tm| pretty_tm(prec, ns.clone(), &tm.1))
+                .reduce(|acc, x| acc + ", " + &x)
+                .map(|x| format!("({x})"))
+                .unwrap_or("".to_owned()),
+        ),
         Tm::Match(tm, _) => format!(
                 "(unsolved match {})",
                 pretty_tm(prec, ns, tm),
