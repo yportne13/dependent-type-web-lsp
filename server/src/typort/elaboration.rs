@@ -652,8 +652,9 @@ impl Infer {
                 let new_params = params
                     .iter()
                     .map(|ty| {
-                        let (ty_checked, lvl) = self.check_universe(cxt, ty.2.clone())?;
-                        Ok((ty.0.clone(), ty_checked, Tm::U(lvl), ty.1))
+                        let (ty_checked, typ_val) = self.infer_expr(cxt, ty.2.clone())?;
+                        let typ = self.quote(cxt.lvl, typ_val.clone());
+                        Ok((ty.0.clone(), ty_checked, typ, ty.1))
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 //TODO: universe need to consider cases?
