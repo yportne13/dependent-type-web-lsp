@@ -713,6 +713,10 @@ enum List[A] {
     cons(head: A, tail: List[A])
 }
 
+enum Eq[T](x: T, y: T) {
+    refl(a: T) -> Eq a a
+}
+
 def listid(x: List[Bool]): List[Bool] = x
 
 def create0: List[Bool] = nil
@@ -731,13 +735,13 @@ def not(x: Bool): Bool =
 
 println (not true)
 
-def add(x: Nat, y: Nat): Nat =
+def add(x: Nat, y: Nat) =
     match x {
         case zero => y
         case succ(n) => succ (add n y)
     }
 
-def mul(x: Nat, y: Nat): Nat = match x {
+def mul(x: Nat, y: Nat) = match x {
     case zero => zero
     case succ(n) => add y (mul n y)
 }
@@ -769,8 +773,8 @@ def test0: Type 1 = Type 0
 def test1: Type 2 = Type 1 -> Type 0
 
 enum HighLvl[A] {
-    case1(A)
-    case2(test1)
+    case1(x: A)
+    case2(x: test1)
 }
 
 def test2: HighLvl[Nat] = case1 zero
@@ -778,8 +782,8 @@ def test2: HighLvl[Nat] = case1 zero
 def test3: Type 2 = HighLvl[Nat]
 
 enum HighLvl2[A: Type 2] {
-    case2_1(A)
-    case2_2(Nat)
+    case2_1(x: A)
+    case2_2(x: Nat)
 }
 
 def test1_2: HighLvl2[HighLvl[Nat]] = case2_1 test2
@@ -788,7 +792,7 @@ def test1_3: Type 2 = HighLvl2[HighLvl[Nat]]
 
 enum HighLvl3[A: Type 2] {
     case3_1
-    case3_2(Nat)
+    case3_2(x: Nat)
 }
 
 def test2_2: HighLvl3[HighLvl[Nat]] = case3_1
@@ -819,8 +823,6 @@ def ab = assign sigA sigB refl
 def cd = assign sigC sigD refl
 
 def three = add two (succ zero)
-
-def xy(t: Nat) = assign (new Bits("AA", add t t)) (new Bits("BB", mul two t)) refl
 
 `
           ),
