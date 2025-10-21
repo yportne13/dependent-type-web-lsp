@@ -57,18 +57,18 @@ impl Backend {
     pub fn main_loop(&mut self) -> std::result::Result<(), Box<dyn Error + Sync + Send>> {
         eprintln!("starting example main loop");
         for msg in self.client.connection.receiver.clone() {
-            eprintln!("got msg: {msg:?}");
+            //eprintln!("got msg: {msg:?}");
             match msg {
                 Message::Request(req) => {
                     if self.client.connection.handle_shutdown(&req)? {
                         return Ok(());
                     }
-                    eprintln!("got request: {req:?}");
+                    //eprintln!("got request: {req:?}");
                     match cast::<GotoDefinition>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got gotoDefinition request #{id}: {params:?}");
+                            //eprintln!("got gotoDefinition request #{id}: {params:?}");
                             let result = self.goto_definition(params)?;
-                            eprintln!("return {result:?}");
+                            //eprintln!("return {result:?}");
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
                             self.client.connection.sender.send(Message::Response(resp))?;
@@ -90,7 +90,7 @@ impl Backend {
                     };
                     match cast::<InlayHintRequest>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got inlay hint request #{id}: {params:?}");
+                            //eprintln!("got inlay hint request #{id}: {params:?}");
                             let result = self.inlay_hint(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
@@ -102,7 +102,7 @@ impl Backend {
                     };
                     match cast::<Completion>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got completion request #{id}: {params:?}");
+                            //eprintln!("got completion request #{id}: {params:?}");
                             let result = self.completion(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
@@ -114,7 +114,7 @@ impl Backend {
                     };
                     match cast::<References>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got references request #{id}: {params:?}");
+                            //eprintln!("got references request #{id}: {params:?}");
                             let result = self.references(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
@@ -126,7 +126,7 @@ impl Backend {
                     };
                     match cast::<SemanticTokensFullRequest>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got semanticTokensFull request #{id}: {params:?}");
+                            //eprintln!("got semanticTokensFull request #{id}: {params:?}");
                             let result = self.semantic_tokens_full(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
@@ -138,7 +138,7 @@ impl Backend {
                     };
                     match cast::<SemanticTokensRangeRequest>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got semanticTokensRange request #{id}: {params:?}");
+                            //eprintln!("got semanticTokensRange request #{id}: {params:?}");
                             let result = self.semantic_tokens_range(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
@@ -150,7 +150,7 @@ impl Backend {
                     };
                     match cast::<Rename>(req.clone()) {
                         Ok((id, params)) => {
-                            eprintln!("got rename request #{id}: {params:?}");
+                            //eprintln!("got rename request #{id}: {params:?}");
                             let result = self.rename(params)?;
                             let result = serde_json::to_value(&result).unwrap();
                             let resp = Response { id, result: Some(result), error: None };
@@ -163,13 +163,13 @@ impl Backend {
                     // ...
                 }
                 Message::Response(resp) => {
-                    eprintln!("got response: {resp:?}");
+                    //eprintln!("got response: {resp:?}");
                 }
                 Message::Notification(not) => {
-                    eprintln!("got notification: {not:?}");
+                    //eprintln!("got notification: {not:?}");
                     match on::<DidOpenTextDocument>(not.clone()) {
                         Ok(params) => {
-                            eprintln!("got didOpenTextDocument notification: {params:?}");
+                            //eprintln!("got didOpenTextDocument notification: {params:?}");
                             self.did_open(params);
                         },
                         Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
@@ -177,7 +177,7 @@ impl Backend {
                     }
                     match on::<DidChangeTextDocument>(not.clone()) {
                         Ok(params) => {
-                            eprintln!("got didChangeTextDocument notification: {params:?}");
+                            //eprintln!("got didChangeTextDocument notification: {params:?}");
                             self.did_change(params);
                         },
                         Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
@@ -185,7 +185,7 @@ impl Backend {
                     }
                     match on::<DidCloseTextDocument>(not.clone()) {
                         Ok(params) => {
-                            eprintln!("got didCloseTextDocument notification: {params:?}");
+                            //eprintln!("got didCloseTextDocument notification: {params:?}");
                             self.did_close(params);
                         },
                         Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
@@ -193,7 +193,7 @@ impl Backend {
                     }
                     match on::<DidSaveTextDocument>(not) {
                         Ok(params) => {
-                            eprintln!("got didSaveTextDocument notification: {params:?}");
+                            //eprintln!("got didSaveTextDocument notification: {params:?}");
                             self.did_save(params);
                         },
                         Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
@@ -285,7 +285,7 @@ impl LanguageServer for Backend {
     }
 
     fn did_open(&mut self, params: DidOpenTextDocumentParams) {
-        debug!("file opened");
+        //debug!("file opened");
         self.on_change(TextDocumentItem {
             uri: params.text_document.uri,
             text: &params.text_document.text,
@@ -302,7 +302,7 @@ impl LanguageServer for Backend {
     }
 
     fn did_save(&mut self, params: DidSaveTextDocumentParams) {
-        dbg!(&params.text);
+        //dbg!(&params.text);
         if let Some(text) = params.text {
             let item = TextDocumentItem {
                 uri: params.text_document.uri,
@@ -678,7 +678,7 @@ struct TextDocumentItem<'a> {
 impl Backend {
     fn on_change(&mut self, params: TextDocumentItem<'_>) {
         let start_all = std::time::Instant::now();
-        dbg!(&params.version);
+        //dbg!(&params.version);
         let rope = ropey::Rope::from_str(params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
@@ -714,7 +714,7 @@ impl Backend {
             }
             eprintln!("infer {:?}", start.elapsed().as_secs_f32());
             self.type_map.insert(params.uri.to_string(), terms);
-            eprintln!("{:?}", err_collect);
+            //eprintln!("{:?}", err_collect);
             let diag = err_collect
                 .into_iter()
                 .filter_map(|e| {
