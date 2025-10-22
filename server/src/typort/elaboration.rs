@@ -217,7 +217,7 @@ impl Infer {
             (Raw::Match(expr, clause), expected) => {
                 let expr_span = expr.to_span();
                 let (tm, typ) = self.infer_expr(cxt, *expr)?;
-                let mut compiler = Compiler::new(expected);
+                let mut compiler = Compiler::new(expected, expr_span);
                 let (ret, error) = compiler.compile(self, typ, &clause, cxt, self.eval(&cxt.env, tm.clone()))?;
                 if !error.is_empty() {
                     Err(Error(expr_span.map(|_| format!("{error:?}"))))

@@ -52,15 +52,17 @@ pub struct Compiler {
     reachable: HashMap<usize, ()>,
     seed: i32,
     ret_type: Val,
+    span: Span<()>,
 }
 
 impl Compiler {
-    pub fn new(ret_type: Val) -> Self {
+    pub fn new(ret_type: Val, span: Span<()>) -> Self {
         Compiler {
             warnings: Vec::new(),
             reachable: HashMap::new(),
             seed: 0,
             ret_type,
+            span,
         }
     }
 
@@ -205,7 +207,7 @@ impl Compiler {
                     let ret = infer.check(&cxt, arm.body.0.clone(), ret_type)?;
                     Ok(Box::new(DecisionTree::Leaf((ret, arm.body.1))))
                 }
-                _ => panic!("impossible"),
+                _ => Err(Error(self.span.map(|_| "empty match".to_owned()))),
             },
             [(var, typ), heads_rest @ ..] => {
                 let is_necessary = arms
