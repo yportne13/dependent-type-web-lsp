@@ -795,6 +795,27 @@ def add_assoc (n: Nat, m: Nat, k: Nat): Eq[Nat] (add (add n m) k) (add n (add m 
         case succ(l) => cong_succ (add_assoc l m k)
     }
 
+def add_zero_left(m: Nat): Eq[Nat] (add zero m) m =
+    rfl
+
+def mul_zero_right(n: Nat): Eq[Nat] (mul n zero) zero =
+    match n {
+        case zero => rfl
+        case succ(k) => trans (refl (add zero (mul k zero))) (mul_zero_right k)
+    }
+
+def add_succ_zero_left(k: Nat): Eq[Nat] (add (succ zero) k) (succ k) =
+    cong_succ (add_zero_left k)
+
+def mul_one_right(n: Nat): Eq[Nat] (mul n (succ zero)) n =
+    match n {
+        case zero => rfl[Nat][zero]
+        case succ(k) =>
+            let ih = mul_one_right k;
+            let lemma: Eq[Nat] (add (succ zero) k) (succ k) = cong_succ (add_zero_left k);
+            trans (cong[Nat][Nat][add (succ zero)][mul k (succ zero)][k] ih) lemma
+    }
+
 struct Point[T] {
     x: T
     y: T
