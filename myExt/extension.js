@@ -816,6 +816,13 @@ def mul_one_right(n: Nat): Eq[Nat] (mul n (succ zero)) n =
             trans (cong[Nat][Nat][add (succ zero)][mul k (succ zero)][k] ih) lemma
     }
 
+struct Exists[A: Type 0, P: A -> Type 0] {
+    witness: A
+    proof: P witness
+}
+
+def exists_two: Exists[Nat][x => Eq x two] = Exists.mk[Nat][x => Eq x two] two rfl
+
 struct Point[T] {
     x: T
     y: T
