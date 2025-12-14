@@ -1,5 +1,6 @@
 #![feature(pattern)]
 mod parser_lib;
+mod parser_lib_resilient;
 mod list;
 mod bimap;
 pub mod parser;
@@ -690,13 +691,13 @@ impl Backend {
         if let Some(ast) = parser(params.text, now_id) {
             eprintln!("parser {:?}", start.elapsed().as_secs_f32());
             let mut err_collect = vec![];
-            self.ast_map.insert(params.uri.to_string(), ast.clone());
+            self.ast_map.insert(params.uri.to_string(), ast.0.clone());
             let mut infer = Infer::new();
             let mut terms = vec![];
             let mut cxt = Cxt::new();
             let mut ret = String::new();
             let start = std::time::Instant::now();
-            for tm in ast {
+            for tm in ast.0 {
                 match infer.infer(&cxt, tm.clone()) {
                     Ok((x, _, new_cxt)) => {
                         terms.push(x);
@@ -717,6 +718,7 @@ impl Backend {
             //eprintln!("{:?}", err_collect);
             let diag = err_collect
                 .into_iter()
+                .chain(ast.1.into_iter().map(|e| e.to_err()))
                 .filter_map(|e| {
                     let start_position = offset_to_position(e.0.start_offset as usize, &rope)?;
                     let end_position = offset_to_position(e.0.end_offset as usize, &rope)?;
