@@ -767,44 +767,44 @@ def add_zero_right(a: Nat): Eq (add a zero) a =
         case succ(t) => cong_succ (add_zero_right t)
     }
 
-def symm[A, x, y: A](e: Eq[A] x y): Eq[A] y x =
+def symm[A, x, y: A](e: Eq x y): Eq y x =
     match e {
         case refl(a) => refl[A] a
     }
 
-def trans[A, x, y, z: A](e1: Eq[A] x y, e2: Eq[A] y z): Eq[A] x z =
+def trans[A, x, y, z: A](e1: Eq x y, e2: Eq y z): Eq x z =
     match e1 {
         case refl(a) => e2
     }
 
-def add_succ_right (n: Nat, m: Nat): Eq[Nat] (add n (succ m)) (succ (add n m)) =
+def add_succ_right (n: Nat, m: Nat): Eq (add n (succ m)) (succ (add n m)) =
     match n {
-        case zero => refl[Nat] (succ m)
+        case zero => refl (succ m)
         case succ(k) => cong_succ (add_succ_right k m)
     }
 
-def add_comm (n: Nat, m: Nat): Eq[Nat] (add n m) (add m n) =
+def add_comm (n: Nat, m: Nat): Eq (add n m) (add m n) =
     match n {
         case zero => symm (add_zero_right m)
         case succ(k) => trans (cong_succ (add_comm k m)) (symm (add_succ_right m k))
     }
 
-def add_assoc (n: Nat, m: Nat, k: Nat): Eq[Nat] (add (add n m) k) (add n (add m k)) =
+def add_assoc (n: Nat, m: Nat, k: Nat): Eq (add (add n m) k) (add n (add m k)) =
     match n {
         case zero => rfl
         case succ(l) => cong_succ (add_assoc l m k)
     }
 
-def add_zero_left(m: Nat): Eq[Nat] (add zero m) m =
+def add_zero_left(m: Nat): Eq (add zero m) m =
     rfl
 
-def mul_zero_right(n: Nat): Eq[Nat] (mul n zero) zero =
+def mul_zero_right(n: Nat): Eq (mul n zero) zero =
     match n {
         case zero => rfl
         case succ(k) => trans (refl (add zero (mul k zero))) (mul_zero_right k)
     }
 
-def add_succ_zero_left(k: Nat): Eq[Nat] (add (succ zero) k) (succ k) =
+def add_succ_zero_left(k: Nat): Eq (add (succ zero) k) (succ k) =
     cong_succ (add_zero_left k)
 
 def mul_one_right(n: Nat): Eq[Nat] (mul n (succ zero)) n =
