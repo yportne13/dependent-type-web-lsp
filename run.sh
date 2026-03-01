@@ -1,9 +1,10 @@
-
+cd elaboration-zoo-lsp
 npm install
 npm install -g vsce
 npm run esbuild
 vsce package
-unzip wasm-language-server-1.0.0.vsix -d sample/wasm-language-server-bak
+unzip TyportHDL-1.0.0.vsix -d ../sample/wasm-language-server-bak
+cd ..
 rm -rf sample/wasm-language-server
 mv sample/wasm-language-server-bak/extension sample/wasm-language-server
 mv sample/wasm-language-server-bak/extension.vsixmanifest sample/wasm-language-server/.vsixmanifest

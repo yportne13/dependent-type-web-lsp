@@ -1,0 +1,3 @@
+[submodule "elaboration-zoo-lsp"]
+	path = elaboration-zoo-lsp
+	url = https://github.com/yportne13/elaboration-zoo-lsp.git
