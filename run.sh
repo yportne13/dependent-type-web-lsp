@@ -3,12 +3,12 @@ npm install
 npm install -g vsce
 npm run esbuild
 vsce package
-unzip TyportHDL-1.0.0.vsix -d ../../sample/wasm-language-server-bak
+unzip TyportHDL-1.0.0.vsix -d ../../sample/TyportHDL-bak
 cd ../..
-rm -rf sample/wasm-language-server
-mv sample/wasm-language-server-bak/extension sample/wasm-language-server
-mv sample/wasm-language-server-bak/extension.vsixmanifest sample/wasm-language-server/.vsixmanifest
-rm -rf sample/wasm-language-server-bak
+rm -rf sample/TyportHDL
+mv sample/TyportHDL-bak/extension sample/TyportHDL
+mv sample/TyportHDL-bak/extension.vsixmanifest sample/TyportHDL/.vsixmanifest
+rm -rf sample/TyportHDL-bak
 curl -o wasm-wasi-core-0.13.3.vsix.gz https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-vscode/vsextensions/wasm-wasi-core/0.13.3/vspackage
 sleep 2
 gunzip wasm-wasi-core-0.13.3.vsix.gz

@@ -31,7 +31,7 @@
 	  {
 		"scheme": "https",
 		"authority": "dependent-type-web-lsp.pages.dev",
-		"path": "/wasm-language-server"
+		"path": "/TyportHDL"
 	  },
 	  {
 		"scheme": "https",
