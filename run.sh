@@ -1,4 +1,6 @@
-cd elaboration-zoo-lsp/vscode_extension
+cd elaboration-zoo-lsp
+git pull
+cd vscode_extension
 npm install
 npm install -g vsce
 npm run esbuild
