@@ -749,7 +749,39 @@ def mul(x: Nat, y: Nat) = match x {
     case succ(n) => add y (mul n y)
 }
 
-def four = add two two
+def outParam[A](a: A): A = a
+
+trait Add[T, O: outParam(Type 0)] {
+    def +(that: T): O
+}
+
+def nat_add_helper(x: Nat, y: Nat): Nat =
+    match y {
+        case zero => x
+        case succ(n) => succ (nat_add_helper x n)
+    }
+
+impl Add[Nat, Nat] for Nat {
+    def +(that: Nat): Nat =
+        nat_add_helper this that
+}
+
+trait Mul[T, O: outParam(Type 0)] {
+    def *(that: T): O
+}
+
+def nat_mul_helper(x: Nat, y: Nat): Nat =
+    match y {
+        case zero => 0
+        case succ(n) => (nat_mul_helper x n) + x
+    }
+
+impl Mul[Nat, Nat] for Nat {
+    def *(that: Nat): Nat =
+        nat_mul_helper this that
+}
+
+def four = 2 + 2
 
 println four
 
@@ -758,13 +790,13 @@ def cong[A, B, f: A -> B, x: A, y: A](e: Eq x y): Eq (f x) (f y) =
         case refl(a) => refl (f a)
     }
 
-def cong_succ[x: Nat, y: Nat](e: Eq x y): Eq (succ x) (succ y) =
+def cong_succ[x: Nat, y: Nat](e: Eq x y): Eq (x + 1) (y + 1) =
     cong[Nat][Nat][succ][x][y] e
 
-def add_zero_right(a: Nat): Eq (add a zero) a =
+def add_zero_left(a: Nat): Eq (0 + a) a =
     match a {
         case zero => refl zero
-        case succ(t) => cong_succ (add_zero_right t)
+        case succ(t) => cong_succ (add_zero_left t)
     }
 
 def symm[A, x, y: A](e: Eq x y): Eq y x =
@@ -777,42 +809,42 @@ def trans[A, x, y, z: A](e1: Eq x y, e2: Eq y z): Eq x z =
         case refl(a) => e2
     }
 
-def add_succ_right (n: Nat, m: Nat): Eq (add n (succ m)) (succ (add n m)) =
-    match n {
-        case zero => refl (succ m)
-        case succ(k) => cong_succ (add_succ_right k m)
+def add_succ_left (n: Nat, m: Nat): Eq ((n + 1) + m) (n + m + 1) =
+    match m {
+        case zero => refl (succ n)
+        case succ(k) => cong_succ (add_succ_left n k)
     }
 
-def add_comm (n: Nat, m: Nat): Eq (add n m) (add m n) =
-    match n {
-        case zero => symm (add_zero_right m)
-        case succ(k) => trans (cong_succ (add_comm k m)) (symm (add_succ_right m k))
+def add_comm (n: Nat, m: Nat): Eq (n + m) (m + n) =
+    match m {
+        case zero => symm (add_zero_left n)
+        case succ(k) => trans (cong_succ (add_comm n k)) (symm (add_succ_left k n))
     }
 
-def add_assoc (n: Nat, m: Nat, k: Nat): Eq (add (add n m) k) (add n (add m k)) =
-    match n {
+def add_assoc (n: Nat, m: Nat, k: Nat): Eq (n + m + k) (n + (m + k)) =
+    match k {
         case zero => rfl
-        case succ(l) => cong_succ (add_assoc l m k)
+        case succ(l) => cong_succ (add_assoc n m l)
     }
 
-def add_zero_left(m: Nat): Eq (add zero m) m =
+def add_zero_right(m: Nat): Eq (m + 0) m =
     rfl
 
-def mul_zero_right(n: Nat): Eq (mul n zero) zero =
+def mul_zero_left(n: Nat): Eq (0 * n) zero =
     match n {
         case zero => rfl
-        case succ(k) => trans (refl (add zero (mul k zero))) (mul_zero_right k)
+        case succ(k) => trans (refl ((0 * k) + 0)) (mul_zero_left k)
     }
 
 def add_succ_zero_left(k: Nat): Eq (add (succ zero) k) (succ k) =
-    cong_succ (add_zero_left k)
+    cong_succ (add_zero_right k)
 
 def mul_one_right(n: Nat): Eq[Nat] (mul n (succ zero)) n =
     match n {
         case zero => rfl[Nat][zero]
         case succ(k) =>
             let ih = mul_one_right k;
-            let lemma: Eq[Nat] (add (succ zero) k) (succ k) = cong_succ (add_zero_left k);
+            let lemma: Eq[Nat] (add (succ zero) k) (succ k) = cong_succ (add_zero_right k);
             trans (cong[Nat][Nat][add (succ zero)][mul k (succ zero)][k] ih) lemma
     }
 
@@ -872,16 +904,16 @@ def test2_2: HighLvl3[HighLvl[Nat]] = case3_1
 
 def test2_3: Type 2 = HighLvl3[HighLvl[Nat]]
 
-def Eq[A](x: A, y: A): Type 1 = (P : A -> Type 0) -> P x -> P y
+def Eq1[A](x: A, y: A): Type 1 = (P : A -> Type 0) -> P x -> P y
 
-def refl[A, x: A]: Eq[A] x x = _ => px => px
+def refl1[A, x: A]: Eq1[A] x x = _ => px => px
 
 struct Bits {
     name: String
     size: Nat
 }
 
-def assign(a: Bits, b: Bits)(eq: Eq[Nat] a.size b.size): String = string_concat a.name b.name
+def assign(a: Bits, b: Bits)(eq: Eq1[Nat] a.size b.size): String = string_concat a.name b.name
 
 def sigA = new Bits("A", four)
 
@@ -891,9 +923,9 @@ def sigC = new Bits("C", two)
 
 def sigD = new Bits("D", two)
 
-def ab = assign sigA sigB refl
+def ab = assign sigA sigB refl1
 
-def cd = assign sigC sigD refl
+def cd = assign sigC sigD refl1
 
 def three = add two (succ zero)
 
