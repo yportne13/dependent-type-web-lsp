@@ -726,7 +726,7 @@ def create0: List[Bool] = nil
 
 def create1: List[Bool] = cons true nil
 
-def create2: List[Bool] = cons true (cons false nil)
+def create2: List[Bool] = cons(true, cons false nil)
 
 def two = succ (succ zero)
 
@@ -746,7 +746,7 @@ def add(x: Nat, y: Nat) =
 
 def mul(x: Nat, y: Nat) = match x {
     case zero => zero
-    case succ(n) => add y (mul n y)
+    case succ(n) => add(y, mul n y)
 }
 
 def outParam[A](a: A): A = a
@@ -785,13 +785,13 @@ def four = 2 + 2
 
 println four
 
-def cong[A, B, f: A -> B, x: A, y: A](e: Eq x y): Eq (f x) (f y) =
+def cong[A, B, x: A, y: A](f: A -> B, e: Eq x y): Eq (f x) (f y) =
     match e {
         case refl(a) => refl (f a)
     }
 
 def cong_succ[x: Nat, y: Nat](e: Eq x y): Eq (x + 1) (y + 1) =
-    cong[Nat][Nat][succ][x][y] e
+    cong succ e
 
 def add_zero_left(a: Nat): Eq (0 + a) a =
     match a {
@@ -836,16 +836,16 @@ def mul_zero_left(n: Nat): Eq (0 * n) zero =
         case succ(k) => trans (refl ((0 * k) + 0)) (mul_zero_left k)
     }
 
-def add_succ_zero_left(k: Nat): Eq (add (succ zero) k) (succ k) =
+def add_succ_zero_left(k: Nat): Eq (add 1 k) (succ k) =
     cong_succ (add_zero_right k)
 
-def mul_one_right(n: Nat): Eq[Nat] (mul n (succ zero)) n =
+def mul_one_right(n: Nat): Eq[Nat] (mul n 1) n =
     match n {
         case zero => rfl[Nat][zero]
         case succ(k) =>
             let ih = mul_one_right k;
-            let lemma: Eq[Nat] (add (succ zero) k) (succ k) = cong_succ (add_zero_right k);
-            trans (cong[Nat][Nat][add (succ zero)][mul k (succ zero)][k] ih) lemma
+            let lemma: Eq[Nat] (add 1 k) (succ k) = cong_succ (add_zero_right k);
+            trans(cong(add 1, ih), lemma)
     }
 
 struct Exists[A: Type 0, P: A -> Type 0] {
@@ -927,7 +927,7 @@ def ab = assign sigA sigB refl1
 
 def cd = assign sigC sigD refl1
 
-def three = add two (succ zero)
+def three = add two 1
 
 `
           ),
