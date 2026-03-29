@@ -929,6 +929,39 @@ def cd = assign sigC sigD refl1
 
 def three = add two 1
 
+
+enum Expr {
+    create(name: String)
+}
+
+struct module {
+    name: String
+    expr: List[Expr]
+}
+
+def newBits(name: String, w: Nat): Bits =
+    let create_sig = change_mutable("module", x => module.mk(x.name, cons(create(name), x.expr)));
+    Bits.mk(name, w)
+
+macro_rules Expr {
+    (input $x:ident <- Bits[$width:raw]) => {let $x = newBits(stringify $x, $width);};
+    (let $x:ident = Bits[$width:raw]) => {let $x = newBits(stringify $x, $width);};
+}
+
+macro_rules module {
+    ($name: ident $args: params {$( $body: Expr )*}) => {def $name $args = let creat_module = create_global("module", module.mk(stringify $name, nil));$({$body})* get_global("module")};
+    ($name: ident $body: raw) => {def $name = string_concat(string_concat("module ", stringify $name), $body)};
+    ($name: ident) => {def $name = string_concat("module ", stringify $name)};
+}
+
+module test[w: Nat] {
+    input z <- Bits[w]
+    input t <- Bits[w]
+    let r = Bits[w]
+}
+
+println (test[2])
+
 `
           ),
           (e.debuggableFile =
