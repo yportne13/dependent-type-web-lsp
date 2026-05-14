@@ -1,19 +1,43 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.deactivate = exports.activate = void 0;
 require("vscode-languageclient/node");
-__exportStar(require("./extension"), exports);
+const vscode_1 = require("vscode");
+const node_1 = require("vscode-languageclient/node");
+const extension_1 = require("./extension");
+let client;
+async function activate(context) {
+    const config = vscode_1.workspace.getConfiguration('typort-hdl');
+    const mode = config.get('lsp-mode', 'wasm');
+    if (mode === 'cli') {
+        const command = config.get('cli-server.path', '') || 'typort';
+        const channel = vscode_1.window.createOutputChannel('TyportHDL Language Server');
+        channel.appendLine(`Starting CLI language server: ${command} lsp`);
+        const clientOptions = {
+            documentSelector: [{ language: "typort" }],
+            outputChannel: channel,
+            synchronize: {
+                fileEvents: vscode_1.workspace.createFileSystemWatcher("**/.clientrc"),
+            },
+        };
+        client = new node_1.LanguageClient('lspClient', 'LSP Client', { command, args: ['lsp'] }, clientOptions);
+        try {
+            await client.start();
+        }
+        catch (error) {
+            client.error(`Start failed`, error, 'force');
+        }
+    }
+    else {
+        await (0, extension_1.activate)(context);
+    }
+}
+exports.activate = activate;
+function deactivate() {
+    if (client) {
+        return client.stop();
+    }
+    return (0, extension_1.deactivate)();
+}
+exports.deactivate = deactivate;
 //# sourceMappingURL=extension.desktop.js.map

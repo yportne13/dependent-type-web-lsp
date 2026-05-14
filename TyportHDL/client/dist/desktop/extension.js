@@ -9462,9 +9462,9 @@ var require_features = __commonJS({
       DynamicFeature2.is = is;
     })(DynamicFeature || (exports2.DynamicFeature = DynamicFeature = {}));
     var DynamicDocumentFeature = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "_client");
-        this._client = client2;
+        this._client = client3;
       }
       /**
        * Returns the state the feature is in.
@@ -9486,8 +9486,8 @@ var require_features = __commonJS({
     };
     exports2.DynamicDocumentFeature = DynamicDocumentFeature;
     var TextDocumentEventFeature = class extends DynamicDocumentFeature {
-      constructor(client2, event, type, middleware, createParams, textDocument, selectorFilter) {
-        super(client2);
+      constructor(client3, event, type, middleware, createParams, textDocument, selectorFilter) {
+        super(client3);
         __publicField(this, "_event");
         __publicField(this, "_type");
         __publicField(this, "_middleware");
@@ -9587,8 +9587,8 @@ var require_features = __commonJS({
     };
     exports2.TextDocumentEventFeature = TextDocumentEventFeature;
     var TextDocumentLanguageFeature = class extends DynamicDocumentFeature {
-      constructor(client2, registrationType) {
-        super(client2);
+      constructor(client3, registrationType) {
+        super(client3);
         __publicField(this, "_registrationType");
         __publicField(this, "_registrations");
         this._registrationType = registrationType;
@@ -9669,11 +9669,11 @@ var require_features = __commonJS({
     };
     exports2.TextDocumentLanguageFeature = TextDocumentLanguageFeature;
     var WorkspaceFeature = class {
-      constructor(client2, registrationType) {
+      constructor(client3, registrationType) {
         __publicField(this, "_client");
         __publicField(this, "_registrationType");
         __publicField(this, "_registrations");
-        this._client = client2;
+        this._client = client3;
         this._registrationType = registrationType;
         this._registrations = /* @__PURE__ */ new Map();
       }
@@ -11508,7 +11508,7 @@ var require_diagnostic = __commonJS({
       }
     };
     var DiagnosticRequestor = class {
-      constructor(client2, tabs, options) {
+      constructor(client3, tabs, options) {
         __publicField(this, "isDisposed");
         __publicField(this, "client");
         __publicField(this, "tabs");
@@ -11521,7 +11521,7 @@ var require_diagnostic = __commonJS({
         __publicField(this, "workspaceErrorCounter");
         __publicField(this, "workspaceCancellation");
         __publicField(this, "workspaceTimeout");
-        this.client = client2;
+        this.client = client3;
         this.tabs = tabs;
         this.options = options;
         this.isDisposed = false;
@@ -11806,7 +11806,7 @@ var require_diagnostic = __commonJS({
       }
     };
     var BackgroundScheduler = class {
-      constructor(client2, diagnosticRequestor) {
+      constructor(client3, diagnosticRequestor) {
         __publicField(this, "client");
         __publicField(this, "diagnosticRequestor");
         __publicField(this, "lastDocumentToPull");
@@ -11817,7 +11817,7 @@ var require_diagnostic = __commonJS({
         // reschedule. So we remember if the background scheduler got disposed
         // and ignore those re-schedules
         __publicField(this, "isDisposed");
-        this.client = client2;
+        this.client = client3;
         this.diagnosticRequestor = diagnosticRequestor;
         this.documents = new vscode_languageserver_protocol_1.LinkedMap();
         this.isDisposed = false;
@@ -11899,13 +11899,13 @@ var require_diagnostic = __commonJS({
       }
     };
     var DiagnosticFeatureProviderImpl = class {
-      constructor(client2, tabs, options) {
+      constructor(client3, tabs, options) {
         __publicField(this, "disposable");
         __publicField(this, "diagnosticRequestor");
         __publicField(this, "activeTextDocument");
         __publicField(this, "backgroundScheduler");
-        const diagnosticPullOptions = Object.assign({ onChange: false, onSave: false, onFocus: false }, client2.clientOptions.diagnosticPullOptions);
-        const documentSelector = client2.protocol2CodeConverter.asDocumentSelector(options.documentSelector);
+        const diagnosticPullOptions = Object.assign({ onChange: false, onSave: false, onFocus: false }, client3.clientOptions.diagnosticPullOptions);
+        const documentSelector = client3.protocol2CodeConverter.asDocumentSelector(options.documentSelector);
         const disposables = [];
         const matchFilter = (filter, resource) => {
           if (typeof filter === "string") {
@@ -11946,8 +11946,8 @@ var require_diagnostic = __commonJS({
         const isActiveDocument = (document) => {
           return document instanceof vscode_1.Uri ? this.activeTextDocument?.uri.toString() === document.toString() : this.activeTextDocument === document;
         };
-        this.diagnosticRequestor = new DiagnosticRequestor(client2, tabs, options);
-        this.backgroundScheduler = new BackgroundScheduler(client2, this.diagnosticRequestor);
+        this.diagnosticRequestor = new DiagnosticRequestor(client3, tabs, options);
+        this.backgroundScheduler = new BackgroundScheduler(client3, this.diagnosticRequestor);
         const addToBackgroundIfNeeded = (document) => {
           if (!matches(document) || !options.interFileDependencies || isActiveDocument(document) || diagnosticPullOptions.onChange === false) {
             return;
@@ -11971,7 +11971,7 @@ var require_diagnostic = __commonJS({
             }
           }
         }));
-        const openFeature = client2.getFeature(vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.method);
+        const openFeature = client3.getFeature(vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.method);
         disposables.push(openFeature.onNotificationSent((event) => {
           const textDocument = event.textDocument;
           if (this.diagnosticRequestor.knows(PullState.document, textDocument)) {
@@ -11983,7 +11983,7 @@ var require_diagnostic = __commonJS({
             });
           }
         }));
-        const notebookFeature = client2.getFeature(vscode_languageserver_protocol_1.NotebookDocumentSyncRegistrationType.method);
+        const notebookFeature = client3.getFeature(vscode_languageserver_protocol_1.NotebookDocumentSyncRegistrationType.method);
         disposables.push(notebookFeature.onOpenNotificationSent((event) => {
           for (const cell of event.getCells()) {
             if (matchesCell(cell)) {
@@ -12042,7 +12042,7 @@ var require_diagnostic = __commonJS({
           }
         }
         if (diagnosticPullOptions.onChange === true) {
-          const changeFeature = client2.getFeature(vscode_languageserver_protocol_1.DidChangeTextDocumentNotification.method);
+          const changeFeature = client3.getFeature(vscode_languageserver_protocol_1.DidChangeTextDocumentNotification.method);
           disposables.push(changeFeature.onNotificationSent(async (event) => {
             const textDocument = event.textDocument;
             if (considerDocument(textDocument, DiagnosticPullMode.onType)) {
@@ -12076,7 +12076,7 @@ var require_diagnostic = __commonJS({
           }));
         }
         if (diagnosticPullOptions.onSave === true) {
-          const saveFeature = client2.getFeature(vscode_languageserver_protocol_1.DidSaveTextDocumentNotification.method);
+          const saveFeature = client3.getFeature(vscode_languageserver_protocol_1.DidSaveTextDocumentNotification.method);
           disposables.push(saveFeature.onNotificationSent((event) => {
             const textDocument = event.textDocument;
             if (considerDocument(textDocument, DiagnosticPullMode.onSave)) {
@@ -12091,7 +12091,7 @@ var require_diagnostic = __commonJS({
             }
           }));
         }
-        const closeFeature = client2.getFeature(vscode_languageserver_protocol_1.DidCloseTextDocumentNotification.method);
+        const closeFeature = client3.getFeature(vscode_languageserver_protocol_1.DidCloseTextDocumentNotification.method);
         disposables.push(closeFeature.onNotificationSent((event) => {
           this.cleanUpDocument(event.textDocument);
         }));
@@ -12134,8 +12134,8 @@ var require_diagnostic = __commonJS({
       }
     };
     var DiagnosticFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentDiagnosticRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentDiagnosticRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const capability = ensure(ensure(capabilities, "textDocument"), "diagnostic");
@@ -12148,8 +12148,8 @@ var require_diagnostic = __commonJS({
         ensure(ensure(capabilities, "workspace"), "diagnostics").refreshSupport = true;
       }
       initialize(capabilities, documentSelector) {
-        const client2 = this._client;
-        client2.onRequest(vscode_languageserver_protocol_1.DiagnosticRefreshRequest.type, async () => {
+        const client3 = this._client;
+        client3.onRequest(vscode_languageserver_protocol_1.DiagnosticRefreshRequest.type, async () => {
           for (const provider of this.getAllProviders()) {
             provider.onDidChangeDiagnosticsEmitter.fire();
           }
@@ -12507,7 +12507,7 @@ var require_notebook = __commonJS({
       SyncInfo2.create = create;
     })(SyncInfo || (SyncInfo = {}));
     var NotebookDocumentSyncFeatureProvider = class {
-      constructor(client2, options, onChangeNotificationSent, onOpenNotificationSent, onCloseNotificationSent, onSaveNotificationSent) {
+      constructor(client3, options, onChangeNotificationSent, onOpenNotificationSent, onCloseNotificationSent, onSaveNotificationSent) {
         __publicField(this, "client");
         __publicField(this, "options");
         __publicField(this, "notebookSyncInfo");
@@ -12518,12 +12518,12 @@ var require_notebook = __commonJS({
         __publicField(this, "onOpenNotificationSent");
         __publicField(this, "onCloseNotificationSent");
         __publicField(this, "onSaveNotificationSent");
-        this.client = client2;
+        this.client = client3;
         this.options = options;
         this.notebookSyncInfo = /* @__PURE__ */ new Map();
         this.notebookDidOpen = /* @__PURE__ */ new Set();
         this.disposables = [];
-        this.selector = client2.protocol2CodeConverter.asDocumentSelector($NotebookDocumentSyncOptions.asDocumentSelector(options));
+        this.selector = client3.protocol2CodeConverter.asDocumentSelector($NotebookDocumentSyncOptions.asDocumentSelector(options));
         this.onChangeNotificationSent = onChangeNotificationSent;
         this.onOpenNotificationSent = onOpenNotificationSent;
         this.onCloseNotificationSent = onCloseNotificationSent;
@@ -12978,7 +12978,7 @@ var require_notebook = __commonJS({
       }
     };
     var _NotebookDocumentSyncFeature = class _NotebookDocumentSyncFeature {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "client");
         __publicField(this, "registrations");
         __publicField(this, "dedicatedChannel");
@@ -12987,7 +12987,7 @@ var require_notebook = __commonJS({
         __publicField(this, "_onCloseNotificationSent");
         __publicField(this, "_onSaveNotificationSent");
         __publicField(this, "registrationType");
-        this.client = client2;
+        this.client = client3;
         this.registrations = /* @__PURE__ */ new Map();
         this.registrationType = proto.NotebookDocumentSyncRegistrationType.type;
         this._onChangeNotificationSent = new vscode.EventEmitter();
@@ -13189,9 +13189,9 @@ var require_configuration = __commonJS({
     var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var ConfigurationFeature = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "_client");
-        this._client = client2;
+        this._client = client3;
       }
       getState() {
         return { kind: "static" };
@@ -13201,8 +13201,8 @@ var require_configuration = __commonJS({
         capabilities.workspace.configuration = true;
       }
       initialize() {
-        const client2 = this._client;
-        client2.onRequest(vscode_languageserver_protocol_1.ConfigurationRequest.type, (params, token) => {
+        const client3 = this._client;
+        client3.onRequest(vscode_languageserver_protocol_1.ConfigurationRequest.type, (params, token) => {
           const configuration = (params2) => {
             const result = [];
             for (const item of params2.items) {
@@ -13211,7 +13211,7 @@ var require_configuration = __commonJS({
             }
             return result;
           };
-          const middleware = client2.middleware.workspace;
+          const middleware = client3.middleware.workspace;
           return middleware && middleware.configuration ? middleware.configuration(params, token, configuration) : configuration(params, token);
         });
       }
@@ -13417,15 +13417,15 @@ var require_textSynchronization = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var DidOpenTextDocumentFeature = class extends features_1.TextDocumentEventFeature {
-      constructor(client2, syncedDocuments) {
-        super(client2, vscode_1.workspace.onDidOpenTextDocument, vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.type, () => client2.middleware.didOpen, (textDocument) => client2.code2ProtocolConverter.asOpenTextDocumentParams(textDocument), (data) => data, features_1.TextDocumentEventFeature.textDocumentFilter);
+      constructor(client3, syncedDocuments) {
+        super(client3, vscode_1.workspace.onDidOpenTextDocument, vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.type, () => client3.middleware.didOpen, (textDocument) => client3.code2ProtocolConverter.asOpenTextDocumentParams(textDocument), (data) => data, features_1.TextDocumentEventFeature.textDocumentFilter);
         __publicField(this, "_syncedDocuments");
         __publicField(this, "_pendingOpenNotifications");
         __publicField(this, "_delayOpen");
         __publicField(this, "_pendingOpenListeners");
         this._syncedDocuments = syncedDocuments;
         this._pendingOpenNotifications = /* @__PURE__ */ new Map();
-        this._delayOpen = client2.clientOptions.textSynchronization?.delayOpenNotifications ?? false;
+        this._delayOpen = client3.clientOptions.textSynchronization?.delayOpenNotifications ?? false;
       }
       async callback(document) {
         if (!this._delayOpen) {
@@ -13538,8 +13538,8 @@ var require_textSynchronization = __commonJS({
     };
     exports2.DidOpenTextDocumentFeature = DidOpenTextDocumentFeature;
     var DidCloseTextDocumentFeature = class extends features_1.TextDocumentEventFeature {
-      constructor(client2, syncedDocuments, pendingTextDocumentChanges) {
-        super(client2, vscode_1.workspace.onDidCloseTextDocument, vscode_languageserver_protocol_1.DidCloseTextDocumentNotification.type, () => client2.middleware.didClose, (textDocument) => client2.code2ProtocolConverter.asCloseTextDocumentParams(textDocument), (data) => data, features_1.TextDocumentEventFeature.textDocumentFilter);
+      constructor(client3, syncedDocuments, pendingTextDocumentChanges) {
+        super(client3, vscode_1.workspace.onDidCloseTextDocument, vscode_languageserver_protocol_1.DidCloseTextDocumentNotification.type, () => client3.middleware.didClose, (textDocument) => client3.code2ProtocolConverter.asCloseTextDocumentParams(textDocument), (data) => data, features_1.TextDocumentEventFeature.textDocumentFilter);
         __publicField(this, "_syncedDocuments");
         __publicField(this, "_pendingTextDocumentChanges");
         this._syncedDocuments = syncedDocuments;
@@ -13591,8 +13591,8 @@ var require_textSynchronization = __commonJS({
     };
     exports2.DidCloseTextDocumentFeature = DidCloseTextDocumentFeature;
     var DidChangeTextDocumentFeature = class extends features_1.DynamicDocumentFeature {
-      constructor(client2, pendingTextDocumentChanges) {
-        super(client2);
+      constructor(client3, pendingTextDocumentChanges) {
+        super(client3);
         __publicField(this, "_listener");
         __publicField(this, "_changeData");
         __publicField(this, "_onNotificationSent");
@@ -13758,8 +13758,8 @@ var require_textSynchronization = __commonJS({
     };
     exports2.DidChangeTextDocumentFeature = DidChangeTextDocumentFeature;
     var WillSaveFeature = class extends features_1.TextDocumentEventFeature {
-      constructor(client2) {
-        super(client2, vscode_1.workspace.onWillSaveTextDocument, vscode_languageserver_protocol_1.WillSaveTextDocumentNotification.type, () => client2.middleware.willSave, (willSaveEvent) => client2.code2ProtocolConverter.asWillSaveTextDocumentParams(willSaveEvent), (event) => event.document, (selectors, willSaveEvent) => features_1.TextDocumentEventFeature.textDocumentFilter(selectors, willSaveEvent.document));
+      constructor(client3) {
+        super(client3, vscode_1.workspace.onWillSaveTextDocument, vscode_languageserver_protocol_1.WillSaveTextDocumentNotification.type, () => client3.middleware.willSave, (willSaveEvent) => client3.code2ProtocolConverter.asWillSaveTextDocumentParams(willSaveEvent), (event) => event.document, (selectors, willSaveEvent) => features_1.TextDocumentEventFeature.textDocumentFilter(selectors, willSaveEvent.document));
       }
       get registrationType() {
         return vscode_languageserver_protocol_1.WillSaveTextDocumentNotification.type;
@@ -13783,8 +13783,8 @@ var require_textSynchronization = __commonJS({
     };
     exports2.WillSaveFeature = WillSaveFeature;
     var WillSaveWaitUntilFeature = class extends features_1.DynamicDocumentFeature {
-      constructor(client2) {
-        super(client2);
+      constructor(client3) {
+        super(client3);
         __publicField(this, "_listener");
         __publicField(this, "_selectors");
         this._selectors = /* @__PURE__ */ new Map();
@@ -13846,8 +13846,8 @@ var require_textSynchronization = __commonJS({
     };
     exports2.WillSaveWaitUntilFeature = WillSaveWaitUntilFeature;
     var DidSaveTextDocumentFeature = class extends features_1.TextDocumentEventFeature {
-      constructor(client2) {
-        super(client2, vscode_1.workspace.onDidSaveTextDocument, vscode_languageserver_protocol_1.DidSaveTextDocumentNotification.type, () => client2.middleware.didSave, (textDocument) => client2.code2ProtocolConverter.asSaveTextDocumentParams(textDocument, this._includeText), (data) => data, features_1.TextDocumentEventFeature.textDocumentFilter);
+      constructor(client3) {
+        super(client3, vscode_1.workspace.onDidSaveTextDocument, vscode_languageserver_protocol_1.DidSaveTextDocumentNotification.type, () => client3.middleware.didSave, (textDocument) => client3.code2ProtocolConverter.asSaveTextDocumentParams(textDocument, this._includeText), (data) => data, features_1.TextDocumentEventFeature.textDocumentFilter);
         __publicField(this, "_includeText");
         this._includeText = false;
       }
@@ -13944,8 +13944,8 @@ var require_completion = __commonJS({
       vscode_languageserver_protocol_1.CompletionItemKind.TypeParameter
     ];
     var CompletionItemFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.CompletionRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.CompletionRequest.type);
         __publicField(this, "labelDetailsSupport");
         this.labelDetailsSupport = /* @__PURE__ */ new Map();
       }
@@ -13996,31 +13996,31 @@ var require_completion = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideCompletionItems: (document, position, token, context) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const middleware = this._client.middleware;
             const provideCompletionItems = (document2, position2, context2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.CompletionRequest.type, client2.code2ProtocolConverter.asCompletionParams(document2, position2, context2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.CompletionRequest.type, client3.code2ProtocolConverter.asCompletionParams(document2, position2, context2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asCompletionResult(result, defaultCommitCharacters, token2);
+                return client3.protocol2CodeConverter.asCompletionResult(result, defaultCommitCharacters, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.CompletionRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.CompletionRequest.type, token2, error, null);
               });
             };
             return middleware.provideCompletionItem ? middleware.provideCompletionItem(document, position, context, token, provideCompletionItems) : provideCompletionItems(document, position, context, token);
           },
           resolveCompletionItem: options.resolveProvider ? (item, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const middleware = this._client.middleware;
             const resolveCompletionItem = (item2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.CompletionResolveRequest.type, client2.code2ProtocolConverter.asCompletionItem(item2, !!this.labelDetailsSupport.get(id)), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.CompletionResolveRequest.type, client3.code2ProtocolConverter.asCompletionItem(item2, !!this.labelDetailsSupport.get(id)), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asCompletionItem(result);
+                return client3.protocol2CodeConverter.asCompletionItem(result);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.CompletionResolveRequest.type, token2, error, item2);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.CompletionResolveRequest.type, token2, error, item2);
               });
             };
             return middleware.resolveCompletionItem ? middleware.resolveCompletionItem(item, token, resolveCompletionItem) : resolveCompletionItem(item, token);
@@ -14071,8 +14071,8 @@ var require_hover = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var HoverFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.HoverRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.HoverRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const hoverCapability = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "hover");
@@ -14093,18 +14093,18 @@ var require_hover = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideHover: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideHover = (document2, position2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.HoverRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.HoverRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asHover(result);
+                return client3.protocol2CodeConverter.asHover(result);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.HoverRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.HoverRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideHover ? middleware.provideHover(document, position, token, provideHover) : provideHover(document, position, token);
           }
         };
@@ -14156,8 +14156,8 @@ var require_definition = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var DefinitionFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DefinitionRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DefinitionRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const definitionSupport = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "definition");
@@ -14175,18 +14175,18 @@ var require_definition = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDefinition: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDefinition = (document2, position2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.DefinitionRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DefinitionRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asDefinitionResult(result, token2);
+                return client3.protocol2CodeConverter.asDefinitionResult(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DefinitionRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DefinitionRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDefinition ? middleware.provideDefinition(document, position, token, provideDefinition) : provideDefinition(document, position, token);
           }
         };
@@ -14238,8 +14238,8 @@ var require_signatureHelp = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var SignatureHelpFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.SignatureHelpRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.SignatureHelpRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const config = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "signatureHelp");
@@ -14263,18 +14263,18 @@ var require_signatureHelp = __commonJS({
       registerLanguageProvider(options) {
         const provider = {
           provideSignatureHelp: (document, position, token, context) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const providerSignatureHelp = (document2, position2, context2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.SignatureHelpRequest.type, client2.code2ProtocolConverter.asSignatureHelpParams(document2, position2, context2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.SignatureHelpRequest.type, client3.code2ProtocolConverter.asSignatureHelpParams(document2, position2, context2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asSignatureHelp(result, token2);
+                return client3.protocol2CodeConverter.asSignatureHelp(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.SignatureHelpRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.SignatureHelpRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideSignatureHelp ? middleware.provideSignatureHelp(document, position, context, token, providerSignatureHelp) : providerSignatureHelp(document, position, context, token);
           }
         };
@@ -14336,8 +14336,8 @@ var require_documentHighlight = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var DocumentHighlightFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentHighlightRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentHighlightRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "documentHighlight").dynamicRegistration = true;
@@ -14353,18 +14353,18 @@ var require_documentHighlight = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDocumentHighlights: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const _provideDocumentHighlights = (document2, position2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentHighlightRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentHighlightRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asDocumentHighlights(result, token2);
+                return client3.protocol2CodeConverter.asDocumentHighlights(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentHighlightRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentHighlightRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentHighlights ? middleware.provideDocumentHighlights(document, position, token, _provideDocumentHighlights) : _provideDocumentHighlights(document, position, token);
           }
         };
@@ -14444,8 +14444,8 @@ var require_documentSymbol = __commonJS({
       vscode_languageserver_protocol_1.SymbolTag.Deprecated
     ];
     var DocumentSymbolFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentSymbolRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentSymbolRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const symbolCapabilities = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "documentSymbol");
@@ -14470,10 +14470,10 @@ var require_documentSymbol = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDocumentSymbols: (document, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const _provideDocumentSymbols = async (document2, token2) => {
               try {
-                const data = await client2.sendRequest(vscode_languageserver_protocol_1.DocumentSymbolRequest.type, client2.code2ProtocolConverter.asDocumentSymbolParams(document2), token2);
+                const data = await client3.sendRequest(vscode_languageserver_protocol_1.DocumentSymbolRequest.type, client3.code2ProtocolConverter.asDocumentSymbolParams(document2), token2);
                 if (token2.isCancellationRequested || data === void 0 || data === null) {
                   return null;
                 }
@@ -14482,16 +14482,16 @@ var require_documentSymbol = __commonJS({
                 } else {
                   const first = data[0];
                   if (vscode_languageserver_protocol_1.DocumentSymbol.is(first)) {
-                    return await client2.protocol2CodeConverter.asDocumentSymbols(data, token2);
+                    return await client3.protocol2CodeConverter.asDocumentSymbols(data, token2);
                   } else {
-                    return await client2.protocol2CodeConverter.asSymbolInformations(data, token2);
+                    return await client3.protocol2CodeConverter.asSymbolInformations(data, token2);
                   }
                 }
               } catch (error) {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentSymbolRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentSymbolRequest.type, token2, error, null);
               }
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentSymbols ? middleware.provideDocumentSymbols(document, token, _provideDocumentSymbols) : _provideDocumentSymbols(document, token);
           }
         };
@@ -14542,8 +14542,8 @@ var require_workspaceSymbol = __commonJS({
     var documentSymbol_1 = require_documentSymbol();
     var UUID = __importStar(require_uuid());
     var WorkspaceSymbolFeature = class extends features_1.WorkspaceFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const symbolCapabilities = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "workspace"), "symbol");
@@ -14568,33 +14568,33 @@ var require_workspaceSymbol = __commonJS({
       registerLanguageProvider(options) {
         const provider = {
           provideWorkspaceSymbols: (query, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideWorkspaceSymbols = (query2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type, { query: query2 }, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type, { query: query2 }, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asSymbolInformations(result, token2);
+                return client3.protocol2CodeConverter.asSymbolInformations(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideWorkspaceSymbols ? middleware.provideWorkspaceSymbols(query, token, provideWorkspaceSymbols) : provideWorkspaceSymbols(query, token);
           },
           resolveWorkspaceSymbol: options.resolveProvider === true ? (item, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const resolveWorkspaceSymbol = (item2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.WorkspaceSymbolResolveRequest.type, client2.code2ProtocolConverter.asWorkspaceSymbol(item2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.WorkspaceSymbolResolveRequest.type, client3.code2ProtocolConverter.asWorkspaceSymbol(item2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asSymbolInformation(result);
+                return client3.protocol2CodeConverter.asSymbolInformation(result);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.WorkspaceSymbolResolveRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.WorkspaceSymbolResolveRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.resolveWorkspaceSymbol ? middleware.resolveWorkspaceSymbol(item, token, resolveWorkspaceSymbol) : resolveWorkspaceSymbol(item, token);
           } : void 0
         };
@@ -14643,8 +14643,8 @@ var require_reference = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var ReferencesFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.ReferencesRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.ReferencesRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "references").dynamicRegistration = true;
@@ -14660,18 +14660,18 @@ var require_reference = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideReferences: (document, position, options2, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const _providerReferences = (document2, position2, options3, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.ReferencesRequest.type, client2.code2ProtocolConverter.asReferenceParams(document2, position2, options3), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.ReferencesRequest.type, client3.code2ProtocolConverter.asReferenceParams(document2, position2, options3), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asReferences(result, token2);
+                return client3.protocol2CodeConverter.asReferences(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.ReferencesRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.ReferencesRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideReferences ? middleware.provideReferences(document, position, options2, token, _providerReferences) : _providerReferences(document, position, options2, token);
           }
         };
@@ -14695,8 +14695,8 @@ var require_typeDefinition = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var TypeDefinitionFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.TypeDefinitionRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.TypeDefinitionRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "typeDefinition").dynamicRegistration = true;
@@ -14715,18 +14715,18 @@ var require_typeDefinition = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideTypeDefinition: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideTypeDefinition = (document2, position2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.TypeDefinitionRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.TypeDefinitionRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asDefinitionResult(result, token2);
+                return client3.protocol2CodeConverter.asDefinitionResult(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.TypeDefinitionRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.TypeDefinitionRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideTypeDefinition ? middleware.provideTypeDefinition(document, position, token, provideTypeDefinition) : provideTypeDefinition(document, position, token);
           }
         };
@@ -14750,8 +14750,8 @@ var require_implementation = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var ImplementationFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.ImplementationRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.ImplementationRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const implementationSupport = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "implementation");
@@ -14769,18 +14769,18 @@ var require_implementation = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideImplementation: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideImplementation = (document2, position2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.ImplementationRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.ImplementationRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asDefinitionResult(result, token2);
+                return client3.protocol2CodeConverter.asDefinitionResult(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.ImplementationRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.ImplementationRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideImplementation ? middleware.provideImplementation(document, position, token, provideImplementation) : provideImplementation(document, position, token);
           }
         };
@@ -14804,8 +14804,8 @@ var require_colorProvider = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var ColorProviderFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentColorRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentColorRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "colorProvider").dynamicRegistration = true;
@@ -14821,41 +14821,41 @@ var require_colorProvider = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideColorPresentations: (color, context, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideColorPresentations = (color2, context2, token2) => {
               const requestParams = {
                 color: color2,
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(context2.document),
-                range: client2.code2ProtocolConverter.asRange(context2.range)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(context2.document),
+                range: client3.code2ProtocolConverter.asRange(context2.range)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.ColorPresentationRequest.type, requestParams, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.ColorPresentationRequest.type, requestParams, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
                 return this._client.protocol2CodeConverter.asColorPresentations(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.ColorPresentationRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.ColorPresentationRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideColorPresentations ? middleware.provideColorPresentations(color, context, token, provideColorPresentations) : provideColorPresentations(color, context, token);
           },
           provideDocumentColors: (document, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDocumentColors = (document2, token2) => {
               const requestParams = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentColorRequest.type, requestParams, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentColorRequest.type, requestParams, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
                 return this._client.protocol2CodeConverter.asColorInformations(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentColorRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentColorRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentColors ? middleware.provideDocumentColors(document, token, provideDocumentColors) : provideDocumentColors(document, token);
           }
         };
@@ -14904,8 +14904,8 @@ var require_codeAction = __commonJS({
     var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var CodeActionFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.CodeActionRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.CodeActionRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const cap = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "codeAction");
@@ -14946,36 +14946,36 @@ var require_codeAction = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideCodeActions: (document, range, context, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const _provideCodeActions = async (document2, range2, context2, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                range: client2.code2ProtocolConverter.asRange(range2),
-                context: client2.code2ProtocolConverter.asCodeActionContextSync(context2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                range: client3.code2ProtocolConverter.asRange(range2),
+                context: client3.code2ProtocolConverter.asCodeActionContextSync(context2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.CodeActionRequest.type, params, token2).then((values) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.CodeActionRequest.type, params, token2).then((values) => {
                 if (token2.isCancellationRequested || values === null || values === void 0) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asCodeActionResult(values, token2);
+                return client3.protocol2CodeConverter.asCodeActionResult(values, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.CodeActionRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.CodeActionRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideCodeActions ? middleware.provideCodeActions(document, range, context, token, _provideCodeActions) : _provideCodeActions(document, range, context, token);
           },
           resolveCodeAction: options.resolveProvider ? (item, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const middleware = this._client.middleware;
             const resolveCodeAction = async (item2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.CodeActionResolveRequest.type, client2.code2ProtocolConverter.asCodeActionSync(item2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.CodeActionResolveRequest.type, client3.code2ProtocolConverter.asCodeActionSync(item2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return item2;
                 }
-                return client2.protocol2CodeConverter.asCodeAction(result, token2);
+                return client3.protocol2CodeConverter.asCodeAction(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.CodeActionResolveRequest.type, token2, error, item2);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.CodeActionResolveRequest.type, token2, error, item2);
               });
             };
             return middleware.resolveCodeAction ? middleware.resolveCodeAction(item, token, resolveCodeAction) : resolveCodeAction(item, token);
@@ -15035,8 +15035,8 @@ var require_codeLens = __commonJS({
     var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var CodeLensFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.CodeLensRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.CodeLensRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const clc = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "codeLens");
@@ -15045,8 +15045,8 @@ var require_codeLens = __commonJS({
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "workspace"), "codeLens").refreshSupport = true;
       }
       initialize(capabilities, documentSelector) {
-        const client2 = this._client;
-        client2.onRequest(vscode_languageserver_protocol_1.CodeLensRefreshRequest.type, async () => {
+        const client3 = this._client;
+        client3.onRequest(vscode_languageserver_protocol_1.CodeLensRefreshRequest.type, async () => {
           for (const provider of this.getAllProviders()) {
             provider.onDidChangeCodeLensEmitter.fire();
           }
@@ -15063,33 +15063,33 @@ var require_codeLens = __commonJS({
         const provider = {
           onDidChangeCodeLenses: eventEmitter.event,
           provideCodeLenses: (document, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideCodeLenses = (document2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.CodeLensRequest.type, client2.code2ProtocolConverter.asCodeLensParams(document2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.CodeLensRequest.type, client3.code2ProtocolConverter.asCodeLensParams(document2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asCodeLenses(result, token2);
+                return client3.protocol2CodeConverter.asCodeLenses(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.CodeLensRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.CodeLensRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideCodeLenses ? middleware.provideCodeLenses(document, token, provideCodeLenses) : provideCodeLenses(document, token);
           },
           resolveCodeLens: options.resolveProvider ? (codeLens, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const resolveCodeLens = (codeLens2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.CodeLensResolveRequest.type, client2.code2ProtocolConverter.asCodeLens(codeLens2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.CodeLensResolveRequest.type, client3.code2ProtocolConverter.asCodeLens(codeLens2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return codeLens2;
                 }
-                return client2.protocol2CodeConverter.asCodeLens(result);
+                return client3.protocol2CodeConverter.asCodeLens(result);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.CodeLensResolveRequest.type, token2, error, codeLens2);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.CodeLensResolveRequest.type, token2, error, codeLens2);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.resolveCodeLens ? middleware.resolveCodeLens(codeLens, token, resolveCodeLens) : resolveCodeLens(codeLens, token);
           } : void 0
         };
@@ -15150,8 +15150,8 @@ var require_formatting = __commonJS({
       FileFormattingOptions2.fromConfiguration = fromConfiguration;
     })(FileFormattingOptions || (FileFormattingOptions = {}));
     var DocumentFormattingFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentFormattingRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentFormattingRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "formatting").dynamicRegistration = true;
@@ -15167,22 +15167,22 @@ var require_formatting = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDocumentFormattingEdits: (document, options2, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDocumentFormattingEdits = (document2, options3, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                options: client2.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                options: client3.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentFormattingRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentFormattingRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asTextEdits(result, token2);
+                return client3.protocol2CodeConverter.asTextEdits(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentFormattingRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentFormattingRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentFormattingEdits ? middleware.provideDocumentFormattingEdits(document, options2, token, provideDocumentFormattingEdits) : provideDocumentFormattingEdits(document, options2, token);
           }
         };
@@ -15191,8 +15191,8 @@ var require_formatting = __commonJS({
     };
     exports2.DocumentFormattingFeature = DocumentFormattingFeature;
     var DocumentRangeFormattingFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const capability = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "rangeFormatting");
@@ -15210,45 +15210,45 @@ var require_formatting = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDocumentRangeFormattingEdits: (document, range, options2, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDocumentRangeFormattingEdits = (document2, range2, options3, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                range: client2.code2ProtocolConverter.asRange(range2),
-                options: client2.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                range: client3.code2ProtocolConverter.asRange(range2),
+                options: client3.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asTextEdits(result, token2);
+                return client3.protocol2CodeConverter.asTextEdits(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentRangeFormattingEdits ? middleware.provideDocumentRangeFormattingEdits(document, range, options2, token, provideDocumentRangeFormattingEdits) : provideDocumentRangeFormattingEdits(document, range, options2, token);
           }
         };
         if (options.rangesSupport) {
           provider.provideDocumentRangesFormattingEdits = (document, ranges, options2, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDocumentRangesFormattingEdits = (document2, ranges2, options3, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                ranges: client2.code2ProtocolConverter.asRanges(ranges2),
-                options: client2.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                ranges: client3.code2ProtocolConverter.asRanges(ranges2),
+                options: client3.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentRangesFormattingRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentRangesFormattingRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asTextEdits(result, token2);
+                return client3.protocol2CodeConverter.asTextEdits(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentRangesFormattingRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentRangesFormattingRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentRangesFormattingEdits ? middleware.provideDocumentRangesFormattingEdits(document, ranges, options2, token, provideDocumentRangesFormattingEdits) : provideDocumentRangesFormattingEdits(document, ranges, options2, token);
           };
         }
@@ -15257,8 +15257,8 @@ var require_formatting = __commonJS({
     };
     exports2.DocumentRangeFormattingFeature = DocumentRangeFormattingFeature;
     var DocumentOnTypeFormattingFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "onTypeFormatting").dynamicRegistration = true;
@@ -15274,24 +15274,24 @@ var require_formatting = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideOnTypeFormattingEdits: (document, position, ch, options2, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideOnTypeFormattingEdits = (document2, position2, ch2, options3, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                position: client2.code2ProtocolConverter.asPosition(position2),
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                position: client3.code2ProtocolConverter.asPosition(position2),
                 ch: ch2,
-                options: client2.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
+                options: client3.code2ProtocolConverter.asFormattingOptions(options3, FileFormattingOptions.fromConfiguration(document2))
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asTextEdits(result, token2);
+                return client3.protocol2CodeConverter.asTextEdits(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideOnTypeFormattingEdits ? middleware.provideOnTypeFormattingEdits(document, position, ch, options2, token, provideOnTypeFormattingEdits) : provideOnTypeFormattingEdits(document, position, ch, options2, token);
           }
         };
@@ -15342,8 +15342,8 @@ var require_rename = __commonJS({
     var Is2 = __importStar(require_is());
     var features_1 = require_features();
     var RenameFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.RenameRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.RenameRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const rename = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "rename");
@@ -15366,43 +15366,43 @@ var require_rename = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideRenameEdits: (document, position, newName, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideRenameEdits = (document2, position2, newName2, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                position: client2.code2ProtocolConverter.asPosition(position2),
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                position: client3.code2ProtocolConverter.asPosition(position2),
                 newName: newName2
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.RenameRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.RenameRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asWorkspaceEdit(result, token2);
+                return client3.protocol2CodeConverter.asWorkspaceEdit(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.RenameRequest.type, token2, error, null, false);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.RenameRequest.type, token2, error, null, false);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideRenameEdits ? middleware.provideRenameEdits(document, position, newName, token, provideRenameEdits) : provideRenameEdits(document, position, newName, token);
           },
           prepareRename: options.prepareProvider ? (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const prepareRename = (document2, position2, token2) => {
               const params = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                position: client2.code2ProtocolConverter.asPosition(position2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                position: client3.code2ProtocolConverter.asPosition(position2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.PrepareRenameRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.PrepareRenameRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
                 if (vscode_languageserver_protocol_1.Range.is(result)) {
-                  return client2.protocol2CodeConverter.asRange(result);
+                  return client3.protocol2CodeConverter.asRange(result);
                 } else if (this.isDefaultBehavior(result)) {
                   return result.defaultBehavior === true ? null : Promise.reject(new Error(`The element can't be renamed.`));
                 } else if (result && vscode_languageserver_protocol_1.Range.is(result.range)) {
                   return {
-                    range: client2.protocol2CodeConverter.asRange(result.range),
+                    range: client3.protocol2CodeConverter.asRange(result.range),
                     placeholder: result.placeholder
                   };
                 }
@@ -15415,7 +15415,7 @@ var require_rename = __commonJS({
                 }
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.prepareRename ? middleware.prepareRename(document, position, token, prepareRename) : prepareRename(document, position, token);
           } : void 0
         };
@@ -15471,8 +15471,8 @@ var require_documentLink = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var DocumentLinkFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DocumentLinkRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DocumentLinkRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const documentLinkCapabilities = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "documentLink");
@@ -15490,33 +15490,33 @@ var require_documentLink = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDocumentLinks: (document, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDocumentLinks = (document2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentLinkRequest.type, client2.code2ProtocolConverter.asDocumentLinkParams(document2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentLinkRequest.type, client3.code2ProtocolConverter.asDocumentLinkParams(document2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asDocumentLinks(result, token2);
+                return client3.protocol2CodeConverter.asDocumentLinks(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentLinkRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentLinkRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDocumentLinks ? middleware.provideDocumentLinks(document, token, provideDocumentLinks) : provideDocumentLinks(document, token);
           },
           resolveDocumentLink: options.resolveProvider ? (link, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const resolveDocumentLink = (link2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.DocumentLinkResolveRequest.type, client2.code2ProtocolConverter.asDocumentLink(link2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DocumentLinkResolveRequest.type, client3.code2ProtocolConverter.asDocumentLink(link2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return link2;
                 }
-                return client2.protocol2CodeConverter.asDocumentLink(result);
+                return client3.protocol2CodeConverter.asDocumentLink(result);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DocumentLinkResolveRequest.type, token2, error, link2);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DocumentLinkResolveRequest.type, token2, error, link2);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.resolveDocumentLink ? middleware.resolveDocumentLink(link, token, resolveDocumentLink) : resolveDocumentLink(link, token);
           } : void 0
         };
@@ -15565,10 +15565,10 @@ var require_executeCommand = __commonJS({
     var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var ExecuteCommandFeature = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "_client");
         __publicField(this, "_commands");
-        this._client = client2;
+        this._client = client3;
         this._commands = /* @__PURE__ */ new Map();
       }
       getState() {
@@ -15590,15 +15590,15 @@ var require_executeCommand = __commonJS({
         });
       }
       register(data) {
-        const client2 = this._client;
-        const middleware = client2.middleware;
+        const client3 = this._client;
+        const middleware = client3.middleware;
         const executeCommand = (command, args) => {
           const params = {
             command,
             arguments: args
           };
-          return client2.sendRequest(vscode_languageserver_protocol_1.ExecuteCommandRequest.type, params).then(void 0, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.ExecuteCommandRequest.type, void 0, error, void 0);
+          return client3.sendRequest(vscode_languageserver_protocol_1.ExecuteCommandRequest.type, params).then(void 0, (error) => {
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.ExecuteCommandRequest.type, void 0, error, void 0);
           });
         };
         if (data.registerOptions.commands) {
@@ -15639,8 +15639,8 @@ var require_foldingRange = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var FoldingRangeFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.FoldingRangeRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.FoldingRangeRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const capability = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "foldingRange");
@@ -15669,21 +15669,21 @@ var require_foldingRange = __commonJS({
         const provider = {
           onDidChangeFoldingRanges: eventEmitter.event,
           provideFoldingRanges: (document, context, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideFoldingRanges = (document2, _, token2) => {
               const requestParams = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.FoldingRangeRequest.type, requestParams, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.FoldingRangeRequest.type, requestParams, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asFoldingRanges(result, token2);
+                return client3.protocol2CodeConverter.asFoldingRanges(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.FoldingRangeRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.FoldingRangeRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideFoldingRanges ? middleware.provideFoldingRanges(document, context, token, provideFoldingRanges) : provideFoldingRanges(document, context, token);
           }
         };
@@ -15704,8 +15704,8 @@ var require_declaration = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var DeclarationFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.DeclarationRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.DeclarationRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const declarationSupport = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "declaration");
@@ -15723,18 +15723,18 @@ var require_declaration = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideDeclaration: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideDeclaration = (document2, position2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.DeclarationRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.DeclarationRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asDeclarationResult(result, token2);
+                return client3.protocol2CodeConverter.asDeclarationResult(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.DeclarationRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.DeclarationRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideDeclaration ? middleware.provideDeclaration(document, position, token, provideDeclaration) : provideDeclaration(document, position, token);
           }
         };
@@ -15758,8 +15758,8 @@ var require_selectionRange = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var SelectionRangeFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.SelectionRangeRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.SelectionRangeRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const capability = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "selectionRange");
@@ -15776,22 +15776,22 @@ var require_selectionRange = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideSelectionRanges: (document, positions, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideSelectionRanges = async (document2, positions2, token2) => {
               const requestParams = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                positions: client2.code2ProtocolConverter.asPositionsSync(positions2, token2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                positions: client3.code2ProtocolConverter.asPositionsSync(positions2, token2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.SelectionRangeRequest.type, requestParams, token2).then((ranges) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.SelectionRangeRequest.type, requestParams, token2).then((ranges) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asSelectionRanges(ranges, token2);
+                return client3.protocol2CodeConverter.asSelectionRanges(ranges, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.SelectionRangeRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.SelectionRangeRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideSelectionRanges ? middleware.provideSelectionRanges(document, positions, token, provideSelectionRanges) : provideSelectionRanges(document, positions, token);
           }
         };
@@ -15815,68 +15815,68 @@ var require_callHierarchy = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var CallHierarchyProvider = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "client");
         __publicField(this, "middleware");
-        this.client = client2;
-        this.middleware = client2.middleware;
+        this.client = client3;
+        this.middleware = client3.middleware;
       }
       prepareCallHierarchy(document, position, token) {
-        const client2 = this.client;
+        const client3 = this.client;
         const middleware = this.middleware;
         const prepareCallHierarchy = (document2, position2, token2) => {
-          const params = client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2);
-          return client2.sendRequest(vscode_languageserver_protocol_1.CallHierarchyPrepareRequest.type, params, token2).then((result) => {
+          const params = client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2);
+          return client3.sendRequest(vscode_languageserver_protocol_1.CallHierarchyPrepareRequest.type, params, token2).then((result) => {
             if (token2.isCancellationRequested) {
               return null;
             }
-            return client2.protocol2CodeConverter.asCallHierarchyItems(result, token2);
+            return client3.protocol2CodeConverter.asCallHierarchyItems(result, token2);
           }, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.CallHierarchyPrepareRequest.type, token2, error, null);
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.CallHierarchyPrepareRequest.type, token2, error, null);
           });
         };
         return middleware.prepareCallHierarchy ? middleware.prepareCallHierarchy(document, position, token, prepareCallHierarchy) : prepareCallHierarchy(document, position, token);
       }
       provideCallHierarchyIncomingCalls(item, token) {
-        const client2 = this.client;
+        const client3 = this.client;
         const middleware = this.middleware;
         const provideCallHierarchyIncomingCalls = (item2, token2) => {
           const params = {
-            item: client2.code2ProtocolConverter.asCallHierarchyItem(item2)
+            item: client3.code2ProtocolConverter.asCallHierarchyItem(item2)
           };
-          return client2.sendRequest(vscode_languageserver_protocol_1.CallHierarchyIncomingCallsRequest.type, params, token2).then((result) => {
+          return client3.sendRequest(vscode_languageserver_protocol_1.CallHierarchyIncomingCallsRequest.type, params, token2).then((result) => {
             if (token2.isCancellationRequested) {
               return null;
             }
-            return client2.protocol2CodeConverter.asCallHierarchyIncomingCalls(result, token2);
+            return client3.protocol2CodeConverter.asCallHierarchyIncomingCalls(result, token2);
           }, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.CallHierarchyIncomingCallsRequest.type, token2, error, null);
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.CallHierarchyIncomingCallsRequest.type, token2, error, null);
           });
         };
         return middleware.provideCallHierarchyIncomingCalls ? middleware.provideCallHierarchyIncomingCalls(item, token, provideCallHierarchyIncomingCalls) : provideCallHierarchyIncomingCalls(item, token);
       }
       provideCallHierarchyOutgoingCalls(item, token) {
-        const client2 = this.client;
+        const client3 = this.client;
         const middleware = this.middleware;
         const provideCallHierarchyOutgoingCalls = (item2, token2) => {
           const params = {
-            item: client2.code2ProtocolConverter.asCallHierarchyItem(item2)
+            item: client3.code2ProtocolConverter.asCallHierarchyItem(item2)
           };
-          return client2.sendRequest(vscode_languageserver_protocol_1.CallHierarchyOutgoingCallsRequest.type, params, token2).then((result) => {
+          return client3.sendRequest(vscode_languageserver_protocol_1.CallHierarchyOutgoingCallsRequest.type, params, token2).then((result) => {
             if (token2.isCancellationRequested) {
               return null;
             }
-            return client2.protocol2CodeConverter.asCallHierarchyOutgoingCalls(result, token2);
+            return client3.protocol2CodeConverter.asCallHierarchyOutgoingCalls(result, token2);
           }, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.CallHierarchyOutgoingCallsRequest.type, token2, error, null);
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.CallHierarchyOutgoingCallsRequest.type, token2, error, null);
           });
         };
         return middleware.provideCallHierarchyOutgoingCalls ? middleware.provideCallHierarchyOutgoingCalls(item, token, provideCallHierarchyOutgoingCalls) : provideCallHierarchyOutgoingCalls(item, token);
       }
     };
     var CallHierarchyFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.CallHierarchyPrepareRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.CallHierarchyPrepareRequest.type);
       }
       fillClientCapabilities(cap) {
         const capabilities = cap;
@@ -15891,8 +15891,8 @@ var require_callHierarchy = __commonJS({
         this.register({ id, registerOptions: options });
       }
       registerLanguageProvider(options) {
-        const client2 = this._client;
-        const provider = new CallHierarchyProvider(client2);
+        const client3 = this._client;
+        const provider = new CallHierarchyProvider(client3);
         return [vscode_1.languages.registerCallHierarchyProvider(this._client.protocol2CodeConverter.asDocumentSelector(options.documentSelector), provider), provider];
       }
     };
@@ -15938,8 +15938,8 @@ var require_semanticTokens = __commonJS({
     var features_1 = require_features();
     var Is2 = __importStar(require_is());
     var SemanticTokensFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.SemanticTokensRegistrationType.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.SemanticTokensRegistrationType.type);
       }
       fillClientCapabilities(capabilities) {
         const capability = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "semanticTokens");
@@ -15996,8 +15996,8 @@ var require_semanticTokens = __commonJS({
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "workspace"), "semanticTokens").refreshSupport = true;
       }
       initialize(capabilities, documentSelector) {
-        const client2 = this._client;
-        client2.onRequest(vscode_languageserver_protocol_1.SemanticTokensRefreshRequest.type, async () => {
+        const client3 = this._client;
+        client3.onRequest(vscode_languageserver_protocol_1.SemanticTokensRefreshRequest.type, async () => {
           for (const provider of this.getAllProviders()) {
             provider.onDidChangeSemanticTokensEmitter.fire();
           }
@@ -16016,42 +16016,42 @@ var require_semanticTokens = __commonJS({
         const documentProvider = fullProvider ? {
           onDidChangeSemanticTokens: eventEmitter.event,
           provideDocumentSemanticTokens: (document, token) => {
-            const client3 = this._client;
-            const middleware = client3.middleware;
+            const client4 = this._client;
+            const middleware = client4.middleware;
             const provideDocumentSemanticTokens = (document2, token2) => {
               const params = {
-                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2)
+                textDocument: client4.code2ProtocolConverter.asTextDocumentIdentifier(document2)
               };
-              return client3.sendRequest(vscode_languageserver_protocol_1.SemanticTokensRequest.type, params, token2).then((result) => {
+              return client4.sendRequest(vscode_languageserver_protocol_1.SemanticTokensRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client3.protocol2CodeConverter.asSemanticTokens(result, token2);
+                return client4.protocol2CodeConverter.asSemanticTokens(result, token2);
               }, (error) => {
-                return client3.handleFailedRequest(vscode_languageserver_protocol_1.SemanticTokensRequest.type, token2, error, null);
+                return client4.handleFailedRequest(vscode_languageserver_protocol_1.SemanticTokensRequest.type, token2, error, null);
               });
             };
             return middleware.provideDocumentSemanticTokens ? middleware.provideDocumentSemanticTokens(document, token, provideDocumentSemanticTokens) : provideDocumentSemanticTokens(document, token);
           },
           provideDocumentSemanticTokensEdits: hasEditProvider ? (document, previousResultId, token) => {
-            const client3 = this._client;
-            const middleware = client3.middleware;
+            const client4 = this._client;
+            const middleware = client4.middleware;
             const provideDocumentSemanticTokensEdits = (document2, previousResultId2, token2) => {
               const params = {
-                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                textDocument: client4.code2ProtocolConverter.asTextDocumentIdentifier(document2),
                 previousResultId: previousResultId2
               };
-              return client3.sendRequest(vscode_languageserver_protocol_1.SemanticTokensDeltaRequest.type, params, token2).then(async (result) => {
+              return client4.sendRequest(vscode_languageserver_protocol_1.SemanticTokensDeltaRequest.type, params, token2).then(async (result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
                 if (vscode_languageserver_protocol_1.SemanticTokens.is(result)) {
-                  return await client3.protocol2CodeConverter.asSemanticTokens(result, token2);
+                  return await client4.protocol2CodeConverter.asSemanticTokens(result, token2);
                 } else {
-                  return await client3.protocol2CodeConverter.asSemanticTokensEdits(result, token2);
+                  return await client4.protocol2CodeConverter.asSemanticTokensEdits(result, token2);
                 }
               }, (error) => {
-                return client3.handleFailedRequest(vscode_languageserver_protocol_1.SemanticTokensDeltaRequest.type, token2, error, null);
+                return client4.handleFailedRequest(vscode_languageserver_protocol_1.SemanticTokensDeltaRequest.type, token2, error, null);
               });
             };
             return middleware.provideDocumentSemanticTokensEdits ? middleware.provideDocumentSemanticTokensEdits(document, previousResultId, token, provideDocumentSemanticTokensEdits) : provideDocumentSemanticTokensEdits(document, previousResultId, token);
@@ -16060,29 +16060,29 @@ var require_semanticTokens = __commonJS({
         const hasRangeProvider = options.range === true;
         const rangeProvider = hasRangeProvider ? {
           provideDocumentRangeSemanticTokens: (document, range, token) => {
-            const client3 = this._client;
-            const middleware = client3.middleware;
+            const client4 = this._client;
+            const middleware = client4.middleware;
             const provideDocumentRangeSemanticTokens = (document2, range2, token2) => {
               const params = {
-                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                range: client3.code2ProtocolConverter.asRange(range2)
+                textDocument: client4.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                range: client4.code2ProtocolConverter.asRange(range2)
               };
-              return client3.sendRequest(vscode_languageserver_protocol_1.SemanticTokensRangeRequest.type, params, token2).then((result) => {
+              return client4.sendRequest(vscode_languageserver_protocol_1.SemanticTokensRangeRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client3.protocol2CodeConverter.asSemanticTokens(result, token2);
+                return client4.protocol2CodeConverter.asSemanticTokens(result, token2);
               }, (error) => {
-                return client3.handleFailedRequest(vscode_languageserver_protocol_1.SemanticTokensRangeRequest.type, token2, error, null);
+                return client4.handleFailedRequest(vscode_languageserver_protocol_1.SemanticTokensRangeRequest.type, token2, error, null);
               });
             };
             return middleware.provideDocumentRangeSemanticTokens ? middleware.provideDocumentRangeSemanticTokens(document, range, token, provideDocumentRangeSemanticTokens) : provideDocumentRangeSemanticTokens(document, range, token);
           }
         } : void 0;
         const disposables = [];
-        const client2 = this._client;
-        const legend = client2.protocol2CodeConverter.asSemanticTokensLegend(options.legend);
-        const documentSelector = client2.protocol2CodeConverter.asDocumentSelector(selector);
+        const client3 = this._client;
+        const legend = client3.protocol2CodeConverter.asSemanticTokensLegend(options.legend);
+        const documentSelector = client3.protocol2CodeConverter.asDocumentSelector(selector);
         if (documentProvider !== void 0) {
           disposables.push(vscode.languages.registerDocumentSemanticTokensProvider(documentSelector, documentProvider, legend));
         }
@@ -16133,8 +16133,8 @@ var require_linkedEditingRange = __commonJS({
     var proto = __importStar(require_api2());
     var features_1 = require_features();
     var LinkedEditingFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, proto.LinkedEditingRangeRequest.type);
+      constructor(client3) {
+        super(client3, proto.LinkedEditingRangeRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const linkedEditingSupport = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "linkedEditingRange");
@@ -16151,18 +16151,18 @@ var require_linkedEditingRange = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideLinkedEditingRanges: (document, position, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideLinkedEditing = (document2, position2, token2) => {
-              return client2.sendRequest(proto.LinkedEditingRangeRequest.type, client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
+              return client3.sendRequest(proto.LinkedEditingRangeRequest.type, client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asLinkedEditingRanges(result, token2);
+                return client3.protocol2CodeConverter.asLinkedEditingRanges(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(proto.LinkedEditingRangeRequest.type, token2, error, null);
+                return client3.handleFailedRequest(proto.LinkedEditingRangeRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideLinkedEditingRange ? middleware.provideLinkedEditingRange(document, position, token, provideLinkedEditing) : provideLinkedEditing(document, position, token);
           }
         };
@@ -16186,68 +16186,68 @@ var require_typeHierarchy = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var TypeHierarchyProvider = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "client");
         __publicField(this, "middleware");
-        this.client = client2;
-        this.middleware = client2.middleware;
+        this.client = client3;
+        this.middleware = client3.middleware;
       }
       prepareTypeHierarchy(document, position, token) {
-        const client2 = this.client;
+        const client3 = this.client;
         const middleware = this.middleware;
         const prepareTypeHierarchy = (document2, position2, token2) => {
-          const params = client2.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2);
-          return client2.sendRequest(vscode_languageserver_protocol_1.TypeHierarchyPrepareRequest.type, params, token2).then((result) => {
+          const params = client3.code2ProtocolConverter.asTextDocumentPositionParams(document2, position2);
+          return client3.sendRequest(vscode_languageserver_protocol_1.TypeHierarchyPrepareRequest.type, params, token2).then((result) => {
             if (token2.isCancellationRequested) {
               return null;
             }
-            return client2.protocol2CodeConverter.asTypeHierarchyItems(result, token2);
+            return client3.protocol2CodeConverter.asTypeHierarchyItems(result, token2);
           }, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.TypeHierarchyPrepareRequest.type, token2, error, null);
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.TypeHierarchyPrepareRequest.type, token2, error, null);
           });
         };
         return middleware.prepareTypeHierarchy ? middleware.prepareTypeHierarchy(document, position, token, prepareTypeHierarchy) : prepareTypeHierarchy(document, position, token);
       }
       provideTypeHierarchySupertypes(item, token) {
-        const client2 = this.client;
+        const client3 = this.client;
         const middleware = this.middleware;
         const provideTypeHierarchySupertypes = (item2, token2) => {
           const params = {
-            item: client2.code2ProtocolConverter.asTypeHierarchyItem(item2)
+            item: client3.code2ProtocolConverter.asTypeHierarchyItem(item2)
           };
-          return client2.sendRequest(vscode_languageserver_protocol_1.TypeHierarchySupertypesRequest.type, params, token2).then((result) => {
+          return client3.sendRequest(vscode_languageserver_protocol_1.TypeHierarchySupertypesRequest.type, params, token2).then((result) => {
             if (token2.isCancellationRequested) {
               return null;
             }
-            return client2.protocol2CodeConverter.asTypeHierarchyItems(result, token2);
+            return client3.protocol2CodeConverter.asTypeHierarchyItems(result, token2);
           }, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.TypeHierarchySupertypesRequest.type, token2, error, null);
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.TypeHierarchySupertypesRequest.type, token2, error, null);
           });
         };
         return middleware.provideTypeHierarchySupertypes ? middleware.provideTypeHierarchySupertypes(item, token, provideTypeHierarchySupertypes) : provideTypeHierarchySupertypes(item, token);
       }
       provideTypeHierarchySubtypes(item, token) {
-        const client2 = this.client;
+        const client3 = this.client;
         const middleware = this.middleware;
         const provideTypeHierarchySubtypes = (item2, token2) => {
           const params = {
-            item: client2.code2ProtocolConverter.asTypeHierarchyItem(item2)
+            item: client3.code2ProtocolConverter.asTypeHierarchyItem(item2)
           };
-          return client2.sendRequest(vscode_languageserver_protocol_1.TypeHierarchySubtypesRequest.type, params, token2).then((result) => {
+          return client3.sendRequest(vscode_languageserver_protocol_1.TypeHierarchySubtypesRequest.type, params, token2).then((result) => {
             if (token2.isCancellationRequested) {
               return null;
             }
-            return client2.protocol2CodeConverter.asTypeHierarchyItems(result, token2);
+            return client3.protocol2CodeConverter.asTypeHierarchyItems(result, token2);
           }, (error) => {
-            return client2.handleFailedRequest(vscode_languageserver_protocol_1.TypeHierarchySubtypesRequest.type, token2, error, null);
+            return client3.handleFailedRequest(vscode_languageserver_protocol_1.TypeHierarchySubtypesRequest.type, token2, error, null);
           });
         };
         return middleware.provideTypeHierarchySubtypes ? middleware.provideTypeHierarchySubtypes(item, token, provideTypeHierarchySubtypes) : provideTypeHierarchySubtypes(item, token);
       }
     };
     var TypeHierarchyFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.TypeHierarchyPrepareRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.TypeHierarchyPrepareRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const capability = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "typeHierarchy");
@@ -16261,9 +16261,9 @@ var require_typeHierarchy = __commonJS({
         this.register({ id, registerOptions: options });
       }
       registerLanguageProvider(options) {
-        const client2 = this._client;
-        const provider = new TypeHierarchyProvider(client2);
-        return [vscode_1.languages.registerTypeHierarchyProvider(client2.protocol2CodeConverter.asDocumentSelector(options.documentSelector), provider), provider];
+        const client3 = this._client;
+        const provider = new TypeHierarchyProvider(client3);
+        return [vscode_1.languages.registerTypeHierarchyProvider(client3.protocol2CodeConverter.asDocumentSelector(options.documentSelector), provider), provider];
       }
     };
     exports2.TypeHierarchyFeature = TypeHierarchyFeature;
@@ -16280,8 +16280,8 @@ var require_inlineValue = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var InlineValueFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.InlineValueRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.InlineValueRequest.type);
       }
       fillClientCapabilities(capabilities) {
         (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "inlineValue").dynamicRegistration = true;
@@ -16305,23 +16305,23 @@ var require_inlineValue = __commonJS({
         const provider = {
           onDidChangeInlineValues: eventEmitter.event,
           provideInlineValues: (document, viewPort, context, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideInlineValues = (document2, viewPort2, context2, token2) => {
               const requestParams = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                range: client2.code2ProtocolConverter.asRange(viewPort2),
-                context: client2.code2ProtocolConverter.asInlineValueContext(context2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                range: client3.code2ProtocolConverter.asRange(viewPort2),
+                context: client3.code2ProtocolConverter.asInlineValueContext(context2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.InlineValueRequest.type, requestParams, token2).then((values) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.InlineValueRequest.type, requestParams, token2).then((values) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asInlineValues(values, token2);
+                return client3.protocol2CodeConverter.asInlineValues(values, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.InlineValueRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.InlineValueRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideInlineValues ? middleware.provideInlineValues(document, viewPort, context, token, provideInlineValues) : provideInlineValues(document, viewPort, context, token);
           }
         };
@@ -16345,8 +16345,8 @@ var require_inlayHint = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var InlayHintsFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.InlayHintRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.InlayHintRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const inlayHint = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "inlayHint");
@@ -16374,41 +16374,41 @@ var require_inlayHint = __commonJS({
         const provider = {
           onDidChangeInlayHints: eventEmitter.event,
           provideInlayHints: (document, viewPort, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideInlayHints = async (document2, viewPort2, token2) => {
               const requestParams = {
-                textDocument: client2.code2ProtocolConverter.asTextDocumentIdentifier(document2),
-                range: client2.code2ProtocolConverter.asRange(viewPort2)
+                textDocument: client3.code2ProtocolConverter.asTextDocumentIdentifier(document2),
+                range: client3.code2ProtocolConverter.asRange(viewPort2)
               };
               try {
-                const values = await client2.sendRequest(vscode_languageserver_protocol_1.InlayHintRequest.type, requestParams, token2);
+                const values = await client3.sendRequest(vscode_languageserver_protocol_1.InlayHintRequest.type, requestParams, token2);
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asInlayHints(values, token2);
+                return client3.protocol2CodeConverter.asInlayHints(values, token2);
               } catch (error) {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.InlayHintRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.InlayHintRequest.type, token2, error, null);
               }
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideInlayHints ? middleware.provideInlayHints(document, viewPort, token, provideInlayHints) : provideInlayHints(document, viewPort, token);
           }
         };
         provider.resolveInlayHint = options.resolveProvider === true ? (hint, token) => {
-          const client2 = this._client;
+          const client3 = this._client;
           const resolveInlayHint = async (item, token2) => {
             try {
-              const value = await client2.sendRequest(vscode_languageserver_protocol_1.InlayHintResolveRequest.type, client2.code2ProtocolConverter.asInlayHint(item), token2);
+              const value = await client3.sendRequest(vscode_languageserver_protocol_1.InlayHintResolveRequest.type, client3.code2ProtocolConverter.asInlayHint(item), token2);
               if (token2.isCancellationRequested) {
                 return null;
               }
-              const result = client2.protocol2CodeConverter.asInlayHint(value, token2);
+              const result = client3.protocol2CodeConverter.asInlayHint(value, token2);
               return token2.isCancellationRequested ? null : result;
             } catch (error) {
-              return client2.handleFailedRequest(vscode_languageserver_protocol_1.InlayHintResolveRequest.type, token2, error, null);
+              return client3.handleFailedRequest(vscode_languageserver_protocol_1.InlayHintResolveRequest.type, token2, error, null);
             }
           };
-          const middleware = client2.middleware;
+          const middleware = client3.middleware;
           return middleware.resolveInlayHint ? middleware.resolveInlayHint(hint, token, resolveInlayHint) : resolveInlayHint(hint, token);
         } : void 0;
         return [this.registerProvider(selector, provider), { provider, onDidChangeInlayHints: eventEmitter }];
@@ -16468,11 +16468,11 @@ var require_workspaceFolder = __commonJS({
     }
     exports2.arrayDiff = arrayDiff;
     var WorkspaceFoldersFeature = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "_client");
         __publicField(this, "_listeners");
         __publicField(this, "_initialFolders");
-        this._client = client2;
+        this._client = client3;
         this._listeners = /* @__PURE__ */ new Map();
       }
       getState() {
@@ -16498,8 +16498,8 @@ var require_workspaceFolder = __commonJS({
         capabilities.workspace.workspaceFolders = true;
       }
       initialize(capabilities) {
-        const client2 = this._client;
-        client2.onRequest(vscode_languageserver_protocol_1.WorkspaceFoldersRequest.type, (token) => {
+        const client3 = this._client;
+        client3.onRequest(vscode_languageserver_protocol_1.WorkspaceFoldersRequest.type, (token) => {
           const workspaceFolders = () => {
             const folders = vscode_1.workspace.workspaceFolders;
             if (folders === void 0) {
@@ -16510,7 +16510,7 @@ var require_workspaceFolder = __commonJS({
             });
             return result;
           };
-          const middleware = client2.middleware.workspace;
+          const middleware = client3.middleware.workspace;
           return middleware && middleware.workspaceFolders ? middleware.workspaceFolders(token, workspaceFolders) : workspaceFolders(token);
         });
         const value = access(access(access(capabilities, "workspace"), "workspaceFolders"), "changeNotifications");
@@ -16554,12 +16554,12 @@ var require_workspaceFolder = __commonJS({
       }
       register(data) {
         const id = data.id;
-        const client2 = this._client;
+        const client3 = this._client;
         const disposable = vscode_1.workspace.onDidChangeWorkspaceFolders((event) => {
           const didChangeWorkspaceFolders = (event2) => {
             return this.doSendEvent(event2.added, event2.removed);
           };
-          const middleware = client2.middleware.workspace;
+          const middleware = client3.middleware.workspace;
           const promise = middleware && middleware.didChangeWorkspaceFolders ? middleware.didChangeWorkspaceFolders(event, didChangeWorkspaceFolders) : didChangeWorkspaceFolders(event);
           promise.catch((error) => {
             this._client.error(`Sending notification ${vscode_languageserver_protocol_1.DidChangeWorkspaceFoldersNotification.type.method} failed`, error);
@@ -16643,7 +16643,7 @@ var require_fileOperations = __commonJS({
       target[key] = value;
     }
     var FileOperationFeature = class _FileOperationFeature {
-      constructor(client2, event, registrationType, clientCapability, serverCapability) {
+      constructor(client3, event, registrationType, clientCapability, serverCapability) {
         __publicField(this, "_client");
         __publicField(this, "_event");
         __publicField(this, "_registrationType");
@@ -16653,7 +16653,7 @@ var require_fileOperations = __commonJS({
         // This property must stay private. Otherwise the type `minimatch.IMinimatch` becomes public and as a consequence we would need to
         // ship the d.ts files for minimatch to make the compiler happy when compiling against the vscode-languageclient library
         __publicField(this, "_filters");
-        this._client = client2;
+        this._client = client3;
         this._event = event;
         this._registrationType = registrationType;
         this._clientCapability = clientCapability;
@@ -16768,8 +16768,8 @@ var require_fileOperations = __commonJS({
       }
     };
     var NotificationFileOperationFeature = class extends FileOperationFeature {
-      constructor(client2, event, notificationType, clientCapability, serverCapability, accessUri, createParams) {
-        super(client2, event, notificationType, clientCapability, serverCapability);
+      constructor(client3, event, notificationType, clientCapability, serverCapability, accessUri, createParams) {
+        super(client3, event, notificationType, clientCapability, serverCapability);
         __publicField(this, "_notificationType");
         __publicField(this, "_accessUri");
         __publicField(this, "_createParams");
@@ -16826,8 +16826,8 @@ var require_fileOperations = __commonJS({
       }
     };
     var DidCreateFilesFeature = class extends NotificationFileOperationFeature {
-      constructor(client2) {
-        super(client2, code.workspace.onDidCreateFiles, proto.DidCreateFilesNotification.type, "didCreate", "didCreate", (i) => i, client2.code2ProtocolConverter.asDidCreateFilesParams);
+      constructor(client3) {
+        super(client3, code.workspace.onDidCreateFiles, proto.DidCreateFilesNotification.type, "didCreate", "didCreate", (i) => i, client3.code2ProtocolConverter.asDidCreateFilesParams);
       }
       doSend(event, next) {
         const middleware = this._client.middleware.workspace;
@@ -16836,8 +16836,8 @@ var require_fileOperations = __commonJS({
     };
     exports2.DidCreateFilesFeature = DidCreateFilesFeature;
     var DidRenameFilesFeature = class extends CachingNotificationFileOperationFeature {
-      constructor(client2) {
-        super(client2, code.workspace.onDidRenameFiles, proto.DidRenameFilesNotification.type, "didRename", "didRename", (i) => i.oldUri, client2.code2ProtocolConverter.asDidRenameFilesParams);
+      constructor(client3) {
+        super(client3, code.workspace.onDidRenameFiles, proto.DidRenameFilesNotification.type, "didRename", "didRename", (i) => i.oldUri, client3.code2ProtocolConverter.asDidRenameFilesParams);
       }
       register(data) {
         if (!this._willListener) {
@@ -16856,8 +16856,8 @@ var require_fileOperations = __commonJS({
     };
     exports2.DidRenameFilesFeature = DidRenameFilesFeature;
     var DidDeleteFilesFeature = class extends CachingNotificationFileOperationFeature {
-      constructor(client2) {
-        super(client2, code.workspace.onDidDeleteFiles, proto.DidDeleteFilesNotification.type, "didDelete", "didDelete", (i) => i, client2.code2ProtocolConverter.asDidDeleteFilesParams);
+      constructor(client3) {
+        super(client3, code.workspace.onDidDeleteFiles, proto.DidDeleteFilesNotification.type, "didDelete", "didDelete", (i) => i, client3.code2ProtocolConverter.asDidDeleteFilesParams);
       }
       register(data) {
         if (!this._willListener) {
@@ -16876,8 +16876,8 @@ var require_fileOperations = __commonJS({
     };
     exports2.DidDeleteFilesFeature = DidDeleteFilesFeature;
     var RequestFileOperationFeature = class extends FileOperationFeature {
-      constructor(client2, event, requestType, clientCapability, serverCapability, accessUri, createParams) {
-        super(client2, event, requestType, clientCapability, serverCapability);
+      constructor(client3, event, requestType, clientCapability, serverCapability, accessUri, createParams) {
+        super(client3, event, requestType, clientCapability, serverCapability);
         __publicField(this, "_requestType");
         __publicField(this, "_accessUri");
         __publicField(this, "_createParams");
@@ -16902,8 +16902,8 @@ var require_fileOperations = __commonJS({
       }
     };
     var WillCreateFilesFeature = class extends RequestFileOperationFeature {
-      constructor(client2) {
-        super(client2, code.workspace.onWillCreateFiles, proto.WillCreateFilesRequest.type, "willCreate", "willCreate", (i) => i, client2.code2ProtocolConverter.asWillCreateFilesParams);
+      constructor(client3) {
+        super(client3, code.workspace.onWillCreateFiles, proto.WillCreateFilesRequest.type, "willCreate", "willCreate", (i) => i, client3.code2ProtocolConverter.asWillCreateFilesParams);
       }
       doSend(event, next) {
         const middleware = this._client.middleware.workspace;
@@ -16912,8 +16912,8 @@ var require_fileOperations = __commonJS({
     };
     exports2.WillCreateFilesFeature = WillCreateFilesFeature;
     var WillRenameFilesFeature = class extends RequestFileOperationFeature {
-      constructor(client2) {
-        super(client2, code.workspace.onWillRenameFiles, proto.WillRenameFilesRequest.type, "willRename", "willRename", (i) => i.oldUri, client2.code2ProtocolConverter.asWillRenameFilesParams);
+      constructor(client3) {
+        super(client3, code.workspace.onWillRenameFiles, proto.WillRenameFilesRequest.type, "willRename", "willRename", (i) => i.oldUri, client3.code2ProtocolConverter.asWillRenameFilesParams);
       }
       doSend(event, next) {
         const middleware = this._client.middleware.workspace;
@@ -16922,8 +16922,8 @@ var require_fileOperations = __commonJS({
     };
     exports2.WillRenameFilesFeature = WillRenameFilesFeature;
     var WillDeleteFilesFeature = class extends RequestFileOperationFeature {
-      constructor(client2) {
-        super(client2, code.workspace.onWillDeleteFiles, proto.WillDeleteFilesRequest.type, "willDelete", "willDelete", (i) => i, client2.code2ProtocolConverter.asWillDeleteFilesParams);
+      constructor(client3) {
+        super(client3, code.workspace.onWillDeleteFiles, proto.WillDeleteFilesRequest.type, "willDelete", "willDelete", (i) => i, client3.code2ProtocolConverter.asWillDeleteFilesParams);
       }
       doSend(event, next) {
         const middleware = this._client.middleware.workspace;
@@ -16972,8 +16972,8 @@ var require_inlineCompletion = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var InlineCompletionItemFeature = class extends features_1.TextDocumentLanguageFeature {
-      constructor(client2) {
-        super(client2, vscode_languageserver_protocol_1.InlineCompletionRequest.type);
+      constructor(client3) {
+        super(client3, vscode_languageserver_protocol_1.InlineCompletionRequest.type);
       }
       fillClientCapabilities(capabilities) {
         const inlineCompletion = (0, features_1.ensure)((0, features_1.ensure)(capabilities, "textDocument"), "inlineCompletion");
@@ -16993,16 +16993,16 @@ var require_inlineCompletion = __commonJS({
         const selector = options.documentSelector;
         const provider = {
           provideInlineCompletionItems: (document, position, context, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const middleware = this._client.middleware;
             const provideInlineCompletionItems = (document2, position2, context2, token2) => {
-              return client2.sendRequest(vscode_languageserver_protocol_1.InlineCompletionRequest.type, client2.code2ProtocolConverter.asInlineCompletionParams(document2, position2, context2), token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.InlineCompletionRequest.type, client3.code2ProtocolConverter.asInlineCompletionParams(document2, position2, context2), token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
-                return client2.protocol2CodeConverter.asInlineCompletionResult(result, token2);
+                return client3.protocol2CodeConverter.asInlineCompletionResult(result, token2);
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.InlineCompletionRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.InlineCompletionRequest.type, token2, error, null);
               });
             };
             return middleware.provideInlineCompletionItems ? middleware.provideInlineCompletionItems(document, position, context, token, provideInlineCompletionItems) : provideInlineCompletionItems(document, position, context, token);
@@ -17053,10 +17053,10 @@ var require_textDocumentContent = __commonJS({
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
     var TextDocumentContentFeature = class {
-      constructor(client2) {
+      constructor(client3) {
         __publicField(this, "_client");
         __publicField(this, "_registrations", /* @__PURE__ */ new Map());
-        this._client = client2;
+        this._client = client3;
       }
       getState() {
         const registrations = this._registrations.size > 0;
@@ -17077,9 +17077,9 @@ var require_textDocumentContent = __commonJS({
         textDocumentContent.dynamicRegistration = true;
       }
       initialize(capabilities) {
-        const client2 = this._client;
-        client2.onRequest(vscode_languageserver_protocol_1.TextDocumentContentRefreshRequest.type, async (params) => {
-          const uri = client2.protocol2CodeConverter.asUri(params.uri);
+        const client3 = this._client;
+        client3.onRequest(vscode_languageserver_protocol_1.TextDocumentContentRefreshRequest.type, async (params) => {
+          const uri = client3.protocol2CodeConverter.asUri(params.uri);
           for (const registrations of this._registrations.values()) {
             for (const provider of registrations.providers) {
               if (provider.scheme !== uri.scheme) {
@@ -17113,21 +17113,21 @@ var require_textDocumentContent = __commonJS({
         const provider = {
           onDidChange: eventEmitter.event,
           provideTextDocumentContent: (uri, token) => {
-            const client2 = this._client;
+            const client3 = this._client;
             const provideTextDocumentContent = (uri2, token2) => {
               const params = {
-                uri: client2.code2ProtocolConverter.asUri(uri2)
+                uri: client3.code2ProtocolConverter.asUri(uri2)
               };
-              return client2.sendRequest(vscode_languageserver_protocol_1.TextDocumentContentRequest.type, params, token2).then((result) => {
+              return client3.sendRequest(vscode_languageserver_protocol_1.TextDocumentContentRequest.type, params, token2).then((result) => {
                 if (token2.isCancellationRequested) {
                   return null;
                 }
                 return result.text;
               }, (error) => {
-                return client2.handleFailedRequest(vscode_languageserver_protocol_1.TextDocumentContentRequest.type, token2, error, null);
+                return client3.handleFailedRequest(vscode_languageserver_protocol_1.TextDocumentContentRequest.type, token2, error, null);
               });
             };
-            const middleware = client2.middleware;
+            const middleware = client3.middleware;
             return middleware.provideTextDocumentContent ? middleware.provideTextDocumentContent(uri, token, provideTextDocumentContent) : provideTextDocumentContent(uri, token);
           }
         };
@@ -17161,11 +17161,11 @@ var require_fileSystemWatcher = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var FileSystemWatcherFeature = class {
-      constructor(client2, notifyFileEvent) {
+      constructor(client3, notifyFileEvent) {
         __publicField(this, "_client");
         __publicField(this, "_notifyFileEvent");
         __publicField(this, "_watchers");
-        this._client = client2;
+        this._client = client3;
         this._notifyFileEvent = notifyFileEvent;
         this._watchers = /* @__PURE__ */ new Map();
       }
@@ -17280,14 +17280,14 @@ var require_progress = __commonJS({
         ensure(capabilities, "window").workDoneProgress = true;
       }
       initialize() {
-        const client2 = this._client;
+        const client3 = this._client;
         const deleteHandler = (part) => {
           this.activeParts.delete(part);
         };
         const createHandler = (params) => {
           this.activeParts.add(new progressPart_1.ProgressPart(this._client, params.token, deleteHandler));
         };
-        client2.onRequest(vscode_languageserver_protocol_1.WorkDoneProgressCreateRequest.type, createHandler);
+        client3.onRequest(vscode_languageserver_protocol_1.WorkDoneProgressCreateRequest.type, createHandler);
       }
       clear() {
         for (const part of this.activeParts) {
@@ -17422,11 +17422,11 @@ var require_client = __commonJS({
       ResolvedClientOptions2.sanitizeIsTrusted = sanitizeIsTrusted;
     })(ResolvedClientOptions || (ResolvedClientOptions = {}));
     var DefaultErrorHandler = class {
-      constructor(client2, maxRestartCount) {
+      constructor(client3, maxRestartCount) {
         __publicField(this, "client");
         __publicField(this, "maxRestartCount");
         __publicField(this, "restarts");
-        this.client = client2;
+        this.client = client3;
         this.maxRestartCount = maxRestartCount;
         this.restarts = [];
       }
@@ -18415,23 +18415,23 @@ var require_client = __commonJS({
         }
       }
       notifyFileEvent(event) {
-        const client2 = this;
+        const client3 = this;
         async function didChangeWatchedFile(event2) {
-          client2._fileEvents.push(event2);
-          return client2._fileEventDelayer.trigger(async () => {
-            const fileEvents = client2._fileEvents;
-            client2._fileEvents = [];
+          client3._fileEvents.push(event2);
+          return client3._fileEventDelayer.trigger(async () => {
+            const fileEvents = client3._fileEvents;
+            client3._fileEvents = [];
             try {
-              await client2.sendNotification(vscode_languageserver_protocol_1.DidChangeWatchedFilesNotification.type, { changes: fileEvents });
+              await client3.sendNotification(vscode_languageserver_protocol_1.DidChangeWatchedFilesNotification.type, { changes: fileEvents });
             } catch (error) {
-              client2._fileEvents.push(...fileEvents);
+              client3._fileEvents.push(...fileEvents);
               throw error;
             }
           });
         }
         const workSpaceMiddleware = this.clientOptions.middleware?.workspace;
         (workSpaceMiddleware?.didChangeWatchedFile ? workSpaceMiddleware.didChangeWatchedFile(event, didChangeWatchedFile) : didChangeWatchedFile(event)).catch((error) => {
-          client2.error(`Notifying file events failed.`, error);
+          client3.error(`Notifying file events failed.`, error);
         });
       }
       async sendPendingFullTextDocumentChanges(connection) {
@@ -18909,7 +18909,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
     ]));
     var BaseLanguageClient = _BaseLanguageClient;
     exports2.BaseLanguageClient = BaseLanguageClient;
-    var LanguageClient2 = class extends BaseLanguageClient {
+    var LanguageClient3 = class extends BaseLanguageClient {
       constructor(id, name, serverOptions, clientOptions) {
         super(id, name, clientOptions);
         __publicField(this, "serverOptions");
@@ -18919,7 +18919,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
         return this.serverOptions();
       }
     };
-    exports2.LanguageClient = LanguageClient2;
+    exports2.LanguageClient = LanguageClient3;
     var ConsoleLogger = class {
       error(message) {
         (0, vscode_languageserver_protocol_1.RAL)().console.error(message);
@@ -20801,7 +20801,7 @@ var require_main3 = __commonJS({
       }
       ChildProcessInfo2.is = is;
     })(ChildProcessInfo || (ChildProcessInfo = {}));
-    var LanguageClient2 = class extends client_1.BaseLanguageClient {
+    var LanguageClient3 = class extends client_1.BaseLanguageClient {
       constructor(arg1, arg2, arg3, arg4, arg5) {
         let id;
         let name;
@@ -21214,7 +21214,7 @@ var require_main3 = __commonJS({
         return Promise.resolve(void 0);
       }
     };
-    exports2.LanguageClient = LanguageClient2;
+    exports2.LanguageClient = LanguageClient3;
     var SettingMonitor = class {
       constructor(_client, _setting) {
         __publicField(this, "_client");
@@ -21608,11 +21608,13 @@ var require_main4 = __commonJS({
 // src/extension.desktop.ts
 var extension_desktop_exports = {};
 __export(extension_desktop_exports, {
-  activate: () => activate,
-  deactivate: () => deactivate
+  activate: () => activate2,
+  deactivate: () => deactivate2
 });
 module.exports = __toCommonJS(extension_desktop_exports);
 var import_node = __toESM(require_main3());
+var import_vscode2 = require("vscode");
+var import_node2 = __toESM(require_main3());
 
 // src/extension.ts
 var import_vscode = require("vscode");
@@ -21620,9 +21622,11 @@ var import_vscode_languageclient = __toESM(require_api3());
 var import_wasm_wasi = __toESM(require_deprecated());
 var import_wasm_wasi_lsp = __toESM(require_main4());
 var client;
-async function activate(context) {
-  const wasm = await import_wasm_wasi.Wasm.load();
-  const channel = import_vscode.window.createOutputChannel("TyportHDL Language Server");
+var channel;
+async function startLanguageServer(context, wasm) {
+  if (!channel) {
+    channel = import_vscode.window.createOutputChannel("TyportHDL Language Server");
+  }
   const serverOptions = async () => {
     const options = {
       stdio: (0, import_wasm_wasi_lsp.createStdioOptions)(),
@@ -21633,7 +21637,7 @@ async function activate(context) {
     const filename = import_vscode.Uri.joinPath(context.extensionUri, "client", "server.wasm");
     const bits = await import_vscode.workspace.fs.readFile(filename);
     const module2 = await WebAssembly.compile(bits);
-    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 160, maximum: 8e3, shared: true }, options);
+    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 320, maximum: 16e3, shared: true }, options);
     const decoder = new TextDecoder("utf-8");
     process2.stderr.onData((data) => {
       channel.append(decoder.decode(data));
@@ -21644,26 +21648,72 @@ async function activate(context) {
     documentSelector: [{ language: "typort" }],
     outputChannel: channel,
     synchronize: {
-      // Notify the server about file changes to '.clientrc files contained in the workspace
       fileEvents: import_vscode.workspace.createFileSystemWatcher("**/.clientrc")
     },
     uriConverters: (0, import_wasm_wasi_lsp.createUriConverters)()
   };
-  client = new import_vscode_languageclient.LanguageClient("lspClient", "LSP Client", serverOptions, clientOptions);
+  const newClient = new import_vscode_languageclient.LanguageClient("lspClient", "LSP Client", serverOptions, clientOptions);
   try {
-    await client.start();
+    await newClient.start();
   } catch (error) {
-    client.error(`Start failed`, error, "force");
+    newClient.error(`Start failed`, error, "force");
   }
+  return newClient;
+}
+async function activate(context) {
+  const wasm = await import_wasm_wasi.Wasm.load();
+  client = await startLanguageServer(context, wasm);
   const CountFilesRequest = new import_vscode_languageclient.RequestType("wasm-language-server/countFiles");
   context.subscriptions.push(import_vscode.commands.registerCommand("vscode-samples.wasm-language-server.countFiles", async () => {
     const folder = import_vscode.workspace.workspaceFolders[0].uri;
     const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
     import_vscode.window.showInformationMessage(`The workspace contains ${result} files.`);
   }));
+  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
+    if (client) {
+      await client.stop();
+    }
+    client = await startLanguageServer(context, wasm);
+    import_vscode.window.showInformationMessage("TyportHDL Language Server restarted.");
+  }));
 }
 function deactivate() {
-  return client.stop();
+  if (client) {
+    return client.stop();
+  }
+}
+
+// src/extension.desktop.ts
+var client2;
+async function activate2(context) {
+  const config = import_vscode2.workspace.getConfiguration("typort-hdl");
+  const mode = config.get("lsp-mode", "wasm");
+  if (mode === "cli") {
+    const command = config.get("cli-server.path", "") || "typort";
+    const channel2 = import_vscode2.window.createOutputChannel("TyportHDL Language Server");
+    channel2.appendLine(`Starting CLI language server: ${command} lsp`);
+    const clientOptions = {
+      documentSelector: [{ language: "typort" }],
+      outputChannel: channel2,
+      synchronize: {
+        fileEvents: import_vscode2.workspace.createFileSystemWatcher("**/.clientrc")
+      }
+    };
+    client2 = new import_node2.LanguageClient("lspClient", "LSP Client", { command, args: ["lsp"] }, clientOptions);
+    try {
+      await client2.start();
+    } catch (error) {
+      client2.error(`Start failed`, error, "force");
+    }
+  } else {
+    await activate(context);
+  }
+}
+function deactivate2() {
+  if (client2) {
+    return client2.stop();
+  }
+  return deactivate();
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

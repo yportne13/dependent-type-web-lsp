@@ -20854,9 +20854,11 @@ var import_vscode_languageclient = __toESM(require_api3());
 var import_wasm_wasi = __toESM(require_deprecated());
 var import_wasm_wasi_lsp = __toESM(require_main4());
 var client;
-async function activate(context) {
-  const wasm = await import_wasm_wasi.Wasm.load();
-  const channel = import_vscode.window.createOutputChannel("TyportHDL Language Server");
+var channel;
+async function startLanguageServer(context, wasm) {
+  if (!channel) {
+    channel = import_vscode.window.createOutputChannel("TyportHDL Language Server");
+  }
   const serverOptions = async () => {
     const options = {
       stdio: (0, import_wasm_wasi_lsp.createStdioOptions)(),
@@ -20867,7 +20869,7 @@ async function activate(context) {
     const filename = import_vscode.Uri.joinPath(context.extensionUri, "client", "server.wasm");
     const bits = await import_vscode.workspace.fs.readFile(filename);
     const module2 = await WebAssembly.compile(bits);
-    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 160, maximum: 8e3, shared: true }, options);
+    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 320, maximum: 16e3, shared: true }, options);
     const decoder = new TextDecoder("utf-8");
     process2.stderr.onData((data) => {
       channel.append(decoder.decode(data));
@@ -20878,25 +20880,38 @@ async function activate(context) {
     documentSelector: [{ language: "typort" }],
     outputChannel: channel,
     synchronize: {
-      // Notify the server about file changes to '.clientrc files contained in the workspace
       fileEvents: import_vscode.workspace.createFileSystemWatcher("**/.clientrc")
     },
     uriConverters: (0, import_wasm_wasi_lsp.createUriConverters)()
   };
-  client = new import_vscode_languageclient.LanguageClient("lspClient", "LSP Client", serverOptions, clientOptions);
+  const newClient = new import_vscode_languageclient.LanguageClient("lspClient", "LSP Client", serverOptions, clientOptions);
   try {
-    await client.start();
+    await newClient.start();
   } catch (error) {
-    client.error(`Start failed`, error, "force");
+    newClient.error(`Start failed`, error, "force");
   }
+  return newClient;
+}
+async function activate(context) {
+  const wasm = await import_wasm_wasi.Wasm.load();
+  client = await startLanguageServer(context, wasm);
   const CountFilesRequest = new import_vscode_languageclient.RequestType("wasm-language-server/countFiles");
   context.subscriptions.push(import_vscode.commands.registerCommand("vscode-samples.wasm-language-server.countFiles", async () => {
     const folder = import_vscode.workspace.workspaceFolders[0].uri;
     const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
     import_vscode.window.showInformationMessage(`The workspace contains ${result} files.`);
   }));
+  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
+    if (client) {
+      await client.stop();
+    }
+    client = await startLanguageServer(context, wasm);
+    import_vscode.window.showInformationMessage("TyportHDL Language Server restarted.");
+  }));
 }
 function deactivate() {
-  return client.stop();
+  if (client) {
+    return client.stop();
+  }
 }
 //# sourceMappingURL=extension.js.map
