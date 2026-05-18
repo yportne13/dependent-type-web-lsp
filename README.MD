@@ -13,6 +13,6 @@ To sync them into the web demo:
 
 ```bash
 git submodule update --remote       # pull latest examples
-node sync_examples.js               # embed into extension.js
+node sync_examples.js               # copy + update extension.js
 # then commit: git add -A && git commit -m "..."
 ```
