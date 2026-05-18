@@ -24,23 +24,23 @@
 	},
 	"additionalBuiltinExtensions": [
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/myExt"
 	  },
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/TyportHDL"
 	  },
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/wasm-wasi-core"
 	  },
 	  {
-		"scheme": "http",
-		"authority": "localhost:8080",
+		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/vim"
 	  }
 	]
