@@ -30,9 +30,13 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-// Read the first .typort file as the new nrsFile content
-const srcPath = path.join(SRC_DIR, files[0]);
-const newContent = fs.readFileSync(srcPath, 'utf-8');
+// Concatenate all .typort files as the new nrsFile content
+let newContent = '';
+for (const file of files) {
+  const filePath = path.join(SRC_DIR, file);
+  newContent += fs.readFileSync(filePath, 'utf-8');
+  if (!newContent.endsWith('\n')) newContent += '\n';
+}
 
 // Read extension.js
 let extJs = fs.readFileSync(EXT_JS, 'utf-8');
