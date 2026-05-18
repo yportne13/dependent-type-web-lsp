@@ -32,6 +32,22 @@ if (files.length === 0) {
   process.exit(0);
 }
 
+/**
+ * Escape content for embedding in a JS template literal (backtick string).
+ * In JS template literals, these must be escaped:
+ *   - backtick (`)  →  \`
+ *   - ${            →  \${  (to prevent template expression parsing)
+ *   - backslash (\) →  \\   (to prevent escape sequence parsing)
+ *
+ * Must also call unescapeNoneAscii afterwards for safety.
+ */
+function escapeForJsTemplate(str) {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$\{/g, '\\${');
+}
+
 // Read extension.js
 let extJs = fs.readFileSync(EXT_JS, 'utf-8');
 
@@ -39,20 +55,21 @@ let changed = 0;
 
 for (const file of files) {
   const filePath = path.join(SRC_DIR, file);
-  const newContent = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
+  const newContent = escapeForJsTemplate(
+    fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n')
+  );
 
   // Build the export name: e.file_<filename_without_ext>
   const exportName = 'e.file_' + file.replace(/\.typort$/, '');
 
   // Find the export assignment in extension.js
-  // Pattern: (e.file_<name> =\n            `  <-- opening backtick
   const exportStart = extJs.indexOf(`${exportName} =\n            \``);
   if (exportStart === -1) {
     console.error(`  ✗ Could not find export "${exportName}" in extension.js`);
     continue;
   }
 
-  // Find the closing backtick of this template literal
+  // Find the opening backtick of this template literal
   const btOpenIdx = extJs.indexOf('`', exportStart + exportName.length);
   if (btOpenIdx === -1) {
     console.error(`  ✗ Could not find opening backtick for "${exportName}"`);
@@ -64,7 +81,6 @@ for (const file of files) {
 
   // Find closing backtick: `\n followed by whitespace and ),
   const rest = extJs.slice(contentStart);
-  // Look for pattern: `\n followed by whitespace and ),
   const btCloseMatch = rest.match(/`\s*\n\s*\),/);
   if (!btCloseMatch) {
     console.error(`  ✗ Could not find closing backtick for "${exportName}"`);
