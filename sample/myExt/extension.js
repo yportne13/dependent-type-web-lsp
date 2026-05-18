@@ -651,6 +651,7 @@ println(not_not(false))
           ),
           (e.file_typeclass_complex =
             `
+
 // ============================================================
 // Complex Typort Examples
 // Style: C-style foo(a, b, c), numeric literals in expressions
@@ -928,19 +929,21 @@ println(symm_eg)
 def trans_eg: Eq(0 + 5, 5) = trans(add_comm(0, 5), add_zero_right(5))
 println(trans_eg)
 
-// 20c. cong: if x = y then f(x) = f(y)
+// 20c. cong_succ: specialized version of cong for succ
 // add_zero_left(5): Eq(0+5, 5)
-// cong(succ, add_zero_left(5)): Eq(succ(0+5), succ(5))
-def cong_eg: Eq(succ(0 + 5), succ(5)) = cong(succ, add_zero_left(5))
-println(cong_eg)
+// cong_succ(add_zero_left(5)): Eq(succ(0+5), succ(5))
+def cong_succ_eg: Eq(succ(0 + 5), succ(5)) = cong_succ(add_zero_left(5))
+println(cong_succ_eg)
 
 // 20d. add_assoc: (a + b) + c = a + (b + c)
 def assoc_eg: Eq((1 + 2) + 3, 1 + (2 + 3)) = add_assoc(1, 2, 3)
 println(assoc_eg)
 
-// 20e. eq_congr: alias for cong with swapped args
-def eq_congr_eg: Eq(succ(2 + 3), succ(3 + 2)) = eq_congr(add_comm(2, 3))
-println(eq_congr_eg)
+// 20e. symm example with different values
+// add_comm(4,1) proves Eq(4+1, 1+4) which is Eq(5, 5); symm to Eq(1+4, 4+1)
+def symm_eg2: Eq(1 + 4, 4 + 1) = symm(add_comm(4, 1))
+println(symm_eg2)
+
 `
           ),
           (e.debuggableFile =
