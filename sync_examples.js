@@ -1,14 +1,16 @@
 /**
- * sync_examples.js — embeds the latest .typort example content from the
- * elaboration-zoo-lsp submodule directly into extension.js as the nrsFile
- * template literal.
+ * sync_examples.js — embeds individual .typort example files from the
+ * elaboration-zoo-lsp submodule into separate file exports in extension.js.
+ *
+ * Each .typort file in the submodule becomes a separate MemFS file in the
+ * web demo (vscode.dev), instead of being merged into one big nrsFile.
  *
  * Usage: node sync_examples.js
  *
  * Workflow:
  *   1. Edit .typort files in elaboration-zoo-lsp/examples/
  *   2. git submodule update --remote  (pull latest from upstream)
- *   3. node sync_examples.js          (embed into extension.js)
+ *   3. node sync_examples.js          (update each file export in extension.js)
  *   4. Commit + push
  */
 
@@ -30,50 +32,62 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-// Concatenate all .typort files as the new nrsFile content
-let newContent = '';
-for (const file of files) {
-  const filePath = path.join(SRC_DIR, file);
-  newContent += fs.readFileSync(filePath, 'utf-8');
-  if (!newContent.endsWith('\n')) newContent += '\n';
-}
-
 // Read extension.js
 let extJs = fs.readFileSync(EXT_JS, 'utf-8');
 
-// Find the nrsFile template literal boundaries
-const nrsStartMarker = '(e.nrsFile =';
-const nrsIdx = extJs.indexOf(nrsStartMarker);
-if (nrsIdx === -1) {
-  console.error('Could not find "(e.nrsFile =" in extension.js');
-  process.exit(1);
+let changed = 0;
+
+for (const file of files) {
+  const filePath = path.join(SRC_DIR, file);
+  const newContent = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
+
+  // Build the export name: e.file_<filename_without_ext>
+  const exportName = 'e.file_' + file.replace(/\.typort$/, '');
+
+  // Find the export assignment in extension.js
+  // Pattern: (e.file_<name> =\n            `  <-- opening backtick
+  const exportStart = extJs.indexOf(`${exportName} =\n            \``);
+  if (exportStart === -1) {
+    console.error(`  ✗ Could not find export "${exportName}" in extension.js`);
+    continue;
+  }
+
+  // Find the closing backtick of this template literal
+  const btOpenIdx = extJs.indexOf('`', exportStart + exportName.length);
+  if (btOpenIdx === -1) {
+    console.error(`  ✗ Could not find opening backtick for "${exportName}"`);
+    continue;
+  }
+
+  // The content starts right after the opening backtick + \n
+  const contentStart = btOpenIdx + 2; // skip ` and \n
+
+  // Find closing backtick: `\n followed by whitespace and ),
+  const rest = extJs.slice(contentStart);
+  // Look for pattern: `\n followed by whitespace and ),
+  const btCloseMatch = rest.match(/`\s*\n\s*\),/);
+  if (!btCloseMatch) {
+    console.error(`  ✗ Could not find closing backtick for "${exportName}"`);
+    continue;
+  }
+  const btCloseIdx = contentStart + btCloseMatch.index;
+
+  const oldContent = extJs.slice(contentStart, btCloseIdx).replace(/\r\n/g, '\n');
+
+  if (oldContent === newContent) {
+    console.log(`  ✓ ${file}: unchanged`);
+  } else {
+    extJs = extJs.slice(0, contentStart) + '\n' + newContent + '\n' + extJs.slice(btCloseIdx);
+    console.log(`  ✓ ${file}: updated (${newContent.length} bytes)`);
+    changed++;
+  }
 }
 
-// Find opening backtick
-const btOpen = extJs.indexOf('`', nrsIdx);
-if (btOpen === -1) {
-  console.error('Could not find opening backtick for nrsFile');
-  process.exit(1);
-}
-
-// Find closing backtick (look for `\n or `\r\n followed by whitespace and ),)
-const rest = extJs.slice(btOpen + 1);
-const btCloseMatch = rest.match(/`\s*\n\s*\)/);
-if (!btCloseMatch) {
-  console.error('Could not find closing backtick for nrsFile');
-  process.exit(1);
-}
-const btClose = btOpen + 1 + btCloseMatch.index;
-
-// The content between backticks
-const oldContent = extJs.slice(btOpen + 1, btClose);
-
-if (oldContent === '\n' + newContent) {
-  console.log('  ✓ nrsFile content unchanged');
-} else {
-  extJs = extJs.slice(0, btOpen + 1) + '\n' + newContent + extJs.slice(btClose);
+if (changed > 0) {
   fs.writeFileSync(EXT_JS, extJs, 'utf-8');
-  console.log(`  ✓ embedded ${files[0]} (${newContent.length} bytes) into extension.js nrsFile`);
+  console.log(`\nUpdated ${changed} file(s) in extension.js`);
+} else {
+  console.log('\nNo changes needed.');
 }
 
 console.log('\nDone!');
