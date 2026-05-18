@@ -702,20 +702,20 @@
 
 // Basic operations
 def mynot(x: Boolean): Boolean = x.not
-println (mynot false)
+println(mynot(false))
 
 // Nat arithmetic using prelude's + and *
-def two = succ (succ zero)
+def two = succ(succ(zero))
 def four = 2 + 2
-println four
+println(four)
 
 def multiply(x: Nat, y: Nat): Nat = x * y
-println (multiply four two)
+println(multiply(four, two))
 
 // Lists using prelude's List with lnil/lcons
 def listid[T](x: List[T]): List[T] = x
-def someBools: List[Boolean] = lcons true (lcons false lnil)
-println (listid someBools)
+def someBools: List[Boolean] = lcons(true, lcons(false, lnil))
+println(listid(someBools))
 
 // Higher-kinded types
 def test0: Type 1 = Type 0
@@ -724,7 +724,7 @@ enum HList[A] {
     hnil
     hcons(x: A, tail: HList[A])
 }
-def hl1: HList[Nat] = hcons zero (hcons two hnil)
+def hl1: HList[Nat] = hcons(zero, hcons(two, hnil))
 
 // Leibniz equality
 def Eq1[A](x: A, y: A): Type 1 = (P: A -> Type 0) -> P x -> P y
@@ -736,24 +736,24 @@ struct MySig {
     size: Nat
 }
 def sameSize(a: MySig, b: MySig)(eq: Eq1[Nat] a.size b.size): String =
-    string_concat a.name b.name
+    string_concat(a.name, b.name)
 def sigA = new MySig("A", four)
 def sigB = new MySig("B", four)
 def sigC = new MySig("C", two)
-def ab = sameSize sigA sigB refl1
-println ab
+def ab = sameSize(sigA, sigB, refl1)
+println(ab)
 
 // Custom lemmas
 def add_succ_zero_left(k: Nat): Eq (1 + k) (succ k) =
-    cong_succ (add_zero_right k)
+    cong_succ(add_zero_right(k))
 
 def mul_one_right(n: Nat): Eq[Nat] (n * 1) n =
     match n {
         case zero => rfl[Nat][zero]
         case succ(k) =>
-            let ih = mul_one_right k;
-            let lemma: Eq[Nat] (1 + k) (succ k) = cong_succ (add_zero_right k);
-            trans(cong(add 1, ih), lemma)
+            let ih = mul_one_right(k);
+            let lemma: Eq[Nat] (1 + k) (succ k) = cong_succ(add_zero_right(k));
+            trans(cong(add, 1, ih), lemma)
     }
 
 // Dependent pair
@@ -762,7 +762,7 @@ struct DepPair[A: Type 0, P: A -> Type 0] {
     snd: P fst
 }
 def ex_even: DepPair[Nat][x => Eq (x % 2) 0] =
-    DepPair.mk[Nat][x => Eq (x % 2) 0] four rfl
+    DepPair.mk[Nat][x => Eq (x % 2, 0)](four, rfl)
 `
           ),
           (e.debuggableFile =
