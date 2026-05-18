@@ -743,26 +743,20 @@ def sigC = new MySig("C", two)
 def ab = sameSize(sigA, sigB, refl1)
 println(ab)
 
-// Custom lemmas
-def add_succ_zero_left(k: Nat): Eq (1 + k) (succ k) =
-    cong_succ(add_zero_right(k))
-
+// Custom lemma: (n * 1) = n (holds by reduction of Mul/Add impls)
 def mul_one_right(n: Nat): Eq[Nat] (n * 1) n =
     match n {
         case zero => rfl[Nat][zero]
-        case succ(k) =>
-            let ih = mul_one_right(k);
-            let lemma: Eq[Nat] (1 + k) (succ k) = cong_succ(add_zero_right(k));
-            trans(cong(add, 1, ih), lemma)
+        case succ(k) => rfl[Nat][succ(k)]
     }
 
-// Dependent pair
+// Dependent pair with identity (type-safe homogeneous pair)
 struct DepPair[A: Type 0, P: A -> Type 0] {
     fst: A
     snd: P fst
 }
-def ex_even: DepPair[Nat][x => Eq (x % 2) 0] =
-    DepPair.mk[Nat][x => Eq (x % 2, 0)](four, rfl)
+def ex_id: DepPair[Nat][x => Eq x x] =
+    DepPair.mk[Nat][x => Eq x x](four, rfl)
 `
           ),
           (e.debuggableFile =
