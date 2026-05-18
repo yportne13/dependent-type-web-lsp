@@ -698,147 +698,274 @@
             "/// <reference path=\"lib/Geometry.ts\"/>\n/// <reference path=\"Game.ts\"/>\n\nmodule Mankala {\nexport var storeHouses = [6,13];\nexport var svgNS = 'http://www.w3.org/2000/svg';\n\nfunction createSVGRect(r:Rectangle) {\n\tvar rect = document.createElementNS(svgNS,'rect');\n\trect.setAttribute('x', r.x.toString());\n\trect.setAttribute('y', r.y.toString());\n\trect.setAttribute('width', r.width.toString());\n\trect.setAttribute('height', r.height.toString());\n\treturn rect;\n}\n\nfunction createSVGEllipse(r:Rectangle) {\n\tvar ell = document.createElementNS(svgNS,'ellipse');\n\tell.setAttribute('rx',(r.width/2).toString());\n\tell.setAttribute('ry',(r.height/2).toString());\n\tell.setAttribute('cx',(r.x+r.width/2).toString());\n\tell.setAttribute('cy',(r.y+r.height/2).toString());\n\treturn ell;\n}\n\nfunction createSVGEllipsePolar(angle:number,radius:number,tx:number,ty:number,cxo:number,cyo:number) {\n\tvar ell = document.createElementNS(svgNS,'ellipse');\n\tell.setAttribute('rx',radius.toString());\n\tell.setAttribute('ry',(radius/3).toString());\n\tell.setAttribute('cx',cxo.toString());\n\tell.setAttribute('cy',cyo.toString());\n\tvar dangle = angle*(180/Math.PI);\n\tell.setAttribute('transform','rotate('+dangle+','+cxo+','+cyo+') translate('+tx+','+ty+')');\n\treturn ell;\n}\n\nfunction createSVGInscribedCircle(sq:Square) {\n\tvar circle = document.createElementNS(svgNS,'circle');\n\tcircle.setAttribute('r',(sq.length/2).toString());\n\tcircle.setAttribute('cx',(sq.x+(sq.length/2)).toString());\n\tcircle.setAttribute('cy',(sq.y+(sq.length/2)).toString());\n\treturn circle;\n}\n\nexport class Position {\n\n\tseedCounts:number[];\n\tstartMove:number;\n\tturn:number;\n\n\tconstructor(seedCounts:number[],startMove:number,turn:number) {\n\t\tthis.seedCounts = seedCounts;\n\t\tthis.startMove = startMove;\n\t\tthis.turn = turn;\n\t}\n\n\tscore() {\n\t\tvar baseScore = this.seedCounts[storeHouses[1-this.turn]]-this.seedCounts[storeHouses[this.turn]];\n\t\tvar otherSpaces = homeSpaces[this.turn];\n\t\tvar sum = 0;\n\t\tfor (var k = 0,len = otherSpaces.length;k<len;k++) {\n\t\t\tsum += this.seedCounts[otherSpaces[k]];\n\t\t}\n\t\tif (sum==0) {\n\t\t\tvar mySpaces = homeSpaces[1-this.turn];\n\t\t\tvar mySum = 0;\n\t\t\tfor (var j = 0,len = mySpaces.length;j<len;j++) {\n\t\t\t\tmySum += this.seedCounts[mySpaces[j]];\n\t\t\t}\n\n\t\t\tbaseScore -= mySum;\n\t\t}\n\t\treturn baseScore;\n\t}\n\n\tmove(space:number,nextSeedCounts:number[],features:Features):boolean {\n\t\tif ((space==storeHouses[0])||(space==storeHouses[1])) {\n\t\t\t// can't move seeds in storehouse\n\t\t\treturn false;\n\t\t}\n\t\tif (this.seedCounts[space]>0) {\n\t\t\tfeatures.clear();\n\t\t\tvar len = this.seedCounts.length;\n\t\t\tfor (var i = 0;i<len;i++) {\n\t\t\t\tnextSeedCounts[i] = this.seedCounts[i];\n\t\t\t}\n\t\t\tvar seedCount = this.seedCounts[space];\n\t\t\tnextSeedCounts[space] = 0;\n\t\t\tvar nextSpace = (space+1)%14;\n\n\t\t\twhile (seedCount>0) {\n\t\t\t\tif (nextSpace==storeHouses[this.turn]) {\n\t\t\t\t\tfeatures.seedStoredCount++;\n\t\t\t\t}\n\t\t\t\tif ((nextSpace!=storeHouses[1-this.turn])) {\n\t\t\t\t\tnextSeedCounts[nextSpace]++;\n\t\t\t\t\tseedCount--;\n\t\t\t\t}\n\t\t\t\tif (seedCount==0) {\n\t\t\t\t\tif (nextSpace==storeHouses[this.turn]) {\n\t\t\t\t\t\tfeatures.turnContinues = true;\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\tif ((nextSeedCounts[nextSpace]==1)&&\n\t\t\t\t\t\t\t(nextSpace>=firstHomeSpace[this.turn])&&\n\t\t\t\t\t\t\t(nextSpace<=lastHomeSpace[this.turn])) {\n\t\t\t\t\t\t\t// capture\n\t\t\t\t\t\t\tvar capturedSpace = capturedSpaces[nextSpace];\n\t\t\t\t\t\t\tif (capturedSpace>=0) {\n\t\t\t\t\t\t\t\tfeatures.spaceCaptured = capturedSpace;\n\t\t\t\t\t\t\t\tfeatures.capturedCount = nextSeedCounts[capturedSpace];\n\t\t\t\t\t\t\t\tnextSeedCounts[capturedSpace] = 0;\n\t\t\t\t\t\t\t\tnextSeedCounts[storeHouses[this.turn]] += features.capturedCount;\n\t\t\t\t\t\t\t\tfeatures.seedStoredCount += nextSeedCounts[capturedSpace];\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tnextSpace = (nextSpace+1)%14;\n\t\t\t}\n\t\t\treturn true;\n\t\t}\n\t\telse {\n\t\t\treturn false;\n\t\t}\n\t}\n}\n\nexport class SeedCoords {\n\ttx:number;\n\tty:number;\n\tangle:number;\n\n\tconstructor(tx:number, ty:number, angle:number) {\n\t\tthis.tx = tx;\n\t\tthis.ty = ty;\n\t\tthis.angle = angle;\n\t}\n}\n\nexport class DisplayPosition extends Position {\n\n\tconfig:SeedCoords[][];\n\n\tconstructor(seedCounts:number[],startMove:number,turn:number) {\n\t\tsuper(seedCounts,startMove,turn);\n\n\t\tthis.config = [];\n\n\t\tfor (var i = 0;i<seedCounts.length;i++) {\n\t\t\tthis.config[i] = new Array<SeedCoords>();\n\t\t}\n\t}\n\n\n\tseedCircleRect(rect:Rectangle,seedCount:number,board:Element,seed:number) {\n\t\tvar coords = this.config[seed];\n\t\tvar sq = rect.inner(0.95).square();\n\t\tvar cxo = (sq.width/2)+sq.x;\n\t\tvar cyo = (sq.height/2)+sq.y;\n\t\tvar seedNumbers = [5,7,9,11];\n\t\tvar ringIndex = 0;\n\t\tvar ringRem = seedNumbers[ringIndex];\n\t\tvar angleDelta = (2*Math.PI)/ringRem;\n\t\tvar angle = angleDelta;\n\t\tvar seedLength = sq.width/(seedNumbers.length<<1);\n\t\tvar crMax = sq.width/2-(seedLength/2);\n\t\tvar pit = createSVGInscribedCircle(sq);\n\t\tif (seed<7) {\n\t\t\tpit.setAttribute('fill','brown');\n\t\t}\n\t\telse {\n\t\t\tpit.setAttribute('fill','saddlebrown');\n\t\t}\n\t\tboard.appendChild(pit);\n\t\tvar seedsSeen = 0;\n\t\twhile (seedCount > 0) {\n\t\t\tif (ringRem == 0) {\n\t\t\t\tringIndex++;\n\t\t\t\tringRem = seedNumbers[ringIndex];\n\t\t\t\tangleDelta = (2*Math.PI)/ringRem;\n\t\t\t\tangle = angleDelta;\n\t\t\t}\n\t\t\tvar tx:number;\n\t\t\tvar ty:number;\n\t\t\tvar tangle = angle;\n\t\t\tif (coords.length>seedsSeen) {\n\t\t\t\ttx = coords[seedsSeen].tx;\n\t\t\t\tty = coords[seedsSeen].ty;\n\t\t\t\ttangle = coords[seedsSeen].angle;\n\t\t\t}\n\t\t\telse {\n\t\t\t\ttx = (Math.random()*crMax)-(crMax/3);\n\t\t\t\tty = (Math.random()*crMax)-(crMax/3);\n\t\t\t\tcoords[seedsSeen] = new SeedCoords(tx,ty,angle);\n\t\t\t}\n\t\t\tvar ell = createSVGEllipsePolar(tangle,seedLength,tx,ty,cxo,cyo);\n\t\t\tboard.appendChild(ell);\n\t\t\tangle += angleDelta;\n\t\t\tringRem--;\n\t\t\tseedCount--;\n\t\t\tseedsSeen++;\n\t\t}\n\t}\n\n\ttoCircleSVG() {\n\t\tvar seedDivisions = 14;\n\t\tvar board = document.createElementNS(svgNS,'svg');\n\t\tvar boardRect = new Rectangle(0,0,1800,800);\n\t\tboard.setAttribute('width','1800');\n\t\tboard.setAttribute('height','800');\n\t\tvar whole = createSVGRect(boardRect);\n\t\twhole.setAttribute('fill','tan');\n\t\tboard.appendChild(whole);\n\t\tvar labPlayLab = boardRect.proportionalSplitVert(20,760,20);\n\t\tvar playSurface = labPlayLab[1];\n\t\tvar storeMainStore = playSurface.proportionalSplitHoriz(8,48,8);\n\t\tvar mainPair = storeMainStore[1].subDivideVert(2);\n\t\tvar playerRects = [mainPair[0].subDivideHoriz(6), mainPair[1].subDivideHoriz(6)];\n\t\t// reverse top layer because storehouse on left\n\t\tfor (var k = 0;k<3;k++) {\n\t\t\tvar temp = playerRects[0][k];\n\t\t\tplayerRects[0][k] = playerRects[0][5-k];\n\t\t\tplayerRects[0][5-k] = temp;\n\t\t}\n\t\tvar storehouses = [storeMainStore[0],storeMainStore[2]];\n\t\tvar playerSeeds = this.seedCounts.length>>1;\n\t\tfor (var i = 0;i<2;i++) {\n\t\t\tvar player = playerRects[i];\n\t\t\tvar storehouse = storehouses[i];\n\t\t\tvar r:Rectangle;\n\t\t\tfor (var j = 0;j<playerSeeds;j++) {\n\t\t\t\tvar seed = (i*playerSeeds)+j;\n\t\t\t\tvar seedCount = this.seedCounts[seed];\n\t\t\t\tif (j==(playerSeeds-1)) {\n\t\t\t\t\tr = storehouse;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tr = player[j];\n\t\t\t\t}\n\t\t\t\tthis.seedCircleRect(r,seedCount,board,seed);\n\t\t\t\tif (seedCount==0) {\n\t\t\t\t\t// clear\n\t\t\t\t\tthis.config[seed] = new Array<SeedCoords>();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn board;\n\t}\n}\n}\n"),
           (e.nrsFile =
             `
-// Typort language demo -- complex examples using prelude types
+// ============================================================
+// Complex Typort Examples
+// Style: C-style function application foo(a, b, c)
+// ============================================================
 
-// ── 1. Higher-order functions (compose, flip, curry) ──
-def add_one(n: Nat): Nat = n + 1
-def dbl(n: Nat): Nat = n * 2
-
-// compose(f, g, x) = f(g(x))
-def add_one_then_dbl(x: Nat): Nat = compose(dbl, add_one, x)
-
-def three = 1 + 2
-println(add_one_then_dbl(three))  // 8: dbl(add_one(3)) = dbl(4) = 8
-
-// flip(f, x, y) = f(y, x)
-def sub_rev = flip(nat_sub, 3, 10)  // = nat_sub(10, 3) = 7
-println(sub_rev)
-
-// ── 2. Boolean operations (using prelude's Boolean type) ──
-def mynot(x: Boolean): Boolean = x.not
-println(mynot(false))  // true
-
-println(true & false)   // false  (And)
-println(true | false)   // true   (Or)
-println(true ^ true)      // false  (Xor)
-println(implies(false, true))  // true
-
-// if_then_else generic over any type
-def bigger = if_then_else(nat_gt(5, 3), 100, 0)
-println(bigger)  // 100
-
-// ── 3. Nat arithmetic (using prelude's +, *, -, /, %) ──
-def two = succ(succ(zero))
-def four = 2 + 2
-println(four)  // 4
-
-def multiply(x: Nat, y: Nat): Nat = x * y
-println(multiply(four, two))  // 8
-
-println(10 - 3)   // 7 (via Sub impl / nat_sub)
-println(7 / 3)    // 2 (via Div impl)
-println(7 % 3)    // 1 (via Rem impl -- returns x when x < y)
-
-// ── 4. Equality proofs ──
-def comm_test: Eq (2 + 3) (3 + 2) = add_comm(2, 3)
-def assoc_test: Eq ((1 + 2) + 3) (1 + (2 + 3)) = add_assoc(1, 2, 3)
-def zero_r_test: Eq (5 + 0) 5 = add_zero_right(5)
-def zero_l_test: Eq (0 + 5) 5 = add_zero_left(5)
-
-// symm + trans chaining
-def chain: Eq (1 + 2) (2 + 1) = trans(rfl[Nat][3], symm(add_comm(1, 2)))
-
-// cong: if a = b then f(a) = f(b)
-def cong_demo(x: Nat, y: Nat)(e: Eq x y): Eq (x * 2) (y * 2) = cong(dbl, e)
-
-// ── 5. List operations (using prelude's List with lnil/lcons) ──
-def listid[T](x: List[T]): List[T] = x
-
-def someBools: List[Boolean] = lcons(true, lcons(false, lnil))
-println(listid(someBools))
-
-// List built-in methods
-def nums: List[Nat] = lcons(5, lcons(3, lcons(8, lcons(1, lnil))))
-println(nums.length)     // 4
-println(nums.all(x => nat_gt(x, 0)))   // true (all > 0)
-println(nums.any(x => nat_gt(x, 5)))   // true (8 > 5)
-
-// Filter with predicate
-def big_nums = nums.filter(x => nat_gt(x, 3))
-
-// map
-def plus_10 = nums.map(x => x + 10)
-
-// ── 6. Product / Struct types ──
-def pair: Product[Nat, Boolean] = new Product(42, true)
-println(pair.fst)  // 42
-println(pair.snd)  // true
-def swapped = pair.swap
-println(swapped.fst)  // true (now Boolean since swapped)
-
-// ── 7. Leibniz equality ──
-def Eq1[A](x: A, y: A): Type 1 = (P: A -> Type 0) -> P x -> P y
-def refl1[A, x: A]: Eq1[A] x x = _ => px => px
-
-// Use Eq1 to constrain struct fields
-struct MySig {
-    name: String
-    size: Nat
+// ---------- 1: Simple trait (zero-arg method, constraint pattern) ----------
+trait Describable {
+    def describe: String
 }
-def sameSize(a: MySig, b: MySig)(eq: Eq1[Nat] a.size b.size): String =
-    string_concat(a.name, b.name)
 
-def sigA = new MySig("A", four)
-def sigB = new MySig("B", four)
-def sigC = new MySig("C", two)
-def ab = sameSize(sigA, sigB, refl1)
-println(ab)  // "AB" (same size 4)
-
-// ── 8. Higher-kinded types ──
-def test0: Type 1 = Type 0
-def test1: Type 2 = Type 1 -> Type 0
-
-enum HList[A] {
-    hnil
-    hcons(x: A, tail: HList[A])
+impl Describable for Nat {
+    def describe: String =
+        match this {
+            case zero => "zero"
+            case succ(m) => "succ(" + m.describe + ")"
+        }
 }
-def hl1: HList[Nat] = hcons(zero, hcons(two, hnil))
 
-// ── 9. GADT-style indexed enum (Fin: bounded natural) ──
-// Fin[n] is a type with n possible values (0 to n-1)
-// (defined in prelude hdl.typort)
-def fin_ex: Fin(3) = fsucc(fsucc(fzero))
-// This represents the value 2 in a 3-valued type
+impl Describable for Boolean {
+    def describe: String =
+        match this {
+            case true => "true"
+            case false => "false"
+        }
+}
 
-// We can use Fin for safe indexing
-def safe_sub(x: Nat, i: Fin(x + 1)): Nat = sub(x, i)
+impl[T] Describable for Option[T] {
+    def describe: String =
+        match this {
+            case Some(_) => "some"
+            case None => "none"
+        }
+}
 
-// ── 10. Custom lemma: (n * 1) = n ──
-def mul_one_right(n: Nat): Eq[Nat] (n * 1) n =
-    match n {
-        case zero => rfl[Nat][zero]
-        case succ(k) => rfl[Nat][succ(k)]
+def describe_val[T][d: Describable[T]](x: T): String = d.describe(x)
+println(describe_val(succ(succ(succ(zero)))))
+
+// ---------- 2: Binary Tree with generic operations ----------
+enum Tree[T] {
+    leaf(val: T)
+    node(left: Tree[T], right: Tree[T])
+}
+
+impl[T] Tree[T] {
+    def depth: Nat =
+        match this {
+            case leaf(_) => zero
+            case node(l, r) =>
+                let dl = l.depth;
+                let dr = r.depth;
+                match nat_compare(dl, dr) {
+                    case lt => succ(dr)
+                    case eq => succ(dl)
+                    case gt => succ(dl)
+                }
+        }
+    def tree_size: Nat =
+        match this {
+            case leaf(_) => succ(zero)
+            case node(l, r) => succ(l.tree_size + r.tree_size)
+        }
+}
+
+def leaf1: Tree[Nat] = leaf(succ(zero))
+println(leaf1.depth)
+println(leaf1.tree_size)
+
+// ---------- 3: Option monadic operations ----------
+impl[T] Option[T] {
+    def bind_option[U](f: T -> Option[U]): Option[U] =
+        match this {
+            case Some(a) => f(a)
+            case None => None
+        }
+    def fmap_option[U](f: T -> U): Option[U] =
+        match this {
+            case Some(a) => Some(f(a))
+            case None => None
+        }
+}
+
+def inc_opt: Option[Nat] = Some(succ(succ(zero))).fmap_option(x => x + 1)
+println(inc_opt)
+
+// ---------- 4: List operations ----------
+def sum_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => zero
+        case lcons(x, rest) => x + sum_list(rest)
     }
 
-// ── 11. Dependent pair (sigma type) ──
-struct DepPair[A: Type 0, P: A -> Type 0] {
-    fst: A
-    snd: P fst
+def product_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => succ(zero)
+        case lcons(x, rest) => x * product_list(rest)
+    }
+
+def numbers: List[Nat] =
+    lcons(succ(zero), lcons(succ(succ(zero)), lcons(succ(succ(succ(zero))), lnil)))
+
+println(sum_list(numbers))
+println(product_list(numbers))
+
+// ---------- 5: Eq proofs (using prelude) ----------
+def two: Nat = succ(succ(zero))
+def three: Nat = succ(succ(succ(zero)))
+
+def comm_test: Eq(two + three, three + two) = add_comm(two, three)
+def same: Eq(two, two) = refl(two)
+
+// ---------- 6: Vec (GADT) operations ----------
+def vec_sum[len: Nat](v: Vec[Nat] len): Nat =
+    match v {
+        case nil => zero
+        case cons(x, xs) => x + vec_sum(xs)
+    }
+
+println(vec_sum(cons(succ(zero), cons(succ(succ(zero)), nil))))
+
+// ---------- 7: Fibonacci ----------
+def fib2(n: Nat): Nat =
+    match n {
+        case zero => succ(zero)
+        case succ(zero) => succ(zero)
+        case succ(succ(m)) => fib2(m) + fib2(succ(m))
+    }
+
+println(fib2(succ(succ(zero))))
+
+// ---------- 8: Product operations ----------
+def swap_and_double(p: Product[Nat, Nat]): Product[Nat, Nat] =
+    new Product(p.snd + p.snd, p.fst + p.fst)
+
+def my_pair: Product[Nat, Nat] = new Product(succ(zero), succ(succ(zero)))
+println(swap_and_double(my_pair))
+
+// ---------- 9: Safe head ----------
+def safe_head[T](xs: List[T]): Option[T] =
+    match xs {
+        case lnil => None
+        case lcons(x, _) => Some(x)
+    }
+
+println(safe_head(numbers))
+
+// ---------- 10: Classify by pattern ----------
+def nat_classify(n: Nat): String =
+    match n {
+        case zero => "zero"
+        case succ(zero) => "one"
+        case _ => "many"
+    }
+
+println(nat_classify(zero))
+println(nat_classify(succ(zero)))
+println(nat_classify(succ(succ(zero))))
+
+// ---------- 11: Factorial ----------
+def fact(n: Nat): Nat =
+    match n {
+        case zero => succ(zero)
+        case succ(m) => n * fact(m)
+    }
+
+println(fact(two))
+println(fact(three))
+
+// ---------- 12: List length ----------
+def list_len[T](xs: List[T]): Nat =
+    match xs {
+        case lnil => zero
+        case lcons(_, rest) => succ(list_len(rest))
+    }
+
+println(list_len(numbers))
+
+// ---------- 13: List append (using prelude method) ----------
+def ab: List[Nat] = numbers.append(lcons(succ(succ(succ(succ(zero)))), lnil))
+println(list_len(ab))
+println(sum_list(ab))
+
+// ---------- 14: Natural subtraction (non-negative) ----------
+def nat_sub_safe(x: Nat, y: Nat): Nat =
+    match y {
+        case zero => x
+        case succ(k) =>
+            match x {
+                case zero => zero
+                case succ(j) => nat_sub_safe(j, k)
+            }
+    }
+
+println(nat_sub_safe(succ(succ(succ(zero))), succ(zero)))
+println(nat_sub_safe(succ(zero), succ(succ(zero))))
+
+// ---------- 15: Max of two nats ----------
+def nat_max2(x: Nat, y: Nat): Nat =
+    match nat_compare(x, y) {
+        case lt => y
+        case eq => x
+        case gt => x
+    }
+
+println(nat_max2(succ(zero), succ(succ(zero))))
+println(nat_max2(succ(succ(zero)), succ(zero)))
+
+// ---------- 16: Boolean expression evaluator ----------
+enum BoolExpr {
+    bool_lit(v: Boolean)
+    bool_not(inner: BoolExpr)
+    bool_and(lhs: BoolExpr, rhs: BoolExpr)
 }
-def ex_id: DepPair[Nat][x => Eq x x] =
-    DepPair.mk[Nat][x => Eq x x](four, rfl)
 
-// ── 12. Into[String] for Boolean ──
-def bool_str: String = true.into
-println(bool_str)  // "true"
+def eval_bool_expr(e: BoolExpr): Boolean =
+    match e {
+        case bool_lit(v) => v
+        case bool_not(inner) => eval_bool_expr(inner).not
+        case bool_and(l, r) =>
+            match eval_bool_expr(l) {
+                case false => false
+                case true => eval_bool_expr(r)
+            }
+    }
 
-// ── 13. Partial application with lambda ──
-def add_five: Nat -> Nat = x => x + 5
-println(add_five(10))  // 15
+def bex: BoolExpr = bool_and(bool_lit(true), bool_not(bool_lit(false)))
+println(eval_bool_expr(bex))
 
-// ── 14. Named theorems ──
-// add_comm is already in the prelude, we just re-export for clarity
-def addition_is_commutative(n: Nat, m: Nat): Eq (n + m) (m + n) = add_comm(n, m)
+// ---------- 17: Arithmetic expression evaluator ----------
+enum Arith {
+    lit(v: Nat)
+    add_expr(lhs: Arith, rhs: Arith)
+    mul_expr(lhs: Arith, rhs: Arith)
+}
+
+def eval_arith(e: Arith): Nat =
+    match e {
+        case lit(v) => v
+        case add_expr(l, r) => eval_arith(l) + eval_arith(r)
+        case mul_expr(l, r) => eval_arith(l) * eval_arith(r)
+    }
+
+// 1 + 2 * 3 = 7
+def ae: Arith = add_expr(lit(succ(zero)), mul_expr(lit(two), lit(three)))
+println(eval_arith(ae))
+
+// ---------- 18: Euclid's GCD ----------
+def gcd(a: Nat, b: Nat): Nat =
+    match b {
+        case zero => a
+        case succ(_) =>
+            match nat_compare(a, b) {
+                case lt => gcd(b, a)
+                case eq => a
+                case gt => gcd(nat_sub_safe(a, b), b)
+            }
+    }
+
+println(gcd(succ(succ(succ(succ(succ(succ(zero)))))), succ(succ(succ(succ(zero))))))
+println(gcd(succ(succ(succ(succ(succ(zero))))), succ(succ(zero))))
+
+// ---------- 19: String repeat ----------
+def repeat_str(s: String, n: Nat): String =
+    match n {
+        case zero => ""
+        case succ(m) => s + repeat_str(s, m)
+    }
+
+println(repeat_str("Ho ", three))
 `
           ),
           (e.debuggableFile =
