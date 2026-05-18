@@ -626,8 +626,8 @@ println(chain_eg)
 //    Requires nested application of cong
 // -------------------------------------------------------
 
-// Step 1: cong(\x. add(x, b), e1): Eq(add(a, b), add(a', b))
-// Step 2: cong(\y. add(a', y), e2): Eq(add(a', b), add(a', b'))
+// Step 1: cong(\\x. add(x, b), e1): Eq(add(a, b), add(a', b))
+// Step 2: cong(\\y. add(a', y), e2): Eq(add(a', b), add(a', b'))
 // Step 3: trans(step1, step2)
 
 def add_cong(a: Nat, a2: Nat, b: Nat, b2: Nat,
