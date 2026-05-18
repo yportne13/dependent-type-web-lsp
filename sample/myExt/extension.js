@@ -140,7 +140,7 @@
             (function (t) {
               const e = new i.MemFS();
               return t.subscriptions.push(e), e;
-            })(t).seed(['typeclass_complex.typort']),
+            })(t).seed(),
               (function (t) {
                 const e = s.languages.createDiagnosticCollection('test');
                 s.window.activeTextEditor &&
@@ -269,7 +269,11 @@
                   t.CustomBuildScriptType,
                   new t(s.workspace.rootPath)
                 );
-              })();
+              })(),
+              s.commands.executeCommand(
+                'vscode.open',
+                s.Uri.parse('memfs:/sample-folder/test.typort')
+              );
           }
         };
       },
@@ -322,179 +326,13 @@
             var t;
             null === (t = this.disposable) || void 0 === t || t.dispose();
           }
-          async seed(fileNames) {
-            this.createDirectory(n.Uri.parse('memfs:/sample-folder/'));
-            for (const name of fileNames) {
-              try {
-                const resp = await fetch('./examples/' + name);
-                if (resp.ok) {
-                  const text = await resp.text();
-                  this.writeFile(n.Uri.parse('memfs:/sample-folder/' + name), a.encode(text), { create: !0, overwrite: !0 });
-                }
-              } catch (e) {
-                console.warn('Could not load example: ' + name);
-              }
-            }
-            if (fileNames.length > 0) {
-              n.commands.executeCommand('vscode.open', n.Uri.parse('memfs:/sample-folder/' + fileNames[0]));
-            }
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.txt'),
-              //  a.encode('foo'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.html'),
-              //  a.encode('<html><body><h1 class="hd">Hello</h1></body></html>'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.js'),
-              //  a.encode('console.log("JavaScript")'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.json'),
-              //  a.encode('{ "json": true }'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.ts'),
-              //  a.encode('console.log("TypeScript")'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.css'),
-              //  a.encode('* { color: green; }'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.md'),
-              //  a.encode(s.debuggableFile),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.xml'),
-              //  a.encode(
-              //    '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-              //  ),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.py'),
-              //  a.encode(
-              //    'import base64, sys; base64.decode(open(sys.argv[1], "rb"), open(sys.argv[2], "wb"))'
-              //  ),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.yaml'),
-              //  a.encode('- just: write something'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.jpg'),
-              //  s.getImageFile(),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/file.php'),
-              //  a.encode('<?php echo "Hello World!"; ?>'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/folder/')),
-              //this.createDirectory(
-              //  n.Uri.parse('memfs:/sample-folder/workspaces/')
-              //),
-              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/large/')),
-              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/')),
-              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/abc')),
-              //this.createDirectory(n.Uri.parse('memfs:/sample-folder/xyz/def')),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/folder/empty.txt'),
-              //  new Uint8Array(0),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/folder/empty.foo'),
-              //  new Uint8Array(0),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/folder/file.ts'),
-              //  a.encode('let a:number = true; console.log(a);'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/large/rnd.foo'),
-              //  (function (t, e = 155) {
-              //    let r = [];
-              //    for (let n = 0; n < t; n++) {
-              //      let t = '';
-              //      for (; t.length < e; )
-              //        t += Math.random()
-              //          .toString(2 + (n % 34))
-              //          .substr(2);
-              //      r.push(t.substr(0, e));
-              //    }
-              //    return a.encode(r.join('\n'));
-              //  })(5e4),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/xyz/UPPER.txt'),
-              //  a.encode('UPPER'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/xyz/upper.txt'),
-              //  a.encode('upper'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/xyz/def/foo.md'),
-              //  a.encode('*MemFS*'),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/workspaces/mem.code-workspace'),
-              //  a.encode(
-              //    JSON.stringify(
-              //      {
-              //        folders: [
-              //          {
-              //            name: 'sample-folder-large',
-              //            uri: 'memfs:/sample-folder/large',
-              //          },
-              //          {
-              //            name: 'sample-folder-xyz',
-              //            uri: 'memfs:/sample-folder/xyz',
-              //          },
-              //          {
-              //            name: 'sample-folder-folder',
-              //            uri: 'memfs:/sample-folder/folder',
-              //          },
-              //        ],
-              //      },
-              //      void 0,
-              //      '\t'
-              //    )
-              //  ),
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.createDirectory(
-              //  n.Uri.parse('memfs:/sample-folder/encodings/')
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/encodings/windows1251.txt'),
-              //  s.windows1251File,
-              //  { create: !0, overwrite: !0 }
-              //),
-              //this.writeFile(
-              //  n.Uri.parse('memfs:/sample-folder/encodings/gbk.txt'),
-              //  s.gbkFile,
-              //  { create: !0, overwrite: !0 }
-              //);
+          seed() {
+            this.createDirectory(n.Uri.parse('memfs:/sample-folder/')),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/test.typort'),
+                a.encode(s.nrsFile),
+                { create: !0, overwrite: !0 }
+              );
           }
           stat(t) {
             return this._lookup(t, !1);
@@ -696,7 +534,274 @@
               void 0),
           (e.largeTSFile =
             "/// <reference path=\"lib/Geometry.ts\"/>\n/// <reference path=\"Game.ts\"/>\n\nmodule Mankala {\nexport var storeHouses = [6,13];\nexport var svgNS = 'http://www.w3.org/2000/svg';\n\nfunction createSVGRect(r:Rectangle) {\n\tvar rect = document.createElementNS(svgNS,'rect');\n\trect.setAttribute('x', r.x.toString());\n\trect.setAttribute('y', r.y.toString());\n\trect.setAttribute('width', r.width.toString());\n\trect.setAttribute('height', r.height.toString());\n\treturn rect;\n}\n\nfunction createSVGEllipse(r:Rectangle) {\n\tvar ell = document.createElementNS(svgNS,'ellipse');\n\tell.setAttribute('rx',(r.width/2).toString());\n\tell.setAttribute('ry',(r.height/2).toString());\n\tell.setAttribute('cx',(r.x+r.width/2).toString());\n\tell.setAttribute('cy',(r.y+r.height/2).toString());\n\treturn ell;\n}\n\nfunction createSVGEllipsePolar(angle:number,radius:number,tx:number,ty:number,cxo:number,cyo:number) {\n\tvar ell = document.createElementNS(svgNS,'ellipse');\n\tell.setAttribute('rx',radius.toString());\n\tell.setAttribute('ry',(radius/3).toString());\n\tell.setAttribute('cx',cxo.toString());\n\tell.setAttribute('cy',cyo.toString());\n\tvar dangle = angle*(180/Math.PI);\n\tell.setAttribute('transform','rotate('+dangle+','+cxo+','+cyo+') translate('+tx+','+ty+')');\n\treturn ell;\n}\n\nfunction createSVGInscribedCircle(sq:Square) {\n\tvar circle = document.createElementNS(svgNS,'circle');\n\tcircle.setAttribute('r',(sq.length/2).toString());\n\tcircle.setAttribute('cx',(sq.x+(sq.length/2)).toString());\n\tcircle.setAttribute('cy',(sq.y+(sq.length/2)).toString());\n\treturn circle;\n}\n\nexport class Position {\n\n\tseedCounts:number[];\n\tstartMove:number;\n\tturn:number;\n\n\tconstructor(seedCounts:number[],startMove:number,turn:number) {\n\t\tthis.seedCounts = seedCounts;\n\t\tthis.startMove = startMove;\n\t\tthis.turn = turn;\n\t}\n\n\tscore() {\n\t\tvar baseScore = this.seedCounts[storeHouses[1-this.turn]]-this.seedCounts[storeHouses[this.turn]];\n\t\tvar otherSpaces = homeSpaces[this.turn];\n\t\tvar sum = 0;\n\t\tfor (var k = 0,len = otherSpaces.length;k<len;k++) {\n\t\t\tsum += this.seedCounts[otherSpaces[k]];\n\t\t}\n\t\tif (sum==0) {\n\t\t\tvar mySpaces = homeSpaces[1-this.turn];\n\t\t\tvar mySum = 0;\n\t\t\tfor (var j = 0,len = mySpaces.length;j<len;j++) {\n\t\t\t\tmySum += this.seedCounts[mySpaces[j]];\n\t\t\t}\n\n\t\t\tbaseScore -= mySum;\n\t\t}\n\t\treturn baseScore;\n\t}\n\n\tmove(space:number,nextSeedCounts:number[],features:Features):boolean {\n\t\tif ((space==storeHouses[0])||(space==storeHouses[1])) {\n\t\t\t// can't move seeds in storehouse\n\t\t\treturn false;\n\t\t}\n\t\tif (this.seedCounts[space]>0) {\n\t\t\tfeatures.clear();\n\t\t\tvar len = this.seedCounts.length;\n\t\t\tfor (var i = 0;i<len;i++) {\n\t\t\t\tnextSeedCounts[i] = this.seedCounts[i];\n\t\t\t}\n\t\t\tvar seedCount = this.seedCounts[space];\n\t\t\tnextSeedCounts[space] = 0;\n\t\t\tvar nextSpace = (space+1)%14;\n\n\t\t\twhile (seedCount>0) {\n\t\t\t\tif (nextSpace==storeHouses[this.turn]) {\n\t\t\t\t\tfeatures.seedStoredCount++;\n\t\t\t\t}\n\t\t\t\tif ((nextSpace!=storeHouses[1-this.turn])) {\n\t\t\t\t\tnextSeedCounts[nextSpace]++;\n\t\t\t\t\tseedCount--;\n\t\t\t\t}\n\t\t\t\tif (seedCount==0) {\n\t\t\t\t\tif (nextSpace==storeHouses[this.turn]) {\n\t\t\t\t\t\tfeatures.turnContinues = true;\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\tif ((nextSeedCounts[nextSpace]==1)&&\n\t\t\t\t\t\t\t(nextSpace>=firstHomeSpace[this.turn])&&\n\t\t\t\t\t\t\t(nextSpace<=lastHomeSpace[this.turn])) {\n\t\t\t\t\t\t\t// capture\n\t\t\t\t\t\t\tvar capturedSpace = capturedSpaces[nextSpace];\n\t\t\t\t\t\t\tif (capturedSpace>=0) {\n\t\t\t\t\t\t\t\tfeatures.spaceCaptured = capturedSpace;\n\t\t\t\t\t\t\t\tfeatures.capturedCount = nextSeedCounts[capturedSpace];\n\t\t\t\t\t\t\t\tnextSeedCounts[capturedSpace] = 0;\n\t\t\t\t\t\t\t\tnextSeedCounts[storeHouses[this.turn]] += features.capturedCount;\n\t\t\t\t\t\t\t\tfeatures.seedStoredCount += nextSeedCounts[capturedSpace];\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tnextSpace = (nextSpace+1)%14;\n\t\t\t}\n\t\t\treturn true;\n\t\t}\n\t\telse {\n\t\t\treturn false;\n\t\t}\n\t}\n}\n\nexport class SeedCoords {\n\ttx:number;\n\tty:number;\n\tangle:number;\n\n\tconstructor(tx:number, ty:number, angle:number) {\n\t\tthis.tx = tx;\n\t\tthis.ty = ty;\n\t\tthis.angle = angle;\n\t}\n}\n\nexport class DisplayPosition extends Position {\n\n\tconfig:SeedCoords[][];\n\n\tconstructor(seedCounts:number[],startMove:number,turn:number) {\n\t\tsuper(seedCounts,startMove,turn);\n\n\t\tthis.config = [];\n\n\t\tfor (var i = 0;i<seedCounts.length;i++) {\n\t\t\tthis.config[i] = new Array<SeedCoords>();\n\t\t}\n\t}\n\n\n\tseedCircleRect(rect:Rectangle,seedCount:number,board:Element,seed:number) {\n\t\tvar coords = this.config[seed];\n\t\tvar sq = rect.inner(0.95).square();\n\t\tvar cxo = (sq.width/2)+sq.x;\n\t\tvar cyo = (sq.height/2)+sq.y;\n\t\tvar seedNumbers = [5,7,9,11];\n\t\tvar ringIndex = 0;\n\t\tvar ringRem = seedNumbers[ringIndex];\n\t\tvar angleDelta = (2*Math.PI)/ringRem;\n\t\tvar angle = angleDelta;\n\t\tvar seedLength = sq.width/(seedNumbers.length<<1);\n\t\tvar crMax = sq.width/2-(seedLength/2);\n\t\tvar pit = createSVGInscribedCircle(sq);\n\t\tif (seed<7) {\n\t\t\tpit.setAttribute('fill','brown');\n\t\t}\n\t\telse {\n\t\t\tpit.setAttribute('fill','saddlebrown');\n\t\t}\n\t\tboard.appendChild(pit);\n\t\tvar seedsSeen = 0;\n\t\twhile (seedCount > 0) {\n\t\t\tif (ringRem == 0) {\n\t\t\t\tringIndex++;\n\t\t\t\tringRem = seedNumbers[ringIndex];\n\t\t\t\tangleDelta = (2*Math.PI)/ringRem;\n\t\t\t\tangle = angleDelta;\n\t\t\t}\n\t\t\tvar tx:number;\n\t\t\tvar ty:number;\n\t\t\tvar tangle = angle;\n\t\t\tif (coords.length>seedsSeen) {\n\t\t\t\ttx = coords[seedsSeen].tx;\n\t\t\t\tty = coords[seedsSeen].ty;\n\t\t\t\ttangle = coords[seedsSeen].angle;\n\t\t\t}\n\t\t\telse {\n\t\t\t\ttx = (Math.random()*crMax)-(crMax/3);\n\t\t\t\tty = (Math.random()*crMax)-(crMax/3);\n\t\t\t\tcoords[seedsSeen] = new SeedCoords(tx,ty,angle);\n\t\t\t}\n\t\t\tvar ell = createSVGEllipsePolar(tangle,seedLength,tx,ty,cxo,cyo);\n\t\t\tboard.appendChild(ell);\n\t\t\tangle += angleDelta;\n\t\t\tringRem--;\n\t\t\tseedCount--;\n\t\t\tseedsSeen++;\n\t\t}\n\t}\n\n\ttoCircleSVG() {\n\t\tvar seedDivisions = 14;\n\t\tvar board = document.createElementNS(svgNS,'svg');\n\t\tvar boardRect = new Rectangle(0,0,1800,800);\n\t\tboard.setAttribute('width','1800');\n\t\tboard.setAttribute('height','800');\n\t\tvar whole = createSVGRect(boardRect);\n\t\twhole.setAttribute('fill','tan');\n\t\tboard.appendChild(whole);\n\t\tvar labPlayLab = boardRect.proportionalSplitVert(20,760,20);\n\t\tvar playSurface = labPlayLab[1];\n\t\tvar storeMainStore = playSurface.proportionalSplitHoriz(8,48,8);\n\t\tvar mainPair = storeMainStore[1].subDivideVert(2);\n\t\tvar playerRects = [mainPair[0].subDivideHoriz(6), mainPair[1].subDivideHoriz(6)];\n\t\t// reverse top layer because storehouse on left\n\t\tfor (var k = 0;k<3;k++) {\n\t\t\tvar temp = playerRects[0][k];\n\t\t\tplayerRects[0][k] = playerRects[0][5-k];\n\t\t\tplayerRects[0][5-k] = temp;\n\t\t}\n\t\tvar storehouses = [storeMainStore[0],storeMainStore[2]];\n\t\tvar playerSeeds = this.seedCounts.length>>1;\n\t\tfor (var i = 0;i<2;i++) {\n\t\t\tvar player = playerRects[i];\n\t\t\tvar storehouse = storehouses[i];\n\t\t\tvar r:Rectangle;\n\t\t\tfor (var j = 0;j<playerSeeds;j++) {\n\t\t\t\tvar seed = (i*playerSeeds)+j;\n\t\t\t\tvar seedCount = this.seedCounts[seed];\n\t\t\t\tif (j==(playerSeeds-1)) {\n\t\t\t\t\tr = storehouse;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tr = player[j];\n\t\t\t\t}\n\t\t\t\tthis.seedCircleRect(r,seedCount,board,seed);\n\t\t\t\tif (seedCount==0) {\n\t\t\t\t\t// clear\n\t\t\t\t\tthis.config[seed] = new Array<SeedCoords>();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn board;\n\t}\n}\n}\n"),
-          (e.nrsFile = ""),
+          (e.nrsFile =
+            `
+// ============================================================
+// Complex Typort Examples
+// Style: C-style foo(a, b, c), numeric literals in expressions
+// ============================================================
+
+// ---------- 1: Simple trait (zero-arg method, constraint pattern) ----------
+trait Describable {
+    def describe: String
+}
+
+impl Describable for Nat {
+    def describe: String =
+        match this {
+            case zero => "zero"
+            case succ(m) => "succ(" + m.describe + ")"
+        }
+}
+
+impl Describable for Boolean {
+    def describe: String =
+        match this {
+            case true => "true"
+            case false => "false"
+        }
+}
+
+impl[T] Describable for Option[T] {
+    def describe: String =
+        match this {
+            case Some(_) => "some"
+            case None => "none"
+        }
+}
+
+def describe_val[T][d: Describable[T]](x: T): String = d.describe(x)
+println(describe_val(3))
+
+// ---------- 2: Binary Tree with generic operations ----------
+enum Tree[T] {
+    leaf(val: T)
+    node(left: Tree[T], right: Tree[T])
+}
+
+impl[T] Tree[T] {
+    def depth: Nat =
+        match this {
+            case leaf(_) => 0
+            case node(l, r) =>
+                let dl = l.depth;
+                let dr = r.depth;
+                match nat_compare(dl, dr) {
+                    case lt => dr + 1
+                    case eq => dl + 1
+                    case gt => dl + 1
+                }
+        }
+    def tree_size: Nat =
+        match this {
+            case leaf(_) => 1
+            case node(l, r) => l.tree_size + r.tree_size + 1
+        }
+}
+
+def leaf1: Tree[Nat] = leaf(1)
+println(leaf1.depth)
+println(leaf1.tree_size)
+
+// ---------- 3: Option monadic operations ----------
+impl[T] Option[T] {
+    def bind_option[U](f: T -> Option[U]): Option[U] =
+        match this {
+            case Some(a) => f(a)
+            case None => None
+        }
+    def fmap_option[U](f: T -> U): Option[U] =
+        match this {
+            case Some(a) => Some(f(a))
+            case None => None
+        }
+}
+
+def inc_opt: Option[Nat] = Some(2).fmap_option(x => x + 1)
+println(inc_opt)
+
+// ---------- 4: List operations ----------
+def sum_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => 0
+        case lcons(x, rest) => x + sum_list(rest)
+    }
+
+def product_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => 1
+        case lcons(x, rest) => x * product_list(rest)
+    }
+
+def numbers: List[Nat] = lcons(1, lcons(2, lcons(3, lnil)))
+
+println(sum_list(numbers))
+println(product_list(numbers))
+
+// ---------- 5: Eq proofs (using prelude) ----------
+def comm_test: Eq(2 + 3, 3 + 2) = add_comm(2, 3)
+def same: Eq(2, 2) = refl(2)
+
+// ---------- 6: Vec (GADT) operations ----------
+def vec_sum[len: Nat](v: Vec[Nat] len): Nat =
+    match v {
+        case nil => 0
+        case cons(x, xs) => x + vec_sum(xs)
+    }
+
+println(vec_sum(cons(1, cons(2, nil))))
+
+// ---------- 7: Fibonacci ----------
+def fib2(n: Nat): Nat =
+    match n {
+        case zero => 1
+        case succ(zero) => 1
+        case succ(succ(m)) => fib2(m) + fib2(succ(m))
+    }
+
+println(fib2(2))
+
+// ---------- 8: Product operations ----------
+def swap_and_double(p: Product[Nat, Nat]): Product[Nat, Nat] =
+    new Product(p.snd + p.snd, p.fst + p.fst)
+
+def my_pair: Product[Nat, Nat] = new Product(1, 2)
+println(swap_and_double(my_pair))
+
+// ---------- 9: Safe head ----------
+def safe_head[T](xs: List[T]): Option[T] =
+    match xs {
+        case lnil => None
+        case lcons(x, _) => Some(x)
+    }
+
+println(safe_head(numbers))
+
+// ---------- 10: Classify by pattern ----------
+def nat_classify(n: Nat): String =
+    match n {
+        case zero => "zero"
+        case succ(zero) => "one"
+        case _ => "many"
+    }
+
+println(nat_classify(0))
+println(nat_classify(1))
+println(nat_classify(2))
+
+// ---------- 11: Factorial ----------
+def fact(n: Nat): Nat =
+    match n {
+        case zero => 1
+        case succ(m) => n * fact(m)
+    }
+
+println(fact(2))
+println(fact(3))
+
+// ---------- 12: List length ----------
+def list_len[T](xs: List[T]): Nat =
+    match xs {
+        case lnil => 0
+        case lcons(_, rest) => list_len(rest) + 1
+    }
+
+println(list_len(numbers))
+
+// ---------- 13: List append (using prelude method) ----------
+def ab: List[Nat] = numbers.append(lcons(4, lnil))
+println(list_len(ab))
+println(sum_list(ab))
+
+// ---------- 14: Natural subtraction (non-negative) ----------
+def nat_sub_safe(x: Nat, y: Nat): Nat =
+    match y {
+        case zero => x
+        case succ(k) =>
+            match x {
+                case zero => 0
+                case succ(j) => nat_sub_safe(j, k)
+            }
+    }
+
+println(nat_sub_safe(3, 1))
+println(nat_sub_safe(1, 2))
+
+// ---------- 15: Max of two nats ----------
+def nat_max2(x: Nat, y: Nat): Nat =
+    match nat_compare(x, y) {
+        case lt => y
+        case eq => x
+        case gt => x
+    }
+
+println(nat_max2(1, 2))
+println(nat_max2(2, 1))
+
+// ---------- 16: Boolean expression evaluator ----------
+enum BoolExpr {
+    bool_lit(v: Boolean)
+    bool_not(inner: BoolExpr)
+    bool_and(lhs: BoolExpr, rhs: BoolExpr)
+}
+
+def eval_bool_expr(e: BoolExpr): Boolean =
+    match e {
+        case bool_lit(v) => v
+        case bool_not(inner) => eval_bool_expr(inner).not
+        case bool_and(l, r) =>
+            match eval_bool_expr(l) {
+                case false => false
+                case true => eval_bool_expr(r)
+            }
+    }
+
+def bex: BoolExpr = bool_and(bool_lit(true), bool_not(bool_lit(false)))
+println(eval_bool_expr(bex))
+
+// ---------- 17: Arithmetic expression evaluator ----------
+enum Arith {
+    lit(v: Nat)
+    add_expr(lhs: Arith, rhs: Arith)
+    mul_expr(lhs: Arith, rhs: Arith)
+}
+
+def eval_arith(e: Arith): Nat =
+    match e {
+        case lit(v) => v
+        case add_expr(l, r) => eval_arith(l) + eval_arith(r)
+        case mul_expr(l, r) => eval_arith(l) * eval_arith(r)
+    }
+
+// 1 + 2 * 3 = 7
+def ae: Arith = add_expr(lit(1), mul_expr(lit(2), lit(3)))
+println(eval_arith(ae))
+
+// ---------- 18: Euclid's GCD ----------
+def gcd(a: Nat, b: Nat): Nat =
+    match b {
+        case zero => a
+        case succ(_) =>
+            match nat_compare(a, b) {
+                case lt => gcd(b, a)
+                case eq => a
+                case gt => gcd(nat_sub_safe(a, b), b)
+            }
+    }
+
+println(gcd(6, 4))
+println(gcd(5, 2))
+
+// ---------- 19: String repeat ----------
+def repeat_str(s: String, n: Nat): String =
+    match n {
+        case zero => ""
+        case succ(m) => s + repeat_str(s, m)
+    }
+
+println(repeat_str("Ho ", 3))
+`
+          ),
           (e.debuggableFile =
             "# VS Code Mock Debug\n\nThis is a starter sample for developing VS Code debug adapters.\n\n**Mock Debug** simulates a debug adapter for Visual Studio Code.\nIt supports *step*, *continue*, *breakpoints*, *exceptions*, and\n*variable access* but it is not connected to any real debugger.\n\nThe sample is meant as an educational piece showing how to implement a debug\nadapter for VS Code. It can be used as a starting point for developing a real adapter.\n\nMore information about how to develop a new debug adapter can be found\n[here](https://code.visualstudio.com/docs/extensions/example-debuggers).\nOr discuss debug adapters on Gitter:\n[![Gitter Chat](https://img.shields.io/badge/chat-online-brightgreen.svg)](https://gitter.im/Microsoft/vscode)\n\n## Using Mock Debug\n\n* Install the **Mock Debug** extension in VS Code.\n* Create a new 'program' file 'readme.md' and enter several lines of arbitrary text.\n* Switch to the debug viewlet and press the gear dropdown.\n* Select the debug environment \"Mock Debug\".\n* Press the green 'play' button to start debugging.\n\nYou can now 'step through' the 'readme.md' file, set and hit breakpoints, and run into exceptions (if the word exception appears in a line).\n\n![Mock Debug](file.jpg)\n\n## Build and Run\n\n[![build status](https://travis-ci.org/Microsoft/vscode-mock-debug.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-mock-debug)\n[![build status](https://ci.appveyor.com/api/projects/status/empmw5q1tk6h1fly/branch/master?svg=true)](https://ci.appveyor.com/project/weinand/vscode-mock-debug)\n\n\n* Clone the project [https://github.com/Microsoft/vscode-mock-debug.git](https://github.com/Microsoft/vscode-mock-debug.git)\n* Open the project folder in VS Code.\n* Press 'F5' to build and launch Mock Debug in another VS Code window. In that window:\n* Open a new workspace, create a new 'program' file 'readme.md' and enter several lines of arbitrary text.\n* Switch to the debug viewlet and press the gear dropdown.\n* Select the debug environment \"Mock Debug\".\n* Press 'F5' to start debugging."),
           (e.getImageFile = function () {
