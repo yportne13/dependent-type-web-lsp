@@ -698,270 +698,71 @@
             "/// <reference path=\"lib/Geometry.ts\"/>\n/// <reference path=\"Game.ts\"/>\n\nmodule Mankala {\nexport var storeHouses = [6,13];\nexport var svgNS = 'http://www.w3.org/2000/svg';\n\nfunction createSVGRect(r:Rectangle) {\n\tvar rect = document.createElementNS(svgNS,'rect');\n\trect.setAttribute('x', r.x.toString());\n\trect.setAttribute('y', r.y.toString());\n\trect.setAttribute('width', r.width.toString());\n\trect.setAttribute('height', r.height.toString());\n\treturn rect;\n}\n\nfunction createSVGEllipse(r:Rectangle) {\n\tvar ell = document.createElementNS(svgNS,'ellipse');\n\tell.setAttribute('rx',(r.width/2).toString());\n\tell.setAttribute('ry',(r.height/2).toString());\n\tell.setAttribute('cx',(r.x+r.width/2).toString());\n\tell.setAttribute('cy',(r.y+r.height/2).toString());\n\treturn ell;\n}\n\nfunction createSVGEllipsePolar(angle:number,radius:number,tx:number,ty:number,cxo:number,cyo:number) {\n\tvar ell = document.createElementNS(svgNS,'ellipse');\n\tell.setAttribute('rx',radius.toString());\n\tell.setAttribute('ry',(radius/3).toString());\n\tell.setAttribute('cx',cxo.toString());\n\tell.setAttribute('cy',cyo.toString());\n\tvar dangle = angle*(180/Math.PI);\n\tell.setAttribute('transform','rotate('+dangle+','+cxo+','+cyo+') translate('+tx+','+ty+')');\n\treturn ell;\n}\n\nfunction createSVGInscribedCircle(sq:Square) {\n\tvar circle = document.createElementNS(svgNS,'circle');\n\tcircle.setAttribute('r',(sq.length/2).toString());\n\tcircle.setAttribute('cx',(sq.x+(sq.length/2)).toString());\n\tcircle.setAttribute('cy',(sq.y+(sq.length/2)).toString());\n\treturn circle;\n}\n\nexport class Position {\n\n\tseedCounts:number[];\n\tstartMove:number;\n\tturn:number;\n\n\tconstructor(seedCounts:number[],startMove:number,turn:number) {\n\t\tthis.seedCounts = seedCounts;\n\t\tthis.startMove = startMove;\n\t\tthis.turn = turn;\n\t}\n\n\tscore() {\n\t\tvar baseScore = this.seedCounts[storeHouses[1-this.turn]]-this.seedCounts[storeHouses[this.turn]];\n\t\tvar otherSpaces = homeSpaces[this.turn];\n\t\tvar sum = 0;\n\t\tfor (var k = 0,len = otherSpaces.length;k<len;k++) {\n\t\t\tsum += this.seedCounts[otherSpaces[k]];\n\t\t}\n\t\tif (sum==0) {\n\t\t\tvar mySpaces = homeSpaces[1-this.turn];\n\t\t\tvar mySum = 0;\n\t\t\tfor (var j = 0,len = mySpaces.length;j<len;j++) {\n\t\t\t\tmySum += this.seedCounts[mySpaces[j]];\n\t\t\t}\n\n\t\t\tbaseScore -= mySum;\n\t\t}\n\t\treturn baseScore;\n\t}\n\n\tmove(space:number,nextSeedCounts:number[],features:Features):boolean {\n\t\tif ((space==storeHouses[0])||(space==storeHouses[1])) {\n\t\t\t// can't move seeds in storehouse\n\t\t\treturn false;\n\t\t}\n\t\tif (this.seedCounts[space]>0) {\n\t\t\tfeatures.clear();\n\t\t\tvar len = this.seedCounts.length;\n\t\t\tfor (var i = 0;i<len;i++) {\n\t\t\t\tnextSeedCounts[i] = this.seedCounts[i];\n\t\t\t}\n\t\t\tvar seedCount = this.seedCounts[space];\n\t\t\tnextSeedCounts[space] = 0;\n\t\t\tvar nextSpace = (space+1)%14;\n\n\t\t\twhile (seedCount>0) {\n\t\t\t\tif (nextSpace==storeHouses[this.turn]) {\n\t\t\t\t\tfeatures.seedStoredCount++;\n\t\t\t\t}\n\t\t\t\tif ((nextSpace!=storeHouses[1-this.turn])) {\n\t\t\t\t\tnextSeedCounts[nextSpace]++;\n\t\t\t\t\tseedCount--;\n\t\t\t\t}\n\t\t\t\tif (seedCount==0) {\n\t\t\t\t\tif (nextSpace==storeHouses[this.turn]) {\n\t\t\t\t\t\tfeatures.turnContinues = true;\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\tif ((nextSeedCounts[nextSpace]==1)&&\n\t\t\t\t\t\t\t(nextSpace>=firstHomeSpace[this.turn])&&\n\t\t\t\t\t\t\t(nextSpace<=lastHomeSpace[this.turn])) {\n\t\t\t\t\t\t\t// capture\n\t\t\t\t\t\t\tvar capturedSpace = capturedSpaces[nextSpace];\n\t\t\t\t\t\t\tif (capturedSpace>=0) {\n\t\t\t\t\t\t\t\tfeatures.spaceCaptured = capturedSpace;\n\t\t\t\t\t\t\t\tfeatures.capturedCount = nextSeedCounts[capturedSpace];\n\t\t\t\t\t\t\t\tnextSeedCounts[capturedSpace] = 0;\n\t\t\t\t\t\t\t\tnextSeedCounts[storeHouses[this.turn]] += features.capturedCount;\n\t\t\t\t\t\t\t\tfeatures.seedStoredCount += nextSeedCounts[capturedSpace];\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tnextSpace = (nextSpace+1)%14;\n\t\t\t}\n\t\t\treturn true;\n\t\t}\n\t\telse {\n\t\t\treturn false;\n\t\t}\n\t}\n}\n\nexport class SeedCoords {\n\ttx:number;\n\tty:number;\n\tangle:number;\n\n\tconstructor(tx:number, ty:number, angle:number) {\n\t\tthis.tx = tx;\n\t\tthis.ty = ty;\n\t\tthis.angle = angle;\n\t}\n}\n\nexport class DisplayPosition extends Position {\n\n\tconfig:SeedCoords[][];\n\n\tconstructor(seedCounts:number[],startMove:number,turn:number) {\n\t\tsuper(seedCounts,startMove,turn);\n\n\t\tthis.config = [];\n\n\t\tfor (var i = 0;i<seedCounts.length;i++) {\n\t\t\tthis.config[i] = new Array<SeedCoords>();\n\t\t}\n\t}\n\n\n\tseedCircleRect(rect:Rectangle,seedCount:number,board:Element,seed:number) {\n\t\tvar coords = this.config[seed];\n\t\tvar sq = rect.inner(0.95).square();\n\t\tvar cxo = (sq.width/2)+sq.x;\n\t\tvar cyo = (sq.height/2)+sq.y;\n\t\tvar seedNumbers = [5,7,9,11];\n\t\tvar ringIndex = 0;\n\t\tvar ringRem = seedNumbers[ringIndex];\n\t\tvar angleDelta = (2*Math.PI)/ringRem;\n\t\tvar angle = angleDelta;\n\t\tvar seedLength = sq.width/(seedNumbers.length<<1);\n\t\tvar crMax = sq.width/2-(seedLength/2);\n\t\tvar pit = createSVGInscribedCircle(sq);\n\t\tif (seed<7) {\n\t\t\tpit.setAttribute('fill','brown');\n\t\t}\n\t\telse {\n\t\t\tpit.setAttribute('fill','saddlebrown');\n\t\t}\n\t\tboard.appendChild(pit);\n\t\tvar seedsSeen = 0;\n\t\twhile (seedCount > 0) {\n\t\t\tif (ringRem == 0) {\n\t\t\t\tringIndex++;\n\t\t\t\tringRem = seedNumbers[ringIndex];\n\t\t\t\tangleDelta = (2*Math.PI)/ringRem;\n\t\t\t\tangle = angleDelta;\n\t\t\t}\n\t\t\tvar tx:number;\n\t\t\tvar ty:number;\n\t\t\tvar tangle = angle;\n\t\t\tif (coords.length>seedsSeen) {\n\t\t\t\ttx = coords[seedsSeen].tx;\n\t\t\t\tty = coords[seedsSeen].ty;\n\t\t\t\ttangle = coords[seedsSeen].angle;\n\t\t\t}\n\t\t\telse {\n\t\t\t\ttx = (Math.random()*crMax)-(crMax/3);\n\t\t\t\tty = (Math.random()*crMax)-(crMax/3);\n\t\t\t\tcoords[seedsSeen] = new SeedCoords(tx,ty,angle);\n\t\t\t}\n\t\t\tvar ell = createSVGEllipsePolar(tangle,seedLength,tx,ty,cxo,cyo);\n\t\t\tboard.appendChild(ell);\n\t\t\tangle += angleDelta;\n\t\t\tringRem--;\n\t\t\tseedCount--;\n\t\t\tseedsSeen++;\n\t\t}\n\t}\n\n\ttoCircleSVG() {\n\t\tvar seedDivisions = 14;\n\t\tvar board = document.createElementNS(svgNS,'svg');\n\t\tvar boardRect = new Rectangle(0,0,1800,800);\n\t\tboard.setAttribute('width','1800');\n\t\tboard.setAttribute('height','800');\n\t\tvar whole = createSVGRect(boardRect);\n\t\twhole.setAttribute('fill','tan');\n\t\tboard.appendChild(whole);\n\t\tvar labPlayLab = boardRect.proportionalSplitVert(20,760,20);\n\t\tvar playSurface = labPlayLab[1];\n\t\tvar storeMainStore = playSurface.proportionalSplitHoriz(8,48,8);\n\t\tvar mainPair = storeMainStore[1].subDivideVert(2);\n\t\tvar playerRects = [mainPair[0].subDivideHoriz(6), mainPair[1].subDivideHoriz(6)];\n\t\t// reverse top layer because storehouse on left\n\t\tfor (var k = 0;k<3;k++) {\n\t\t\tvar temp = playerRects[0][k];\n\t\t\tplayerRects[0][k] = playerRects[0][5-k];\n\t\t\tplayerRects[0][5-k] = temp;\n\t\t}\n\t\tvar storehouses = [storeMainStore[0],storeMainStore[2]];\n\t\tvar playerSeeds = this.seedCounts.length>>1;\n\t\tfor (var i = 0;i<2;i++) {\n\t\t\tvar player = playerRects[i];\n\t\t\tvar storehouse = storehouses[i];\n\t\t\tvar r:Rectangle;\n\t\t\tfor (var j = 0;j<playerSeeds;j++) {\n\t\t\t\tvar seed = (i*playerSeeds)+j;\n\t\t\t\tvar seedCount = this.seedCounts[seed];\n\t\t\t\tif (j==(playerSeeds-1)) {\n\t\t\t\t\tr = storehouse;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tr = player[j];\n\t\t\t\t}\n\t\t\t\tthis.seedCircleRect(r,seedCount,board,seed);\n\t\t\t\tif (seedCount==0) {\n\t\t\t\t\t// clear\n\t\t\t\t\tthis.config[seed] = new Array<SeedCoords>();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn board;\n\t}\n}\n}\n"),
           (e.nrsFile =
             `
-enum Bool {
-    true
-    false
-}
+// Typort language demo -- demo using prelude types (Nat, Boolean, List, Eq)
 
-enum Nat {
-    zero
-    succ(x: Nat)
-}
+// Basic operations
+def mynot(x: Boolean): Boolean = x.not
+println (mynot false)
 
-enum List[A] {
-    nil
-    cons(head: A, tail: List[A])
-}
-
-enum Eq[T](x: T, y: T) {
-    refl(a: T) -> Eq a a
-}
-
-def rfl[A][a: A]: Eq a a =
-    refl a
-
-def listid(x: List[Bool]): List[Bool] = x
-
-def create0: List[Bool] = nil
-
-def create1: List[Bool] = cons true nil
-
-def create2: List[Bool] = cons(true, cons false nil)
-
+// Nat arithmetic using prelude's + and *
 def two = succ (succ zero)
-
-def not(x: Bool): Bool =
-    match x {
-        case true => false
-        case false => true
-    }
-
-println (not true)
-
-def add(x: Nat, y: Nat) =
-    match x {
-        case zero => y
-        case succ(n) => succ (add n y)
-    }
-
-def mul(x: Nat, y: Nat) = match x {
-    case zero => zero
-    case succ(n) => add(y, mul n y)
-}
-
-def outParam[A](a: A): A = a
-
-trait Add[T, O: outParam(Type 0)] {
-    def +(that: T): O
-}
-
-def nat_add_helper(x: Nat, y: Nat): Nat =
-    match y {
-        case zero => x
-        case succ(n) => succ (nat_add_helper x n)
-    }
-
-impl Add[Nat, Nat] for Nat {
-    def +(that: Nat): Nat =
-        nat_add_helper this that
-}
-
-trait Mul[T, O: outParam(Type 0)] {
-    def *(that: T): O
-}
-
-def nat_mul_helper(x: Nat, y: Nat): Nat =
-    match y {
-        case zero => 0
-        case succ(n) => (nat_mul_helper x n) + x
-    }
-
-impl Mul[Nat, Nat] for Nat {
-    def *(that: Nat): Nat =
-        nat_mul_helper this that
-}
-
 def four = 2 + 2
-
 println four
 
-def cong[A, B, x: A, y: A](f: A -> B, e: Eq x y): Eq (f x) (f y) =
-    match e {
-        case refl(a) => refl (f a)
-    }
+def multiply(x: Nat, y: Nat): Nat = x * y
+println (multiply four two)
 
-def cong_succ[x: Nat, y: Nat](e: Eq x y): Eq (x + 1) (y + 1) =
-    cong succ e
+// Lists using prelude's List with lnil/lcons
+def listid[T](x: List[T]): List[T] = x
+def someBools: List[Boolean] = lcons true (lcons false lnil)
+println (listid someBools)
 
-def add_zero_left(a: Nat): Eq (0 + a) a =
-    match a {
-        case zero => refl zero
-        case succ(t) => cong_succ (add_zero_left t)
-    }
+// Higher-kinded types
+def test0: Type 1 = Type 0
+def test1: Type 2 = Type 1 -> Type 0
+enum HList[A] {
+    hnil
+    hcons(x: A, tail: HList[A])
+}
+def hl1: HList[Nat] = hcons zero (hcons two hnil)
 
-def symm[A, x, y: A](e: Eq x y): Eq y x =
-    match e {
-        case refl(a) => refl[A] a
-    }
+// Leibniz equality
+def Eq1[A](x: A, y: A): Type 1 = (P: A -> Type 0) -> P x -> P y
+def refl1[A, x: A]: Eq1[A] x x = _ => px => px
 
-def trans[A, x, y, z: A](e1: Eq x y, e2: Eq y z): Eq x z =
-    match e1 {
-        case refl(a) => e2
-    }
+// Struct with size constraints
+struct MySig {
+    name: String
+    size: Nat
+}
+def sameSize(a: MySig, b: MySig)(eq: Eq1[Nat] a.size b.size): String =
+    string_concat a.name b.name
+def sigA = new MySig("A", four)
+def sigB = new MySig("B", four)
+def sigC = new MySig("C", two)
+def ab = sameSize sigA sigB refl1
+println ab
 
-def add_succ_left (n: Nat, m: Nat): Eq ((n + 1) + m) (n + m + 1) =
-    match m {
-        case zero => refl (succ n)
-        case succ(k) => cong_succ (add_succ_left n k)
-    }
-
-def add_comm (n: Nat, m: Nat): Eq (n + m) (m + n) =
-    match m {
-        case zero => symm (add_zero_left n)
-        case succ(k) => trans (cong_succ (add_comm n k)) (symm (add_succ_left k n))
-    }
-
-def add_assoc (n: Nat, m: Nat, k: Nat): Eq (n + m + k) (n + (m + k)) =
-    match k {
-        case zero => rfl
-        case succ(l) => cong_succ (add_assoc n m l)
-    }
-
-def add_zero_right(m: Nat): Eq (m + 0) m =
-    rfl
-
-def mul_zero_left(n: Nat): Eq (0 * n) zero =
-    match n {
-        case zero => rfl
-        case succ(k) => trans (refl ((0 * k) + 0)) (mul_zero_left k)
-    }
-
-def add_succ_zero_left(k: Nat): Eq (add 1 k) (succ k) =
+// Custom lemmas
+def add_succ_zero_left(k: Nat): Eq (1 + k) (succ k) =
     cong_succ (add_zero_right k)
 
-def mul_one_right(n: Nat): Eq[Nat] (mul n 1) n =
+def mul_one_right(n: Nat): Eq[Nat] (n * 1) n =
     match n {
         case zero => rfl[Nat][zero]
         case succ(k) =>
             let ih = mul_one_right k;
-            let lemma: Eq[Nat] (add 1 k) (succ k) = cong_succ (add_zero_right k);
+            let lemma: Eq[Nat] (1 + k) (succ k) = cong_succ (add_zero_right k);
             trans(cong(add 1, ih), lemma)
     }
 
-struct Exists[A: Type 0, P: A -> Type 0] {
-    witness: A
-    proof: P witness
+// Dependent pair
+struct DepPair[A: Type 0, P: A -> Type 0] {
+    fst: A
+    snd: P fst
 }
-
-def exists_two: Exists[Nat][x => Eq x two] = Exists.mk[Nat][x => Eq x two] two rfl
-
-struct Point[T] {
-    x: T
-    y: T
-}
-
-def get_x[T](p: Point[T]): T = p.x
-
-def point_add(p1: Point[Nat], p2: Point[Nat]): Point[Nat] =
-    new Point((add p1.x p2.x), (add p1.y p2.y))
-
-def start_point = new Point(zero, four)
-
-def end_point = new Point(four, two)
-
-println (get_x start_point)
-
-println (point_add start_point end_point)
-
-def test0: Type 1 = Type 0
-
-def test1: Type 2 = Type 1 -> Type 0
-
-enum HighLvl[A] {
-    case1(x: A)
-    case2(x: test1)
-}
-
-def test2: HighLvl[Nat] = case1 zero
-
-def test3: Type 2 = HighLvl[Nat]
-
-enum HighLvl2[A: Type 2] {
-    case2_1(x: A)
-    case2_2(x: Nat)
-}
-
-def test1_2: HighLvl2[HighLvl[Nat]] = case2_1 test2
-
-def test1_3: Type 2 = HighLvl2[HighLvl[Nat]]
-
-enum HighLvl3[A: Type 2] {
-    case3_1
-    case3_2(x: Nat)
-}
-
-def test2_2: HighLvl3[HighLvl[Nat]] = case3_1
-
-def test2_3: Type 2 = HighLvl3[HighLvl[Nat]]
-
-def Eq1[A](x: A, y: A): Type 1 = (P : A -> Type 0) -> P x -> P y
-
-def refl1[A, x: A]: Eq1[A] x x = _ => px => px
-
-struct Bits {
-    name: String
-    size: Nat
-}
-
-def assign(a: Bits, b: Bits)(eq: Eq1[Nat] a.size b.size): String = string_concat a.name b.name
-
-def sigA = new Bits("A", four)
-
-def sigB = new Bits("B", four)
-
-def sigC = new Bits("C", two)
-
-def sigD = new Bits("D", two)
-
-def ab = assign sigA sigB refl1
-
-def cd = assign sigC sigD refl1
-
-def three = add two 1
-
-
-enum Expr {
-    create(name: String)
-}
-
-struct module {
-    name: String
-    expr: List[Expr]
-}
-
-def newBits(name: String, w: Nat): Bits =
-    let create_sig = change_mutable("module", x => module.mk(x.name, cons(create(name), x.expr)));
-    Bits.mk(name, w)
-
-macro_rules Expr {
-    (input $x:ident <- Bits[$width:raw]) => {let $x = newBits(stringify $x, $width);};
-    (let $x:ident = Bits[$width:raw]) => {let $x = newBits(stringify $x, $width);};
-}
-
-macro_rules module {
-    ($name: ident $args: params {$( $body: Expr )*}) => {def $name $args = let creat_module = create_global("module", module.mk(stringify $name, nil));$({$body})* get_global("module")};
-    ($name: ident $body: raw) => {def $name = string_concat(string_concat("module ", stringify $name), $body)};
-    ($name: ident) => {def $name = string_concat("module ", stringify $name)};
-}
-
-module test[w: Nat] {
-    input z <- Bits[w]
-    input t <- Bits[w]
-    let r = Bits[w]
-}
-
-println (test[2])
-
+def ex_even: DepPair[Nat][x => Eq (x % 2) 0] =
+    DepPair.mk[Nat][x => Eq (x % 2) 0] four rfl
 `
           ),
           (e.debuggableFile =
