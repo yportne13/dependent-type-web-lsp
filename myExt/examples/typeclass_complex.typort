@@ -1,0 +1,264 @@
+// ============================================================
+// Complex Typort Examples
+// Style: C-style foo(a, b, c), numeric literals in expressions
+// ============================================================
+
+// ---------- 1: Simple trait (zero-arg method, constraint pattern) ----------
+trait Describable {
+    def describe: String
+}
+
+impl Describable for Nat {
+    def describe: String =
+        match this {
+            case zero => "zero"
+            case succ(m) => "succ(" + m.describe + ")"
+        }
+}
+
+impl Describable for Boolean {
+    def describe: String =
+        match this {
+            case true => "true"
+            case false => "false"
+        }
+}
+
+impl[T] Describable for Option[T] {
+    def describe: String =
+        match this {
+            case Some(_) => "some"
+            case None => "none"
+        }
+}
+
+def describe_val[T][d: Describable[T]](x: T): String = d.describe(x)
+println(describe_val(3))
+
+// ---------- 2: Binary Tree with generic operations ----------
+enum Tree[T] {
+    leaf(val: T)
+    node(left: Tree[T], right: Tree[T])
+}
+
+impl[T] Tree[T] {
+    def depth: Nat =
+        match this {
+            case leaf(_) => 0
+            case node(l, r) =>
+                let dl = l.depth;
+                let dr = r.depth;
+                match nat_compare(dl, dr) {
+                    case lt => dr + 1
+                    case eq => dl + 1
+                    case gt => dl + 1
+                }
+        }
+    def tree_size: Nat =
+        match this {
+            case leaf(_) => 1
+            case node(l, r) => l.tree_size + r.tree_size + 1
+        }
+}
+
+def leaf1: Tree[Nat] = leaf(1)
+println(leaf1.depth)
+println(leaf1.tree_size)
+
+// ---------- 3: Option monadic operations ----------
+impl[T] Option[T] {
+    def bind_option[U](f: T -> Option[U]): Option[U] =
+        match this {
+            case Some(a) => f(a)
+            case None => None
+        }
+    def fmap_option[U](f: T -> U): Option[U] =
+        match this {
+            case Some(a) => Some(f(a))
+            case None => None
+        }
+}
+
+def inc_opt: Option[Nat] = Some(2).fmap_option(x => x + 1)
+println(inc_opt)
+
+// ---------- 4: List operations ----------
+def sum_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => 0
+        case lcons(x, rest) => x + sum_list(rest)
+    }
+
+def product_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => 1
+        case lcons(x, rest) => x * product_list(rest)
+    }
+
+def numbers: List[Nat] = lcons(1, lcons(2, lcons(3, lnil)))
+
+println(sum_list(numbers))
+println(product_list(numbers))
+
+// ---------- 5: Eq proofs (using prelude) ----------
+def comm_test: Eq(2 + 3, 3 + 2) = add_comm(2, 3)
+def same: Eq(2, 2) = refl(2)
+
+// ---------- 6: Vec (GADT) operations ----------
+def vec_sum[len: Nat](v: Vec[Nat] len): Nat =
+    match v {
+        case nil => 0
+        case cons(x, xs) => x + vec_sum(xs)
+    }
+
+println(vec_sum(cons(1, cons(2, nil))))
+
+// ---------- 7: Fibonacci ----------
+def fib2(n: Nat): Nat =
+    match n {
+        case zero => 1
+        case succ(zero) => 1
+        case succ(succ(m)) => fib2(m) + fib2(succ(m))
+    }
+
+println(fib2(2))
+
+// ---------- 8: Product operations ----------
+def swap_and_double(p: Product[Nat, Nat]): Product[Nat, Nat] =
+    new Product(p.snd + p.snd, p.fst + p.fst)
+
+def my_pair: Product[Nat, Nat] = new Product(1, 2)
+println(swap_and_double(my_pair))
+
+// ---------- 9: Safe head ----------
+def safe_head[T](xs: List[T]): Option[T] =
+    match xs {
+        case lnil => None
+        case lcons(x, _) => Some(x)
+    }
+
+println(safe_head(numbers))
+
+// ---------- 10: Classify by pattern ----------
+def nat_classify(n: Nat): String =
+    match n {
+        case zero => "zero"
+        case succ(zero) => "one"
+        case _ => "many"
+    }
+
+println(nat_classify(0))
+println(nat_classify(1))
+println(nat_classify(2))
+
+// ---------- 11: Factorial ----------
+def fact(n: Nat): Nat =
+    match n {
+        case zero => 1
+        case succ(m) => n * fact(m)
+    }
+
+println(fact(2))
+println(fact(3))
+
+// ---------- 12: List length ----------
+def list_len[T](xs: List[T]): Nat =
+    match xs {
+        case lnil => 0
+        case lcons(_, rest) => list_len(rest) + 1
+    }
+
+println(list_len(numbers))
+
+// ---------- 13: List append (using prelude method) ----------
+def ab: List[Nat] = numbers.append(lcons(4, lnil))
+println(list_len(ab))
+println(sum_list(ab))
+
+// ---------- 14: Natural subtraction (non-negative) ----------
+def nat_sub_safe(x: Nat, y: Nat): Nat =
+    match y {
+        case zero => x
+        case succ(k) =>
+            match x {
+                case zero => 0
+                case succ(j) => nat_sub_safe(j, k)
+            }
+    }
+
+println(nat_sub_safe(3, 1))
+println(nat_sub_safe(1, 2))
+
+// ---------- 15: Max of two nats ----------
+def nat_max2(x: Nat, y: Nat): Nat =
+    match nat_compare(x, y) {
+        case lt => y
+        case eq => x
+        case gt => x
+    }
+
+println(nat_max2(1, 2))
+println(nat_max2(2, 1))
+
+// ---------- 16: Boolean expression evaluator ----------
+enum BoolExpr {
+    bool_lit(v: Boolean)
+    bool_not(inner: BoolExpr)
+    bool_and(lhs: BoolExpr, rhs: BoolExpr)
+}
+
+def eval_bool_expr(e: BoolExpr): Boolean =
+    match e {
+        case bool_lit(v) => v
+        case bool_not(inner) => eval_bool_expr(inner).not
+        case bool_and(l, r) =>
+            match eval_bool_expr(l) {
+                case false => false
+                case true => eval_bool_expr(r)
+            }
+    }
+
+def bex: BoolExpr = bool_and(bool_lit(true), bool_not(bool_lit(false)))
+println(eval_bool_expr(bex))
+
+// ---------- 17: Arithmetic expression evaluator ----------
+enum Arith {
+    lit(v: Nat)
+    add_expr(lhs: Arith, rhs: Arith)
+    mul_expr(lhs: Arith, rhs: Arith)
+}
+
+def eval_arith(e: Arith): Nat =
+    match e {
+        case lit(v) => v
+        case add_expr(l, r) => eval_arith(l) + eval_arith(r)
+        case mul_expr(l, r) => eval_arith(l) * eval_arith(r)
+    }
+
+// 1 + 2 * 3 = 7
+def ae: Arith = add_expr(lit(1), mul_expr(lit(2), lit(3)))
+println(eval_arith(ae))
+
+// ---------- 18: Euclid's GCD ----------
+def gcd(a: Nat, b: Nat): Nat =
+    match b {
+        case zero => a
+        case succ(_) =>
+            match nat_compare(a, b) {
+                case lt => gcd(b, a)
+                case eq => a
+                case gt => gcd(nat_sub_safe(a, b), b)
+            }
+    }
+
+println(gcd(6, 4))
+println(gcd(5, 2))
+
+// ---------- 19: String repeat ----------
+def repeat_str(s: String, n: Nat): String =
+    match n {
+        case zero => ""
+        case succ(m) => s + repeat_str(s, m)
+    }
+
+println(repeat_str("Ho ", 3))
