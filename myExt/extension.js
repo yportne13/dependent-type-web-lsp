@@ -954,67 +954,67 @@ println(symm_eg2)
           (e.file_alu =
             `
 
-     1|// ============================================================
-     2|// ALU: Hardware Description DSL Example
-     3|// A 4-function ALU using the SpinalHDL-inspired DSL
-     4|// ============================================================
-     5|
-     6|// ---------- Simple ALU ----------
-     7|
-     8|module simpleALU {
-     9|    input a = UInt[8]
-    10|    input b = UInt[8]
-    11|    output result = UInt[8]
-    12|
-    13|    // Basic arithmetic
-    14|    let sum = UInt[8]
-    15|    sum := a + b
-    16|
-    17|    // Bitwise operations
-    18|    let and_op = UInt[8]
-    19|    and_op := a & b
-    20|    let or_op = UInt[8]
-    21|    or_op := a | b
-    22|    let xor_op = UInt[8]
-    23|    xor_op := a ^ b
-    24|}
-    25|
-    26|// Print the generated Verilog module
-    27|def alu_module_opt = get_global("module").data.head_option
-    28|def alu_module = alu_module_opt.unwrap_or(Module.mk("simpleALU", 0, nil))
-    29|println(moduleVL(alu_module))
-    30|
-    31|// ---------- Multi-function ALU with selects ----------
-    32|
-    33|module multiALU {
-    34|    input op = UInt[2]
-    35|    input a = UInt[8]
-    36|    input b = UInt[8]
-    37|    output result = UInt[8]
-    38|
-    39|    let add = UInt[8]
-    40|    add := a + b
-    41|    let sub = UInt[8]
-    42|    sub := a - b
-    43|    let bit_and = UInt[8]
-    44|    bit_and := a & b
-    45|    let bit_or = UInt[8]
-    46|    bit_or := a | b
-    47|    let bit_xor = UInt[8]
-    48|    bit_xor := a ^ b
-    49|}
-    50|
-    51|def multi_module_opt = get_global("module").data.head_option
-    52|def multi_module_after = multi_module_opt.unwrap_or(Module.mk("multiALU", 0, nil))
-    53|
-    54|// Delay-check: verify the module name
-    55|def multi_module_check = get_global("module")
-    56|
-    57|// Print all accumulated module Verilog
-    58|def all_modules = multi_module_check
-    59|println("\\n--- ALU Multi-Function Verilog ---")
-    60|println(moduleVL(multi_module_after))
-    61|
+// ============================================================
+// ALU: Hardware Description DSL Example
+// A 4-function ALU using the SpinalHDL-inspired DSL
+// ============================================================
+
+// ---------- Simple ALU ----------
+
+module simpleALU {
+    input a = UInt[8]
+    input b = UInt[8]
+    output result = UInt[8]
+
+    // Basic arithmetic
+    let sum = UInt[8]
+    sum := a + b
+
+    // Bitwise operations
+    let and_op = UInt[8]
+    and_op := a & b
+    let or_op = UInt[8]
+    or_op := a | b
+    let xor_op = UInt[8]
+    xor_op := a ^ b
+}
+
+// Print the generated Verilog module
+def alu_module_opt = get_global("module").data.head_option
+def alu_module = alu_module_opt.unwrap_or(Module.mk("simpleALU", 0, nil))
+println(moduleVL(alu_module))
+
+// ---------- Multi-function ALU with selects ----------
+
+module multiALU {
+    input op = UInt[2]
+    input a = UInt[8]
+    input b = UInt[8]
+    output result = UInt[8]
+
+    let add = UInt[8]
+    add := a + b
+    let sub = UInt[8]
+    sub := a - b
+    let bit_and = UInt[8]
+    bit_and := a & b
+    let bit_or = UInt[8]
+    bit_or := a | b
+    let bit_xor = UInt[8]
+    bit_xor := a ^ b
+}
+
+def multi_module_opt = get_global("module").data.head_option
+def multi_module_after = multi_module_opt.unwrap_or(Module.mk("multiALU", 0, nil))
+
+// Delay-check: verify the module name
+def multi_module_check = get_global("module")
+
+// Print all accumulated module Verilog
+def all_modules = multi_module_check
+println("\\n--- ALU Multi-Function Verilog ---")
+println(moduleVL(multi_module_after))
+
 `
           ),
           (e.debuggableFile =
