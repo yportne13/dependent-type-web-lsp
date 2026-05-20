@@ -25,23 +25,41 @@
 
 	<!-- Startup (do not modify order of script tags!) -->
 	<script src="./depend/vscode-web/dist/out/vs/loader.js"></script>
-	<script src="./depend/vscode-web/dist/out/vs/webPackagePaths.js"></script>
+	<script src="./depend/vscode-web/dist/out/nls.messages.js"></script>
 	<script>
-		Object.keys(self.webPackagePaths).map(function (key, index) {
-			self.webPackagePaths[key] = `${window.location.origin + window.location.pathname}/depend/vscode-web/dist/depend/${key}/${self.webPackagePaths[key]}`;
-		});
+		var base = window.location.origin + window.location.pathname;
 		require.config({
-			baseUrl: `${window.location.origin + window.location.pathname}/depend/vscode-web/dist/out`,
+			baseUrl: base + '/depend/vscode-web/dist/out',
 			recordStats: true,
 			trustedTypesPolicy: window.trustedTypes?.createPolicy('amdLoader', {
-				createScriptURL(value) {
+				createScriptURL: function (value) {
 					return value;
 				}
 			}),
-			paths: self.webPackagePaths
+			paths: {
+				'@microsoft/1ds-core-js': '../depend/@microsoft/1ds-core-js/dist/ms.core.min.js',
+				'@microsoft/1ds-post-js': '../depend/@microsoft/1ds-post-js/dist/ms.post.min.js',
+				'@vscode/iconv-lite-umd': '../depend/@vscode/iconv-lite-umd/lib/iconv-lite-umd.js',
+				'@vscode/tree-sitter-wasm': '../depend/@vscode/tree-sitter-wasm/wasm/tree-sitter.js',
+				'@vscode/vscode-languagedetection': '../depend/@vscode/vscode-languagedetection/dist/lib/index.js',
+				'@xterm/addon-clipboard': '../depend/@xterm/addon-clipboard/lib/addon-clipboard.js',
+				'@xterm/addon-image': '../depend/@xterm/addon-image/lib/addon-image.js',
+				'@xterm/addon-search': '../depend/@xterm/addon-search/lib/addon-search.js',
+				'@xterm/addon-serialize': '../depend/@xterm/addon-serialize/lib/addon-serialize.js',
+				'@xterm/addon-unicode11': '../depend/@xterm/addon-unicode11/lib/addon-unicode11.js',
+				'@xterm/addon-webgl': '../depend/@xterm/addon-webgl/lib/addon-webgl.js',
+				'@xterm/xterm': '../depend/@xterm/xterm/lib/xterm.js',
+				jschardet: '../depend/jschardet/dist/jschardet.min.js',
+				'tas-client-umd': '../depend/tas-client-umd/lib/tas-client-umd.js',
+				'vscode-oniguruma': '../depend/vscode-oniguruma/release/main.js',
+				'vscode-textmate': '../depend/vscode-textmate/release/main.js',
+				'vscode-regexp-languagedetection': '../depend/vscode-regexp-languagedetection/dist/index.js',
+				vsda: '../depend/vsda/rust/web/vsda.js',
+				'@microsoft/dynamicproto-js': '../depend/@microsoft/dynamicproto-js/lib/dist/umd/dynamicproto-js.min.js',
+				'@microsoft/applicationinsights-shims': '../depend/@microsoft/applicationinsights-shims/dist/umd/applicationinsights-shims.min.js',
+				'@microsoft/applicationinsights-core-js': '../depend/@microsoft/applicationinsights-core-js/browser/applicationinsights-core-js.min.js'
+			}
 		});
 	</script>
-	<script src="./depend/vscode-web/dist/out/vs/workbench/workbench.web.main.nls.js"></script>
 	<script src="./depend/vscode-web/dist/out/vs/workbench/workbench.web.main.js"></script>
-	<script src="./depend/vscode-web/dist/out/vs/code/browser/workbench/workbench.js"></script>
 </html>
