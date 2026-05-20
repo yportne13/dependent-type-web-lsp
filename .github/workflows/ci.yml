@@ -28,10 +28,6 @@ jobs:
           sh ./run.sh
           cd sample/
           npm install
-          mv node_modules depend
-          mv depend/@liudonghua123/vscode-web depend/vscode-web
-          rm -rf depend/@liudonghua123
-          mv depend/vscode-web/dist/node_modules depend/vscode-web/dist/depend
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
