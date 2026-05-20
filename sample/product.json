@@ -4,7 +4,7 @@
 	  "nameLong": "VSCode Web sample",
 	  "applicationName": "code-web-sample",
 	  "dataFolderName": ".vscode-web-sample",
-	  "version": "1.102.3",
+	  "version": "1.91.1",
 	  "extensionsGallery": {
 		"serviceUrl": "https://open-vsx.org/vscode/gallery",
 		"itemUrl": "https://open-vsx.org/vscode/item",
@@ -25,18 +25,22 @@
 	"additionalBuiltinExtensions": [
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/myExt"
 	  },
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/TyportHDL"
 	  },
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/wasm-wasi-core"
 	  },
 	  {
 		"scheme": "https",
+		"authority": "dependent-type-web-lsp.pages.dev",
 		"path": "/vim"
 	  }
 	]
