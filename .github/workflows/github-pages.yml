@@ -32,6 +32,11 @@ jobs:
           mv node_modules depend
           mv depend/vscode-web/dist/node_modules depend/vscode-web/dist/depend
 
+      - name: Patch product.json for GitHub Pages
+        run: |
+          cd sample/
+          sed -i 's|dependent-type-web-lsp.pages.dev|yportne13.github.io/dependent-type-web-lsp|g' product.json
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
