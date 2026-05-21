@@ -23,6 +23,24 @@
 	<body aria-label="">
 	</body>
 
+	<!-- Register COOP/COEP Service Worker for SharedArrayBuffer support -->
+	<script>
+		if ("serviceWorker" in navigator) {
+			navigator.serviceWorker.register("./sw.js").then(
+				function (registration) {
+					if (registration.active && !navigator.serviceWorker.controller) {
+						window.location.reload();
+					}
+				},
+				function (err) {
+					console.warn("COOP/COEP Service Worker failed to register", err);
+				}
+			);
+		} else {
+			console.warn("Service workers not supported; SharedArrayBuffer may be unavailable");
+		}
+	</script>
+
 	<!-- Startup (do not modify order of script tags!) -->
 	<script src="./depend/vscode-web/dist/out/vs/loader.js"></script>
 	<script src="./depend/vscode-web/dist/out/vs/webPackagePaths.js"></script>

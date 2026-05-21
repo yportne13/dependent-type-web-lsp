@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -6,14 +6,15 @@ on:
       - master
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -31,14 +32,9 @@ jobs:
           mv node_modules depend
           mv depend/vscode-web/dist/node_modules depend/vscode-web/dist/depend
 
-      - name: Strip Service Worker (Cloudflare uses _headers instead)
-        run: |
-          cd sample/
-          sed -i '/<!-- Register COOP\/COEP/,/<\/script>/d' index.html
-          rm -f sw.js
-
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./sample
+          publish_branch: pages-github
