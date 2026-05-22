@@ -21637,7 +21637,7 @@ async function startLanguageServer(context, wasm) {
     const filename = import_vscode.Uri.joinPath(context.extensionUri, "client", "server.wasm");
     const bits = await import_vscode.workspace.fs.readFile(filename);
     const module2 = await WebAssembly.compile(bits);
-    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 640, maximum: 32e3, shared: true }, options);
+    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 640, maximum: 16e3, shared: true }, options);
     const decoder = new TextDecoder("utf-8");
     process2.stderr.onData((data) => {
       channel.append(decoder.decode(data));
