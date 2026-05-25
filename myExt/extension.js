@@ -549,7 +549,7 @@
 // ============================================================
 // Theorem Proving Examples
 // Complex proofs using Eq, lemmas from the prelude, and
-// compositional reasoning with trans, symm, and cong.
+// compositional reasoning with trans, symm, cong, and subst.
 // ============================================================
 
 // -------------------------------------------------------
@@ -569,7 +569,22 @@ def identity_right(n: Nat): Eq(n + 0, n) = add_zero_right(n)
 println(identity_right(3))
 
 // -------------------------------------------------------
-// 2. n + 1 = succ(n)
+// 2. succ is injective: if succ(a) = succ(b) then a = b
+//    Proof: use pred on both sides via cong
+// -------------------------------------------------------
+
+// pred(succ(n)) = n by definition, so:
+// Given e: Eq(succ(a), succ(b))
+// cong(pred, e): Eq(pred(succ(a)), pred(succ(b))) = Eq(a, b)
+def succ_injective[A, a: A, b: A](e: Eq(succ(a), succ(b))): Eq(a, b) =
+    cong(pred, e)
+
+// Example usage
+def succ_inj_eg: Eq(3, 3) = succ_injective(refl(succ(3)))
+println(succ_inj_eg)
+
+// -------------------------------------------------------
+// 3. n + 1 = succ(n)
 //    add_succ_right(n, 0): Eq(n + succ(0), succ(n + 0))
 //    Since 1 = succ(0) and n + 0 = n via add_zero_right(n):
 //    trans( add_succ_right(n, 0), cong(succ, add_zero_right(n)) )
@@ -583,7 +598,7 @@ def add_one_succ(n: Nat): Eq(n + 1, succ(n)) =
 println(add_one_succ(3))
 
 // -------------------------------------------------------
-// 3. double(n) = n + n
+// 4. double(n) = n + n
 //    double is defined as n + n, so this is rfl
 // -------------------------------------------------------
 
@@ -591,19 +606,64 @@ def double_eq_add_self(n: Nat): Eq(double(n), n + n) = rfl
 println(double_eq_add_self(4))
 
 // -------------------------------------------------------
-// 4. Composition: chaining via trans
-//    add_zero_right(7): Eq(7+0, 7)
-//    symm(add_zero_left(7)): Eq(7, 0+7)
-//    Then Eq(7+0, 0+7):
+// 5. Composition: if a = b = c = d then a = d
+//    Chain multiple proofs via trans
 // -------------------------------------------------------
 
+// add_comm(3, 5): Eq(3+5, 5+3)
+// We want Eq(3+5, (5+2)+1)... hmm, need to think of a concrete example.
+//
+// add_comm(2, 3): Eq(2+3, 3+2)   — both are 5
+// add_assoc(1, 1, 3): Eq(1+1+3, 1+(1+3))
+// But we need these to be connected...
+
+// Simpler: Chain three theorems about the same expression
+// add_zero_right(7): Eq(7+0, 7)
+// symm(add_zero_left(7)): Eq(7, 0+7)
+// Then Eq(7+0, 0+7):
 def chain_eg: Eq(7 + 0, 0 + 7) =
     trans(add_zero_right(7), symm(add_zero_left(7)))
 
 println(chain_eg)
 
 // -------------------------------------------------------
-// 5. Proof of add_succ_left via induction
+// 6. Congruence with binary functions via nested cong
+//    If a = a' and b = b' then f(a, b) = f(a', b')
+//    Requires nested application of cong
+// -------------------------------------------------------
+
+// Step 1: cong(\\x. add(x, b), e1): Eq(add(a, b), add(a', b))
+// Step 2: cong(\\y. add(a', y), e2): Eq(add(a', b), add(a', b'))
+// Step 3: trans(step1, step2)
+
+def add_cong(a: Nat, a2: Nat, b: Nat, b2: Nat,
+             e1: Eq(a, a2), e2: Eq(b, b2)): Eq(a + b, a2 + b2) =
+    let step1: Eq(a + b, a2 + b) = cong({x: Nat => x + b}, e1);
+    let step2: Eq(a2 + b, a2 + b2) = cong({x: Nat => a2 + x}, e2);
+    trans(step1, step2)
+
+// add_comm(1, 6): Eq(1+6, 6+1) = Eq(7, 7)  — just a proof of refl(7) via comm
+// So add_cong(1, 6, 2, 4, add_comm(1, 6)...) won't type-check since types differ.
+//
+// Use simpler: refl values
+def add_cong_eg: Eq(3 + 5, 3 + 5) = add_cong(3, 3, 5, 5, rfl, rfl)
+println(add_cong_eg)
+
+// For non-trivial: add_cong with symm of add_zero
+// add_zero_right(5): Eq(5+0, 5), add_zero_left(3): Eq(0+3, 3)
+// But 5+0 ≠ 0+3... wrong types again.
+//
+// add_zero_right(5): Eq(5+0, 5) means a=5+0, a2=5
+// add_zero_left(7): Eq(0+7, 7) means b=0+7, b2=7
+// So add_cong(5+0, 5, 0+7, 7, add_zero_right(5), add_zero_left(7)):
+//   Eq((5+0)+(0+7), 5+7)
+def add_cong_complex: Eq((5 + 0) + (0 + 7), 5 + 7) =
+    add_cong(5+0, 5, 0+7, 7, add_zero_right(5), add_zero_left(7))
+
+println(add_cong_complex)
+
+// -------------------------------------------------------
+// 7. Proof of add_succ_left via induction
 //    add_succ_left(n, m): Eq(succ(n) + m, succ(n + m))
 //    This is already in the prelude. We just show its usage.
 // -------------------------------------------------------
@@ -614,29 +674,29 @@ def add_succ_left_eg(n: Nat, m: Nat): Eq(succ(n) + m, succ(n + m)) =
 println(add_succ_left_eg(2, 3))
 
 // -------------------------------------------------------
-// 6. add_assoc usage
+// 8. Relationship: double(n) + double(m) = double(n + m)
+//    double(n) = n + n
+//    So (n+n) + (m+m) = (n+m) + (n+m) = double(n + m)
+//    This requires add_assoc and add_comm to rearrange.
+//
+//    (n+n) + (m+m)
+//    = n + (n + (m + m))          by add_assoc(n, n, m+m)
+//    = n + ((n + m) + m)          by add_assoc(n, m, m) moving parens + add_comm
+//    = n + ((m + n) + m)          by add_comm(n, m)
+//    ... this gets complex. Let's simplify.
 // -------------------------------------------------------
 
-def assoc_eg: Eq((1 + 2) + 3, 1 + (2 + 3)) = add_assoc(1, 2, 3)
-println(assoc_eg)
+// Simpler: double(n + m) = (n + m) + (n + m) by definition
+// And (n + n) + (m + m) = (n + m) + (n + m) requires comm/assoc
+// Let's prove a simpler lemma: (a + b) + c = (a + c) + b
+// Using add_assoc + add_comm(b, c) + add_assoc
+def add_permute(a: Nat, b: Nat, c: Nat): Eq((a + b) + c, (a + c) + b) =
+    let lhs: Eq((a + b) + c, a + (b + c)) = add_assoc(a, b, c);
+    let mid: Eq(a + (b + c), a + (c + b)) = cong({x: Nat => a + x}, add_comm(b, c));
+    let rhs: Eq(a + (c + b), (a + c) + b) = symm(add_assoc(a, c, b));
+    trans(trans(lhs, mid), rhs)
 
-// -------------------------------------------------------
-// 7. trans usage: chaining comm + identity
-//    From add_comm(0,5): Eq(0+5, 5+0)
-//    From add_zero_right(5): Eq(5+0, 5)
-//    trans gives Eq(0+5, 5)
-// -------------------------------------------------------
-
-def trans_eg: Eq(0 + 5, 5) = trans(add_comm(0, 5), add_zero_right(5))
-println(trans_eg)
-
-// -------------------------------------------------------
-// 8. symm usage
-//    add_comm(3,2) proves Eq(3+2, 2+3); symm swaps to Eq(2+3, 3+2)
-// -------------------------------------------------------
-
-def symm_eg: Eq(2 + 3, 3 + 2) = symm(add_comm(3, 2))
-println(symm_eg)
+println(add_permute(1, 2, 3))
 
 // -------------------------------------------------------
 // 9. Proof by cases on Boolean
@@ -651,6 +711,26 @@ def not_not(b: Boolean): Eq(b.not.not, b) =
 
 println(not_not(true))
 println(not_not(false))
+
+// -------------------------------------------------------
+// 10. Using subst for rewriting under predicates
+//     subst(e: Eq(x, y), proof: P(x)): P(y)
+//     Here we use subst to rewrite an Eq proof.
+// -------------------------------------------------------
+
+// We have add_comm(0, 5): Eq(0+5, 5+0). Let P(x) = Eq(0+5, x)
+// add_comm(0, 5): Eq(0+5, 5+0) = Eq x y where x=0+5, y=5+0
+// P(y) = Eq(0+5, 5+0) which is exactly add_comm(0, 5)
+// P(x) = Eq(0+5, 0+5) = rfl
+// So subst(add_comm(0, 5), rfl): Eq(0+5, 5+0) which is... just add_comm(0,5) again.
+// That's circular. 
+//
+// Better: P(x) = Eq(x, 5). P(0+5) = Eq(0+5, 5) = add_zero_left(5)
+// subst(add_comm(0, 5), add_zero_left(5)): Eq(5+0, 5)
+// Which is add_zero_right(5)!
+def subst_eg: Eq(5 + 0, 5) = subst(add_comm(0, 5), add_zero_left(5))
+println(subst_eg)
+// This proves 5+0 = 5 by rewriting the left side of add_zero_left(5) using add_comm!
 
 `
           ),
@@ -920,6 +1000,8 @@ def repeat_str(s: String, n: Nat): String =
         case succ(m) => s + repeat_str(s, m)
     }
 
+println(repeat_str("Ho ", 3))
+
 // ---------- 20: Theorem proving with Eq ----------
 
 // 20a. symm: if x = y then y = x
@@ -934,20 +1016,19 @@ println(symm_eg)
 def trans_eg: Eq(0 + 5, 5) = trans(add_comm(0, 5), add_zero_right(5))
 println(trans_eg)
 
-// 20c. cong_succ: specialized version of cong for succ
+// 20c. cong: if x = y then f(x) = f(y)
 // add_zero_left(5): Eq(0+5, 5)
-// cong_succ(add_zero_left(5)): Eq(succ(0+5), succ(5))
-def cong_succ_eg: Eq(succ(0 + 5), succ(5)) = cong_succ(add_zero_left(5))
-println(cong_succ_eg)
+// cong(succ, add_zero_left(5)): Eq(succ(0+5), succ(5))
+def cong_eg: Eq(succ(0 + 5), succ(5)) = cong(succ, add_zero_left(5))
+println(cong_eg)
 
 // 20d. add_assoc: (a + b) + c = a + (b + c)
 def assoc_eg: Eq((1 + 2) + 3, 1 + (2 + 3)) = add_assoc(1, 2, 3)
 println(assoc_eg)
 
-// 20e. symm example with different values
-// add_comm(4,1) proves Eq(4+1, 1+4) which is Eq(5, 5); symm to Eq(1+4, 4+1)
-def symm_eg2: Eq(1 + 4, 4 + 1) = symm(add_comm(4, 1))
-println(symm_eg2)
+// 20e. eq_congr: alias for cong with swapped args
+def eq_congr_eg: Eq(succ(2 + 3), succ(3 + 2)) = eq_congr(add_comm(2, 3))
+println(eq_congr_eg)
 
 `
           ),
@@ -966,17 +1047,7 @@ module simpleALU {
     input b = UInt[8]
     output result = UInt[8]
 
-    // Basic arithmetic
-    let sum = UInt[8]
-    sum := a + b
-
-    // Bitwise operations
-    let and_op = UInt[8]
-    and_op := a & b
-    let or_op = UInt[8]
-    or_op := a | b
-    let xor_op = UInt[8]
-    xor_op := a ^ b
+    result := a + b
 }
 
 // Print the generated Verilog module
@@ -992,28 +1063,39 @@ module multiALU {
     input b = UInt[8]
     output result = UInt[8]
 
-    let add = UInt[8]
-    add := a + b
-    let sub = UInt[8]
-    sub := a - b
-    let bit_and = UInt[8]
-    bit_and := a & b
-    let bit_or = UInt[8]
-    bit_or := a | b
-    let bit_xor = UInt[8]
-    bit_xor := a ^ b
+    // Nat literal assignment (via Into auto-conversion)
+    result := 0
+
+    // Using eqNat to compare with Nat literal (cleaner than UInt.mk(..., create("uint_lit")))
+    when(op.eqNat(0)) {
+        result := a + b
+    } elsewhen(op.eqNat(1)) {
+        result := a - b
+    } otherwise {
+        result := b
+    }
 }
 
 def multi_module_opt = get_global("module").data.head_option
 def multi_module_after = multi_module_opt.unwrap_or(Module.mk("multiALU", 0, nil))
-
-// Delay-check: verify the module name
-def multi_module_check = get_global("module")
-
-// Print all accumulated module Verilog
-def all_modules = multi_module_check
 println("\\n--- ALU Multi-Function Verilog ---")
 println(moduleVL(multi_module_after))
+
+// ---------- Counter with Nat initial value ----------
+
+module counter {
+    reg count = UInt[16]
+    output done = Bool
+
+    // Assign initial value (Nat literal auto-converted via Into)
+    count := 0
+    done := count.eqNat(65535)
+}
+
+def counter_module_opt = get_global("module").data.head_option
+def counter_module = counter_module_opt.unwrap_or(Module.mk("counter", 0, nil))
+println("\\n--- Counter Verilog ---")
+println(moduleVL(counter_module))
 
 `
           ),
