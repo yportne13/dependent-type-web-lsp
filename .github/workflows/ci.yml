@@ -31,6 +31,12 @@ jobs:
           mv node_modules depend
           mv depend/vscode-web/dist/node_modules depend/vscode-web/dist/depend
 
+      - name: Patch product.json for Cloudflare Pages
+        run: |
+          cd sample/
+          sed -i 's|"scheme": "http"|"scheme": "https"|g' product.json
+          sed -i 's|"authority": "localhost:8080"|"authority": "dependent-type-web-lsp.pages.dev"|g' product.json
+
       - name: Strip Service Worker (Cloudflare uses _headers instead)
         run: |
           cd sample/

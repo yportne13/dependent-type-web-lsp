@@ -35,7 +35,8 @@ jobs:
       - name: Patch product.json for GitHub Pages
         run: |
           cd sample/
-          sed -i 's|"authority": "dependent-type-web-lsp.pages.dev"|"authority": "yportne13.github.io"|g' product.json
+          sed -i 's|"scheme": "http"|"scheme": "https"|g' product.json
+          sed -i 's|"authority": "localhost:8080"|"authority": "yportne13.github.io"|g' product.json
           sed -i 's|"/myExt"|"/dependent-type-web-lsp/myExt"|g' product.json
           sed -i 's|"/TyportHDL"|"/dependent-type-web-lsp/TyportHDL"|g' product.json
           sed -i 's|"/wasm-wasi-core"|"/dependent-type-web-lsp/wasm-wasi-core"|g' product.json
