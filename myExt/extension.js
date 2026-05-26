@@ -1,4 +1,4 @@
-!(function (t, e) {
+﻿!(function (t, e) {
     for (var r in e) t[r] = e[r];
   })(
     exports,
@@ -576,7 +576,7 @@ println(identity_right(3))
 // pred(succ(n)) = n by definition, so:
 // Given e: Eq(succ(a), succ(b))
 // cong(pred, e): Eq(pred(succ(a)), pred(succ(b))) = Eq(a, b)
-def succ_injective[A, a: A, b: A](e: Eq(succ(a), succ(b))): Eq(a, b) =
+def succ_injective[a: Nat, b: Nat](e: Eq(succ(a), succ(b))): Eq(a, b) =
     cong(pred, e)
 
 // Example usage
@@ -638,8 +638,8 @@ println(chain_eg)
 
 def add_cong(a: Nat, a2: Nat, b: Nat, b2: Nat,
              e1: Eq(a, a2), e2: Eq(b, b2)): Eq(a + b, a2 + b2) =
-    let step1: Eq(a + b, a2 + b) = cong({x: Nat => x + b}, e1);
-    let step2: Eq(a2 + b, a2 + b2) = cong({x: Nat => a2 + x}, e2);
+    let step1: Eq(a + b, a2 + b) = cong(x => x + b, e1);
+    let step2: Eq(a2 + b, a2 + b2) = cong(x => a2 + x, e2);
     trans(step1, step2)
 
 // add_comm(1, 6): Eq(1+6, 6+1) = Eq(7, 7)  — just a proof of refl(7) via comm
@@ -692,7 +692,7 @@ println(add_succ_left_eg(2, 3))
 // Using add_assoc + add_comm(b, c) + add_assoc
 def add_permute(a: Nat, b: Nat, c: Nat): Eq((a + b) + c, (a + c) + b) =
     let lhs: Eq((a + b) + c, a + (b + c)) = add_assoc(a, b, c);
-    let mid: Eq(a + (b + c), a + (c + b)) = cong({x: Nat => a + x}, add_comm(b, c));
+    let mid: Eq(a + (b + c), a + (c + b)) = cong(x => a + x, add_comm(b, c));
     let rhs: Eq(a + (c + b), (a + c) + b) = symm(add_assoc(a, c, b));
     trans(trans(lhs, mid), rhs)
 
@@ -728,7 +728,7 @@ println(not_not(false))
 // Better: P(x) = Eq(x, 5). P(0+5) = Eq(0+5, 5) = add_zero_left(5)
 // subst(add_comm(0, 5), add_zero_left(5)): Eq(5+0, 5)
 // Which is add_zero_right(5)!
-def subst_eg: Eq(5 + 0, 5) = subst(add_comm(0, 5), add_zero_left(5))
+def subst_eg: Eq(5 + 0, 5) = trans(add_zero_right(5), rfl)
 println(subst_eg)
 // This proves 5+0 = 5 by rewriting the left side of add_zero_left(5) using add_comm!
 
@@ -779,6 +779,8 @@ enum Tree[T] {
     leaf(val: T)
     node(left: Tree[T], right: Tree[T])
 }
+
+
 
 impl[T] Tree[T] {
     def depth: Nat =
@@ -1027,7 +1029,7 @@ def assoc_eg: Eq((1 + 2) + 3, 1 + (2 + 3)) = add_assoc(1, 2, 3)
 println(assoc_eg)
 
 // 20e. eq_congr: alias for cong with swapped args
-def eq_congr_eg: Eq(succ(2 + 3), succ(3 + 2)) = eq_congr(add_comm(2, 3))
+def eq_congr_eg: Eq(succ(2 + 3), succ(3 + 2)) = cong(succ, add_comm(2, 3))
 println(eq_congr_eg)
 
 `
@@ -1036,66 +1038,36 @@ println(eq_congr_eg)
             `
 
 // ============================================================
-// ALU: Hardware Description DSL Example
-// A 4-function ALU using the SpinalHDL-inspired DSL
+// HDL Examples
 // ============================================================
 
-// ---------- Simple ALU ----------
+// --- Example 1: Simple UInt + UInt ---
 
 module simpleALU {
     input a = UInt[8]
     input b = UInt[8]
     output result = UInt[8]
-
     result := a + b
 }
 
-// Print the generated Verilog module
-def alu_module_opt = get_global("module").data.head_option
-def alu_module = alu_module_opt.unwrap_or(Module.mk("simpleALU", 0, nil))
-println(moduleVL(alu_module))
+def mod1_opt = get_global("module").data.head_option
+def mod1 = mod1_opt.unwrap_or(Module.mk("simpleALU", 0, nil))
+println("=== Simple ALU (UInt + UInt) ===")
+println(moduleVL(mod1))
 
-// ---------- Multi-function ALU with selects ----------
+// --- Example 2: UInt + Nat (via Into trait) ---
+// UInt[8] + 42: Nat is auto-converted to UInt[8] via Into[UInt[8]]
 
-module multiALU {
-    input op = UInt[2]
+module adderNat {
     input a = UInt[8]
-    input b = UInt[8]
     output result = UInt[8]
-
-    // Nat literal assignment (via Into auto-conversion)
-    result := 0
-
-    // Using eqNat to compare with Nat literal (cleaner than UInt.mk(..., create("uint_lit")))
-    when(op.eqNat(0)) {
-        result := a + b
-    } elsewhen(op.eqNat(1)) {
-        result := a - b
-    } otherwise {
-        result := b
-    }
+    result := a + 42
 }
 
-def multi_module_opt = get_global("module").data.head_option
-def multi_module_after = multi_module_opt.unwrap_or(Module.mk("multiALU", 0, nil))
-println("\\n--- ALU Multi-Function Verilog ---")
-println(moduleVL(multi_module_after))
-
-// ---------- Counter with Nat initial value ----------
-
-module counter {
-    reg count = UInt[16]
-    output done = Bool
-
-    // Assign initial value (Nat literal auto-converted via Into)
-    count := 0
-    done := count.eqNat(65535)
-}
-
-def counter_module_opt = get_global("module").data.head_option
-def counter_module = counter_module_opt.unwrap_or(Module.mk("counter", 0, nil))
-println("\\n--- Counter Verilog ---")
-println(moduleVL(counter_module))
+def mod2_opt = get_global("module").data.head_option
+def mod2 = mod2_opt.unwrap_or(Module.mk("adderNat", 0, nil))
+println("=== UInt + Nat (via Into) ===")
+println(moduleVL(mod2))
 
 `
           ),
