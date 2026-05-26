@@ -1,4 +1,5 @@
 git submodule update --init --recursive
+node sync_examples.js
 cd elaboration-zoo-lsp/vscode_extension
 npm install
 npm install -g vsce
