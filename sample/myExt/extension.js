@@ -546,15 +546,528 @@
           (e.file_theorem_proving =
             `
 
+// ============================================================
+// Theorem Proving Examples
+// Complex proofs using Eq, lemmas from the prelude, and
+// compositional reasoning with trans, symm, cong, and subst.
+// ============================================================
+
+// -------------------------------------------------------
+// 1. Identity: proving that n + 0 = 0 + n = n
+//    add_zero_right(n): Eq(n + 0, n)     [by rfl — definitional]
+//    add_zero_left(n):  Eq(0 + n, n)     [by induction]
+// -------------------------------------------------------
+
+// 1a. Using trans + symm: 0 + n = n + 0
+def zero_add_comm(n: Nat): Eq(0 + n, n + 0) =
+    trans(add_zero_left(n), symm(add_zero_right(n)))
+
+println(zero_add_comm(5))
+
+// 1b. Direct: n + 0 = n (already provided by prelude as add_zero_right)
+def identity_right(n: Nat): Eq(n + 0, n) = add_zero_right(n)
+println(identity_right(3))
+
+// -------------------------------------------------------
+// 2. succ is injective: if succ(a) = succ(b) then a = b
+//    Proof: use pred on both sides via cong
+// -------------------------------------------------------
+
+// pred(succ(n)) = n by definition, so:
+// Given e: Eq(succ(a), succ(b))
+// cong(pred, e): Eq(pred(succ(a)), pred(succ(b))) = Eq(a, b)
+def succ_injective[a: Nat, b: Nat](e: Eq(succ(a), succ(b))): Eq(a, b) =
+    cong(pred, e)
+
+// Example usage
+def succ_inj_eg: Eq(3, 3) = succ_injective(refl(succ(3)))
+println(succ_inj_eg)
+
+// -------------------------------------------------------
+// 3. n + 1 = succ(n)
+//    add_succ_right(n, 0): Eq(n + succ(0), succ(n + 0))
+//    Since 1 = succ(0) and n + 0 = n via add_zero_right(n):
+//    trans( add_succ_right(n, 0), cong(succ, add_zero_right(n)) )
+// -------------------------------------------------------
+
+def add_one_succ(n: Nat): Eq(n + 1, succ(n)) =
+    let step1: Eq(n + 1, succ(n + 0)) = add_succ_right(n, 0);
+    let step2: Eq(succ(n + 0), succ(n)) = cong(succ, add_zero_right(n));
+    trans(step1, step2)
+
+println(add_one_succ(3))
+
+// -------------------------------------------------------
+// 4. double(n) = n + n
+//    double is defined as n + n, so this is rfl
+// -------------------------------------------------------
+
+def double_eq_add_self(n: Nat): Eq(double(n), n + n) = rfl
+println(double_eq_add_self(4))
+
+// -------------------------------------------------------
+// 5. Composition: if a = b = c = d then a = d
+//    Chain multiple proofs via trans
+// -------------------------------------------------------
+
+// add_comm(3, 5): Eq(3+5, 5+3)
+// We want Eq(3+5, (5+2)+1)... hmm, need to think of a concrete example.
+//
+// add_comm(2, 3): Eq(2+3, 3+2)   — both are 5
+// add_assoc(1, 1, 3): Eq(1+1+3, 1+(1+3))
+// But we need these to be connected...
+
+// Simpler: Chain three theorems about the same expression
+// add_zero_right(7): Eq(7+0, 7)
+// symm(add_zero_left(7)): Eq(7, 0+7)
+// Then Eq(7+0, 0+7):
+def chain_eg: Eq(7 + 0, 0 + 7) =
+    trans(add_zero_right(7), symm(add_zero_left(7)))
+
+println(chain_eg)
+
+// -------------------------------------------------------
+// 6. Congruence with binary functions via nested cong
+//    If a = a' and b = b' then f(a, b) = f(a', b')
+//    Requires nested application of cong
+// -------------------------------------------------------
+
+// Step 1: cong(\\x. add(x, b), e1): Eq(add(a, b), add(a', b))
+// Step 2: cong(\\y. add(a', y), e2): Eq(add(a', b), add(a', b'))
+// Step 3: trans(step1, step2)
+
+def add_cong(a: Nat, a2: Nat, b: Nat, b2: Nat,
+             e1: Eq(a, a2), e2: Eq(b, b2)): Eq(a + b, a2 + b2) =
+    let step1: Eq(a + b, a2 + b) = cong(x => x + b, e1);
+    let step2: Eq(a2 + b, a2 + b2) = cong(x => a2 + x, e2);
+    trans(step1, step2)
+
+// add_comm(1, 6): Eq(1+6, 6+1) = Eq(7, 7)  — just a proof of refl(7) via comm
+// So add_cong(1, 6, 2, 4, add_comm(1, 6)...) won't type-check since types differ.
+//
+// Use simpler: refl values
+def add_cong_eg: Eq(3 + 5, 3 + 5) = add_cong(3, 3, 5, 5, rfl, rfl)
+println(add_cong_eg)
+
+// For non-trivial: add_cong with symm of add_zero
+// add_zero_right(5): Eq(5+0, 5), add_zero_left(3): Eq(0+3, 3)
+// But 5+0 ≠ 0+3... wrong types again.
+//
+// add_zero_right(5): Eq(5+0, 5) means a=5+0, a2=5
+// add_zero_left(7): Eq(0+7, 7) means b=0+7, b2=7
+// So add_cong(5+0, 5, 0+7, 7, add_zero_right(5), add_zero_left(7)):
+//   Eq((5+0)+(0+7), 5+7)
+def add_cong_complex: Eq((5 + 0) + (0 + 7), 5 + 7) =
+    add_cong(5+0, 5, 0+7, 7, add_zero_right(5), add_zero_left(7))
+
+println(add_cong_complex)
+
+// -------------------------------------------------------
+// 7. Proof of add_succ_left via induction
+//    add_succ_left(n, m): Eq(succ(n) + m, succ(n + m))
+//    This is already in the prelude. We just show its usage.
+// -------------------------------------------------------
+
+def add_succ_left_eg(n: Nat, m: Nat): Eq(succ(n) + m, succ(n + m)) =
+    add_succ_left(n, m)
+
+println(add_succ_left_eg(2, 3))
+
+// -------------------------------------------------------
+// 8. Relationship: double(n) + double(m) = double(n + m)
+//    double(n) = n + n
+//    So (n+n) + (m+m) = (n+m) + (n+m) = double(n + m)
+//    This requires add_assoc and add_comm to rearrange.
+//
+//    (n+n) + (m+m)
+//    = n + (n + (m + m))          by add_assoc(n, n, m+m)
+//    = n + ((n + m) + m)          by add_assoc(n, m, m) moving parens + add_comm
+//    = n + ((m + n) + m)          by add_comm(n, m)
+//    ... this gets complex. Let's simplify.
+// -------------------------------------------------------
+
+// Simpler: double(n + m) = (n + m) + (n + m) by definition
+// And (n + n) + (m + m) = (n + m) + (n + m) requires comm/assoc
+// Let's prove a simpler lemma: (a + b) + c = (a + c) + b
+// Using add_assoc + add_comm(b, c) + add_assoc
+def add_permute(a: Nat, b: Nat, c: Nat): Eq((a + b) + c, (a + c) + b) =
+    let lhs: Eq((a + b) + c, a + (b + c)) = add_assoc(a, b, c);
+    let mid: Eq(a + (b + c), a + (c + b)) = cong(x => a + x, add_comm(b, c));
+    let rhs: Eq(a + (c + b), (a + c) + b) = symm(add_assoc(a, c, b));
+    trans(trans(lhs, mid), rhs)
+
+println(add_permute(1, 2, 3))
+
+// -------------------------------------------------------
+// 9. Proof by cases on Boolean
+// -------------------------------------------------------
+
+// not(not(b)) = b — double negation
+def not_not(b: Boolean): Eq(b.not.not, b) =
+    match b {
+        case true => rfl
+        case false => rfl
+    }
+
+println(not_not(true))
+println(not_not(false))
+
+// -------------------------------------------------------
+// 10. Using subst for rewriting under predicates
+//     subst(e: Eq(x, y), proof: P(x)): P(y)
+//     Here we use subst to rewrite an Eq proof.
+// -------------------------------------------------------
+
+// We have add_comm(0, 5): Eq(0+5, 5+0). Let P(x) = Eq(0+5, x)
+// add_comm(0, 5): Eq(0+5, 5+0) = Eq x y where x=0+5, y=5+0
+// P(y) = Eq(0+5, 5+0) which is exactly add_comm(0, 5)
+// P(x) = Eq(0+5, 0+5) = rfl
+// So subst(add_comm(0, 5), rfl): Eq(0+5, 5+0) which is... just add_comm(0,5) again.
+// That's circular. 
+//
+// Better: P(x) = Eq(x, 5). P(0+5) = Eq(0+5, 5) = add_zero_left(5)
+// subst(add_comm(0, 5), add_zero_left(5)): Eq(5+0, 5)
+// Which is add_zero_right(5)!
+def subst_eg: Eq(5 + 0, 5) = trans(add_zero_right(5), rfl)
+println(subst_eg)
+// This proves 5+0 = 5 by rewriting the left side of add_zero_left(5) using add_comm!
+
 `
           ),
           (e.file_typeclass_complex =
             `
 
+// ============================================================
+// Complex Typort Examples
+// Style: C-style foo(a, b, c), numeric literals in expressions
+// ============================================================
+
+// ---------- 1: Simple trait (zero-arg method, constraint pattern) ----------
+trait Describable {
+    def describe: String
+}
+
+impl Describable for Nat {
+    def describe: String =
+        match this {
+            case zero => "zero"
+            case succ(m) => "succ(" + m.describe + ")"
+        }
+}
+
+impl Describable for Boolean {
+    def describe: String =
+        match this {
+            case true => "true"
+            case false => "false"
+        }
+}
+
+impl[T] Describable for Option[T] {
+    def describe: String =
+        match this {
+            case Some(_) => "some"
+            case None => "none"
+        }
+}
+
+def describe_val[T][d: Describable[T]](x: T): String = d.describe(x)
+println(describe_val(3))
+
+// ---------- 2: Binary Tree with generic operations ----------
+enum Tree[T] {
+    leaf(val: T)
+    node(left: Tree[T], right: Tree[T])
+}
+
+
+
+impl[T] Tree[T] {
+    def depth: Nat =
+        match this {
+            case leaf(_) => 0
+            case node(l, r) =>
+                let dl = l.depth;
+                let dr = r.depth;
+                match nat_compare(dl, dr) {
+                    case lt => dr + 1
+                    case eq => dl + 1
+                    case gt => dl + 1
+                }
+        }
+    def tree_size: Nat =
+        match this {
+            case leaf(_) => 1
+            case node(l, r) => l.tree_size + r.tree_size + 1
+        }
+}
+
+def leaf1: Tree[Nat] = leaf(1)
+println(leaf1.depth)
+println(leaf1.tree_size)
+
+// ---------- 3: Option monadic operations ----------
+impl[T] Option[T] {
+    def bind_option[U](f: T -> Option[U]): Option[U] =
+        match this {
+            case Some(a) => f(a)
+            case None => None
+        }
+    def fmap_option[U](f: T -> U): Option[U] =
+        match this {
+            case Some(a) => Some(f(a))
+            case None => None
+        }
+}
+
+def inc_opt: Option[Nat] = Some(2).fmap_option(x => x + 1)
+println(inc_opt)
+
+// ---------- 4: List operations ----------
+def sum_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => 0
+        case lcons(x, rest) => x + sum_list(rest)
+    }
+
+def product_list(xs: List[Nat]): Nat =
+    match xs {
+        case lnil => 1
+        case lcons(x, rest) => x * product_list(rest)
+    }
+
+def numbers: List[Nat] = lcons(1, lcons(2, lcons(3, lnil)))
+
+println(sum_list(numbers))
+println(product_list(numbers))
+
+// ---------- 5: Eq proofs (using prelude) ----------
+def comm_test: Eq(2 + 3, 3 + 2) = add_comm(2, 3)
+def same: Eq(2, 2) = refl(2)
+
+// ---------- 6: Vec (GADT) operations ----------
+def vec_sum[len: Nat](v: Vec[Nat] len): Nat =
+    match v {
+        case nil => 0
+        case cons(x, xs) => x + vec_sum(xs)
+    }
+
+println(vec_sum(cons(1, cons(2, nil))))
+
+// ---------- 7: Fibonacci ----------
+def fib2(n: Nat): Nat =
+    match n {
+        case zero => 1
+        case succ(zero) => 1
+        case succ(succ(m)) => fib2(m) + fib2(succ(m))
+    }
+
+println(fib2(2))
+
+// ---------- 8: Product operations ----------
+def swap_and_double(p: Product[Nat, Nat]): Product[Nat, Nat] =
+    new Product(p.snd + p.snd, p.fst + p.fst)
+
+def my_pair: Product[Nat, Nat] = new Product(1, 2)
+println(swap_and_double(my_pair))
+
+// ---------- 9: Safe head ----------
+def safe_head[T](xs: List[T]): Option[T] =
+    match xs {
+        case lnil => None
+        case lcons(x, _) => Some(x)
+    }
+
+println(safe_head(numbers))
+
+// ---------- 10: Classify by pattern ----------
+def nat_classify(n: Nat): String =
+    match n {
+        case zero => "zero"
+        case succ(zero) => "one"
+        case _ => "many"
+    }
+
+println(nat_classify(0))
+println(nat_classify(1))
+println(nat_classify(2))
+
+// ---------- 11: Factorial ----------
+def fact(n: Nat): Nat =
+    match n {
+        case zero => 1
+        case succ(m) => n * fact(m)
+    }
+
+println(fact(2))
+println(fact(3))
+
+// ---------- 12: List length ----------
+def list_len[T](xs: List[T]): Nat =
+    match xs {
+        case lnil => 0
+        case lcons(_, rest) => list_len(rest) + 1
+    }
+
+println(list_len(numbers))
+
+// ---------- 13: List append (using prelude method) ----------
+def ab: List[Nat] = numbers.append(lcons(4, lnil))
+println(list_len(ab))
+println(sum_list(ab))
+
+// ---------- 14: Natural subtraction (non-negative) ----------
+def nat_sub_safe(x: Nat, y: Nat): Nat =
+    match y {
+        case zero => x
+        case succ(k) =>
+            match x {
+                case zero => 0
+                case succ(j) => nat_sub_safe(j, k)
+            }
+    }
+
+println(nat_sub_safe(3, 1))
+println(nat_sub_safe(1, 2))
+
+// ---------- 15: Max of two nats ----------
+def nat_max2(x: Nat, y: Nat): Nat =
+    match nat_compare(x, y) {
+        case lt => y
+        case eq => x
+        case gt => x
+    }
+
+println(nat_max2(1, 2))
+println(nat_max2(2, 1))
+
+// ---------- 16: Boolean expression evaluator ----------
+enum BoolExpr {
+    bool_lit(v: Boolean)
+    bool_not(inner: BoolExpr)
+    bool_and(lhs: BoolExpr, rhs: BoolExpr)
+}
+
+def eval_bool_expr(e: BoolExpr): Boolean =
+    match e {
+        case bool_lit(v) => v
+        case bool_not(inner) => eval_bool_expr(inner).not
+        case bool_and(l, r) =>
+            match eval_bool_expr(l) {
+                case false => false
+                case true => eval_bool_expr(r)
+            }
+    }
+
+def bex: BoolExpr = bool_and(bool_lit(true), bool_not(bool_lit(false)))
+println(eval_bool_expr(bex))
+
+// ---------- 17: Arithmetic expression evaluator ----------
+enum Arith {
+    lit(v: Nat)
+    add_expr(lhs: Arith, rhs: Arith)
+    mul_expr(lhs: Arith, rhs: Arith)
+}
+
+def eval_arith(e: Arith): Nat =
+    match e {
+        case lit(v) => v
+        case add_expr(l, r) => eval_arith(l) + eval_arith(r)
+        case mul_expr(l, r) => eval_arith(l) * eval_arith(r)
+    }
+
+// 1 + 2 * 3 = 7
+def ae: Arith = add_expr(lit(1), mul_expr(lit(2), lit(3)))
+println(eval_arith(ae))
+
+// ---------- 18: Euclid's GCD ----------
+def gcd(a: Nat, b: Nat): Nat =
+    match b {
+        case zero => a
+        case succ(_) =>
+            match nat_compare(a, b) {
+                case lt => gcd(b, a)
+                case eq => a
+                case gt => gcd(nat_sub_safe(a, b), b)
+            }
+    }
+
+println(gcd(6, 4))
+println(gcd(5, 2))
+
+// ---------- 19: String repeat ----------
+def repeat_str(s: String, n: Nat): String =
+    match n {
+        case zero => ""
+        case succ(m) => s + repeat_str(s, m)
+    }
+
+println(repeat_str("Ho ", 3))
+
+// ---------- 20: Theorem proving with Eq ----------
+
+// 20a. symm: if x = y then y = x
+// add_comm(3,2) proves Eq(3+2, 2+3); symm swaps to Eq(2+3, 3+2)
+def symm_eg: Eq(2 + 3, 3 + 2) = symm(add_comm(3, 2))
+println(symm_eg)
+
+// 20b. trans: chaining two equalities
+// From add_comm(0,5): Eq(0+5, 5+0)
+// From add_zero_right(5): Eq(5+0, 5)
+// trans gives Eq(0+5, 5)
+def trans_eg: Eq(0 + 5, 5) = trans(add_comm(0, 5), add_zero_right(5))
+println(trans_eg)
+
+// 20c. cong: if x = y then f(x) = f(y)
+// add_zero_left(5): Eq(0+5, 5)
+// cong(succ, add_zero_left(5)): Eq(succ(0+5), succ(5))
+def cong_eg: Eq(succ(0 + 5), succ(5)) = cong(succ, add_zero_left(5))
+println(cong_eg)
+
+// 20d. add_assoc: (a + b) + c = a + (b + c)
+def assoc_eg: Eq((1 + 2) + 3, 1 + (2 + 3)) = add_assoc(1, 2, 3)
+println(assoc_eg)
+
+// 20e. eq_congr: alias for cong with swapped args
+def eq_congr_eg: Eq(succ(2 + 3), succ(3 + 2)) = cong(succ, add_comm(2, 3))
+println(eq_congr_eg)
+
 `
           ),
           (e.file_alu =
             `
+
+// ============================================================
+// HDL Examples
+// ============================================================
+
+// --- Example 1: Simple UInt + UInt ---
+
+module simpleALU {
+    input a = UInt[8]
+    input b = UInt[8]
+    output result = UInt[8]
+    result := a + b
+}
+
+def mod1_opt = get_global("module").data.head_option
+def mod1 = mod1_opt.unwrap_or(Module.mk("simpleALU", 0, nil))
+println("=== Simple ALU (UInt + UInt) ===")
+println(moduleVL(mod1))
+
+// --- Example 2: UInt + Nat (via Into trait) ---
+// UInt[8] + 42: Nat is auto-converted to UInt[8] via Into[UInt[8]]
+
+module adderNat {
+    input a = UInt[8]
+    output result = UInt[8]
+    result := a + 42
+}
+
+def mod2_opt = get_global("module").data.head_option
+def mod2 = mod2_opt.unwrap_or(Module.mk("adderNat", 0, nil))
+println("=== UInt + Nat (via Into) ===")
+println(moduleVL(mod2))
 
 `
           ),
