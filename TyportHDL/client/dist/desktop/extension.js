@@ -3429,7 +3429,7 @@ var init_main = __esm({
       }
       uinteger2.is = is;
     })(uinteger || (uinteger = {}));
-    (function(Position2) {
+    (function(Position3) {
       function create(line, character) {
         if (line === Number.MAX_VALUE) {
           line = uinteger.MAX_VALUE;
@@ -3439,12 +3439,12 @@ var init_main = __esm({
         }
         return { line, character };
       }
-      Position2.create = create;
+      Position3.create = create;
       function is(value) {
         const candidate = value;
         return Is.objectLiteral(candidate) && Is.uinteger(candidate.line) && Is.uinteger(candidate.character);
       }
-      Position2.is = is;
+      Position3.is = is;
     })(Position || (Position = {}));
     (function(Range2) {
       function create(one, two, three, four) {
@@ -22652,6 +22652,29 @@ async function activate(context) {
     const folder = import_vscode.workspace.workspaceFolders[0].uri;
     const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
     import_vscode.window.showInformationMessage(`The workspace contains ${result} files.`);
+  }));
+  const ExpandMacroRequest = new import_vscode_languageclient.RequestType("typort-hdl/expandMacro");
+  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.expandMacro", async () => {
+    const editor = import_vscode.window.activeTextEditor;
+    if (!editor || !client) {
+      return;
+    }
+    const uri = editor.document.uri.toString();
+    const position = editor.selection.active;
+    try {
+      const result = await client.sendRequest(ExpandMacroRequest, { uri, position });
+      if (result) {
+        const doc = await import_vscode.workspace.openTextDocument({
+          content: result.expanded_text,
+          language: "typort"
+        });
+        await import_vscode.window.showTextDocument(doc, { preview: true });
+      } else {
+        import_vscode.window.showInformationMessage("No macro expansion found at cursor position.");
+      }
+    } catch (error) {
+      import_vscode.window.showErrorMessage(`Expand macro failed: ${error}`);
+    }
   }));
   context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
     if (client) {

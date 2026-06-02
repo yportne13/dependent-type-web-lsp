@@ -76,6 +76,31 @@ async function activate(context) {
         const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
         vscode_1.window.showInformationMessage(`The workspace contains ${result} files.`);
     }));
+    const ExpandMacroRequest = new vscode_languageclient_1.RequestType('typort-hdl/expandMacro');
+    context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.expandMacro', async () => {
+        const editor = vscode_1.window.activeTextEditor;
+        if (!editor || !client) {
+            return;
+        }
+        const uri = editor.document.uri.toString();
+        const position = editor.selection.active;
+        try {
+            const result = await client.sendRequest(ExpandMacroRequest, { uri, position });
+            if (result) {
+                const doc = await vscode_1.workspace.openTextDocument({
+                    content: result.expanded_text,
+                    language: 'typort',
+                });
+                await vscode_1.window.showTextDocument(doc, { preview: true });
+            }
+            else {
+                vscode_1.window.showInformationMessage('No macro expansion found at cursor position.');
+            }
+        }
+        catch (error) {
+            vscode_1.window.showErrorMessage(`Expand macro failed: ${error}`);
+        }
+    }));
     context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.restartLanguageServer', async () => {
         if (client) {
             await client.stop();
