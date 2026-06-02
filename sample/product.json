@@ -22,6 +22,9 @@
 	  "scheme": "memfs",
 	  "path": "/sample-folder"
 	},
+	"settings": {
+	  "files.autoSave": "off"
+	},
 	"additionalBuiltinExtensions": [
 	  {
 		"scheme": "http",
