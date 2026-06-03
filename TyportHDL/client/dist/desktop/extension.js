@@ -22659,7 +22659,7 @@ async function activate(context) {
     if (!editor || !client) {
       return;
     }
-    const uri = editor.document.uri.toString();
+    const uri = client.code2ProtocolConverter.asUri(editor.document.uri);
     const position = editor.selection.active;
     try {
       const result = await client.sendRequest(ExpandMacroRequest, { uri, position });
