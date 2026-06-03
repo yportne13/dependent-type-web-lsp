@@ -18320,13 +18320,13 @@ var require_client = __commonJS({
       CloseAction2[CloseAction2["DoNotRestart"] = 1] = "DoNotRestart";
       CloseAction2[CloseAction2["Restart"] = 2] = "Restart";
     })(CloseAction || (exports.CloseAction = CloseAction = {}));
-    var State;
-    (function(State2) {
-      State2[State2["Stopped"] = 1] = "Stopped";
-      State2[State2["Starting"] = 3] = "Starting";
-      State2[State2["StartFailed"] = 4] = "StartFailed";
-      State2[State2["Running"] = 2] = "Running";
-    })(State || (exports.State = State = {}));
+    var State2;
+    (function(State3) {
+      State3[State3["Stopped"] = 1] = "Stopped";
+      State3[State3["Starting"] = 3] = "Starting";
+      State3[State3["StartFailed"] = 4] = "StartFailed";
+      State3[State3["Running"] = 2] = "Running";
+    })(State2 || (exports.State = State2 = {}));
     var SuspendMode;
     (function(SuspendMode2) {
       SuspendMode2["off"] = "off";
@@ -18716,13 +18716,13 @@ var require_client = __commonJS({
       getPublicState() {
         switch (this.$state) {
           case ClientState.Starting:
-            return State.Starting;
+            return State2.Starting;
           case ClientState.Running:
-            return State.Running;
+            return State2.Running;
           case ClientState.StartFailed:
-            return State.StartFailed;
+            return State2.StartFailed;
           default:
-            return State.Stopped;
+            return State2.Stopped;
         }
       }
       get initializeResult() {
@@ -21812,6 +21812,31 @@ var import_v1 = __toESM(require_v1());
 var import_wasm_wasi_lsp = __toESM(require_main4());
 var client;
 var channel;
+var statusBarItem;
+function createStatusBarItem() {
+  const item = import_vscode.window.createStatusBarItem(import_vscode.StatusBarAlignment.Left, 0);
+  item.name = "TyportHDL Language Server";
+  item.text = "$(sync~spin) TyPort";
+  item.tooltip = "Starting TyportHDL Language Server...";
+  item.command = "typort-hdl.showServerActions";
+  return item;
+}
+function updateStatusBar(state) {
+  switch (state) {
+    case import_vscode_languageclient.State.Starting:
+      statusBarItem.text = "$(sync~spin) TyPort";
+      statusBarItem.tooltip = "Starting TyportHDL language server...";
+      break;
+    case import_vscode_languageclient.State.Running:
+      statusBarItem.text = "$(check) TyPort";
+      statusBarItem.tooltip = "TyportHDL language server running";
+      break;
+    case import_vscode_languageclient.State.Stopped:
+      statusBarItem.text = "$(warning) TyPort";
+      statusBarItem.tooltip = "TyportHDL language server stopped";
+      break;
+  }
+}
 async function startLanguageServer(context, wasm) {
   if (!channel) {
     channel = import_vscode.window.createOutputChannel("TyportHDL Language Server", { log: true });
@@ -21851,7 +21876,15 @@ async function startLanguageServer(context, wasm) {
 }
 async function activate(context) {
   const wasm = await import_v1.Wasm.load();
+  statusBarItem = createStatusBarItem();
+  context.subscriptions.push(statusBarItem);
+  statusBarItem.show();
+  updateStatusBar(import_vscode_languageclient.State.Starting);
   client = await startLanguageServer(context, wasm);
+  client.onDidChangeState((e) => {
+    updateStatusBar(e.newState);
+  });
+  updateStatusBar(import_vscode_languageclient.State.Running);
   const BuiltinContentRequest = new import_vscode_languageclient.RequestType("typort-hdl/builtinContent");
   context.subscriptions.push(
     import_vscode.workspace.registerTextDocumentContentProvider("builtin", {
@@ -21904,8 +21937,26 @@ async function activate(context) {
     if (client) {
       await client.stop();
     }
+    updateStatusBar(import_vscode_languageclient.State.Starting);
     client = await startLanguageServer(context, wasm);
+    client.onDidChangeState((e) => {
+      updateStatusBar(e.newState);
+    });
+    updateStatusBar(import_vscode_languageclient.State.Running);
     import_vscode.window.showInformationMessage("TyportHDL Language Server restarted.");
+  }));
+  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.showServerActions", async () => {
+    if (!client) return;
+    const pick = await import_vscode.window.showQuickPick([
+      { label: "$(debug-restart) Restart Language Server", description: "Restart the TyportHDL language server" },
+      { label: "$(output) Show Log", description: "Open the language server output channel" }
+    ], { placeHolder: "Language Server Actions" });
+    if (!pick) return;
+    if (pick.label.includes("Restart")) {
+      import_vscode.commands.executeCommand("typort-hdl.restartLanguageServer");
+    } else if (pick.label.includes("Log")) {
+      channel.show();
+    }
   }));
 }
 function deactivate() {
