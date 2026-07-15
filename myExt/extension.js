@@ -1050,7 +1050,7 @@ module simpleALU {
     result := a + b
 }
 
-let mod1 = simpleALU()
+def mod1 = simpleALU()
 println("=== Simple ALU (UInt + UInt) ===")
 println(moduleTreeVL(mod1))
 
@@ -1063,7 +1063,7 @@ module adderNat {
     result := a + 42
 }
 
-let mod2 = adderNat()
+def mod2 = adderNat()
 println("=== UInt + Nat (via Into) ===")
 println(moduleTreeVL(mod2))
 
