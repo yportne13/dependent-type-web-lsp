@@ -21861,9 +21861,6 @@ async function startLanguageServer(context, wasm) {
   const clientOptions = {
     documentSelector: [{ language: "typort" }],
     outputChannel: channel,
-    synchronize: {
-      fileEvents: import_vscode.workspace.createFileSystemWatcher("**/.clientrc")
-    },
     uriConverters: (0, import_wasm_wasi_lsp.createUriConverters)()
   };
   const newClient = new import_vscode_languageclient.LanguageClient("lspClient", "LSP Client", serverOptions, clientOptions);
@@ -21904,12 +21901,6 @@ async function activate(context) {
       }
     })
   );
-  const CountFilesRequest = new import_vscode_languageclient.RequestType("wasm-language-server/countFiles");
-  context.subscriptions.push(import_vscode.commands.registerCommand("vscode-samples.wasm-language-server.countFiles", async () => {
-    const folder = import_vscode.workspace.workspaceFolders[0].uri;
-    const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
-    import_vscode.window.showInformationMessage(`The workspace contains ${result} files.`);
-  }));
   const ExpandMacroRequest = new import_vscode_languageclient.RequestType("typort-hdl/expandMacro");
   context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.expandMacro", async () => {
     const editor = import_vscode.window.activeTextEditor;

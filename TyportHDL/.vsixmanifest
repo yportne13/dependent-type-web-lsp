@@ -3,8 +3,8 @@
 		<Metadata>
 			<Identity Language="en-US" Id="TyportHDL" Version="1.0.0" Publisher="TyportHDL" />
 			<DisplayName>TyportHDL</DisplayName>
-			<Description xml:space="preserve">An example demonstrating how to implement a language server as a WebAssembly module.</Description>
-			<Tags>WASM,Component Model,LSP,Language Server,typort,__ext_typort,__web_extension</Tags>
+			<Description xml:space="preserve">VS Code extension for the Typort language: LSP-powered hover, completion, diagnostics and HDL code generation.</Description>
+			<Tags>LSP,Language Server,dependent types,HDL,Verilog,typort,__ext_typort,__web_extension</Tags>
 			<Categories></Categories>
 			<GalleryFlags>Public</GalleryFlags>
 			
