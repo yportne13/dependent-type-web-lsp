@@ -18310,16 +18310,16 @@ var require_client = __commonJS({
       RevealOutputChannelOn2[RevealOutputChannelOn2["Error"] = 3] = "Error";
       RevealOutputChannelOn2[RevealOutputChannelOn2["Never"] = 4] = "Never";
     })(RevealOutputChannelOn || (exports2.RevealOutputChannelOn = RevealOutputChannelOn = {}));
-    var ErrorAction;
-    (function(ErrorAction2) {
-      ErrorAction2[ErrorAction2["Continue"] = 1] = "Continue";
-      ErrorAction2[ErrorAction2["Shutdown"] = 2] = "Shutdown";
-    })(ErrorAction || (exports2.ErrorAction = ErrorAction = {}));
-    var CloseAction;
-    (function(CloseAction2) {
-      CloseAction2[CloseAction2["DoNotRestart"] = 1] = "DoNotRestart";
-      CloseAction2[CloseAction2["Restart"] = 2] = "Restart";
-    })(CloseAction || (exports2.CloseAction = CloseAction = {}));
+    var ErrorAction2;
+    (function(ErrorAction3) {
+      ErrorAction3[ErrorAction3["Continue"] = 1] = "Continue";
+      ErrorAction3[ErrorAction3["Shutdown"] = 2] = "Shutdown";
+    })(ErrorAction2 || (exports2.ErrorAction = ErrorAction2 = {}));
+    var CloseAction2;
+    (function(CloseAction3) {
+      CloseAction3[CloseAction3["DoNotRestart"] = 1] = "DoNotRestart";
+      CloseAction3[CloseAction3["Restart"] = 2] = "Restart";
+    })(CloseAction2 || (exports2.CloseAction = CloseAction2 = {}));
     var State3;
     (function(State4) {
       State4[State4["Stopped"] = 1] = "Stopped";
@@ -18356,21 +18356,21 @@ var require_client = __commonJS({
       }
       error(_error, _message, count) {
         if (count && count <= 3) {
-          return { action: ErrorAction.Continue };
+          return { action: ErrorAction2.Continue };
         }
-        return { action: ErrorAction.Shutdown };
+        return { action: ErrorAction2.Shutdown };
       }
       closed() {
         this.restarts.push(Date.now());
         if (this.restarts.length <= this.maxRestartCount) {
-          return { action: CloseAction.Restart };
+          return { action: CloseAction2.Restart };
         } else {
           const diff = this.restarts[this.restarts.length - 1] - this.restarts[0];
           if (diff <= 3 * 60 * 1e3) {
-            return { action: CloseAction.DoNotRestart, message: `The ${this.client.name} server crashed ${this.maxRestartCount + 1} times in the last 3 minutes. The server will not be restarted. See the output for more information.` };
+            return { action: CloseAction2.DoNotRestart, message: `The ${this.client.name} server crashed ${this.maxRestartCount + 1} times in the last 3 minutes. The server will not be restarted. See the output for more information.` };
           } else {
             this.restarts.shift();
-            return { action: CloseAction.Restart };
+            return { action: CloseAction2.Restart };
           }
         }
       }
@@ -19504,7 +19504,7 @@ ${this.data2String(data)}` : message;
           }
         } catch (error) {
         }
-        let handlerResult = { action: CloseAction.DoNotRestart };
+        let handlerResult = { action: CloseAction2.DoNotRestart };
         if (this.$state !== ClientState.Stopping) {
           try {
             handlerResult = await this._clientOptions.errorHandler.closed();
@@ -19512,7 +19512,7 @@ ${this.data2String(data)}` : message;
           }
         }
         this._connection = void 0;
-        if (handlerResult.action === CloseAction.DoNotRestart) {
+        if (handlerResult.action === CloseAction2.DoNotRestart) {
           this.error(handlerResult.message ?? "Connection to server got closed. Server will not be restarted.", void 0, handlerResult.handled === true ? false : "force");
           this.cleanUp(ShutdownMode.Stop);
           if (this.$state === ClientState.Starting) {
@@ -19522,7 +19522,7 @@ ${this.data2String(data)}` : message;
           }
           this._onStop = Promise.resolve();
           this._onStart = void 0;
-        } else if (handlerResult.action === CloseAction.Restart) {
+        } else if (handlerResult.action === CloseAction2.Restart) {
           this.info(handlerResult.message ?? "Connection to server got closed. Server will restart.", void 0, !handlerResult.handled);
           this.cleanUp(ShutdownMode.Restart);
           this.$state = ClientState.Initial;
@@ -19533,7 +19533,7 @@ ${this.data2String(data)}` : message;
       }
       async handleConnectionError(error, message, count) {
         const handlerResult = await this._clientOptions.errorHandler.error(error, message, count);
-        if (handlerResult.action === ErrorAction.Shutdown) {
+        if (handlerResult.action === ErrorAction2.Shutdown) {
           this.error(handlerResult.message ?? `Client ${this._name}: connection to server is erroring.
 ${error.message}
 Shutting down server.`, void 0, handlerResult.handled === true ? false : "force");
@@ -22733,9 +22733,17 @@ function deactivate() {
 }
 
 // src/extension.desktop.ts
+var MAX_CONSECUTIVE_CRASHES = 5;
+var AUTO_RESTART_DELAY_MS = 1e3;
 var client2;
 var statusBarItem2;
 var logChannel;
+var cliCommand = "typort";
+var cliArgs = ["lsp"];
+var cliClientOptions;
+var consecutiveCrashCount = 0;
+var userStopped = false;
+var restartTimer;
 function updateStatusBar2(state) {
   if (!statusBarItem2) return;
   switch (state) {
@@ -22751,7 +22759,61 @@ function updateStatusBar2(state) {
       statusBarItem2.text = "$(warning) TyPort";
       statusBarItem2.tooltip = "TyportHDL language server stopped";
       break;
+    case import_node2.State.StartFailed:
+      statusBarItem2.text = "$(error) TyPort";
+      statusBarItem2.tooltip = "TyportHDL language server failed to start";
+      break;
   }
+}
+async function startClient() {
+  if (!cliClientOptions) return;
+  updateStatusBar2(import_node2.State.Starting);
+  const newClient = new import_node2.LanguageClient("lspClient", "LSP Client", { command: cliCommand, args: cliArgs }, cliClientOptions);
+  newClient.onDidChangeState(handleStateChange);
+  client2 = newClient;
+  try {
+    await newClient.start();
+  } catch (error) {
+    newClient.error(`Start failed`, error, "force");
+  }
+  if (newClient.state === import_node2.State.Running) {
+    updateStatusBar2(import_node2.State.Running);
+  }
+}
+function handleStateChange(e) {
+  updateStatusBar2(e.newState);
+  if (e.newState === import_node2.State.Running) {
+    consecutiveCrashCount = 0;
+    return;
+  }
+  if (e.newState !== import_node2.State.Stopped) {
+    return;
+  }
+  if (userStopped) {
+    return;
+  }
+  if (restartTimer !== void 0) {
+    return;
+  }
+  consecutiveCrashCount += 1;
+  if (consecutiveCrashCount >= MAX_CONSECUTIVE_CRASHES) {
+    logChannel?.appendLine(`Server exited unexpectedly ${MAX_CONSECUTIVE_CRASHES} times in a row. Stopping automatic restarts; please restart the language server manually.`);
+    void import_vscode2.window.showErrorMessage(
+      "TyportHDL language server crashed 5 times in a row. Please restart it manually.",
+      "Restart"
+    ).then((action) => {
+      if (action === "Restart") {
+        void import_vscode2.commands.executeCommand("typort-hdl.restartLanguageServer");
+      }
+    });
+    return;
+  }
+  logChannel?.appendLine(`Server exited unexpectedly, restarting (attempt ${consecutiveCrashCount}/${MAX_CONSECUTIVE_CRASHES})...`);
+  updateStatusBar2(import_node2.State.Starting);
+  restartTimer = setTimeout(() => {
+    restartTimer = void 0;
+    void startClient();
+  }, AUTO_RESTART_DELAY_MS);
 }
 async function activate2(context) {
   statusBarItem2 = import_vscode2.window.createStatusBarItem(import_vscode2.StatusBarAlignment.Left, 0);
@@ -22777,35 +22839,45 @@ async function activate2(context) {
   const config = import_vscode2.workspace.getConfiguration("typort-hdl");
   const mode = config.get("lsp-mode", "wasm");
   if (mode === "cli") {
-    const command = config.get("cli-server.path", "") || "typort";
+    cliCommand = config.get("cli-server.path", "") || "typort";
+    cliArgs = ["lsp"];
     logChannel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
-    logChannel.appendLine(`Starting CLI language server: ${command} lsp`);
-    const clientOptions = {
+    logChannel.appendLine(`Starting CLI language server: ${cliCommand} lsp`);
+    cliClientOptions = {
       documentSelector: [{ language: "typort" }],
-      outputChannel: logChannel
+      outputChannel: logChannel,
+      errorHandler: {
+        error: (_error, _message, count) => {
+          if (count !== void 0 && count <= 3) {
+            return { action: import_node2.ErrorAction.Continue };
+          }
+          return { action: import_node2.ErrorAction.Shutdown };
+        },
+        closed: () => {
+          return { action: import_node2.CloseAction.DoNotRestart, message: "Language server process exited", handled: true };
+        }
+      }
     };
-    updateStatusBar2(import_node2.State.Starting);
-    client2 = new import_node2.LanguageClient("lspClient", "LSP Client", { command, args: ["lsp"] }, clientOptions);
-    client2.onDidChangeState((e) => updateStatusBar2(e.newState));
-    try {
-      await client2.start();
-    } catch (error) {
-      client2.error(`Start failed`, error, "force");
-    }
-    updateStatusBar2(import_node2.State.Running);
+    await startClient();
     context.subscriptions.push(import_vscode2.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
-      if (client2) {
-        await client2.stop();
+      if (restartTimer !== void 0) {
+        clearTimeout(restartTimer);
+        restartTimer = void 0;
       }
-      updateStatusBar2(import_node2.State.Starting);
-      client2 = new import_node2.LanguageClient("lspClient", "LSP Client", { command, args: ["lsp"] }, clientOptions);
-      client2.onDidChangeState((e) => updateStatusBar2(e.newState));
+      consecutiveCrashCount = 0;
+      userStopped = true;
       try {
-        await client2.start();
-      } catch (error) {
-        client2.error(`Start failed`, error, "force");
+        if (client2) {
+          try {
+            await client2.stop();
+          } catch (error) {
+            client2.error(`Stopping server failed`, error, "force");
+          }
+        }
+      } finally {
+        userStopped = false;
       }
-      updateStatusBar2(import_node2.State.Running);
+      await startClient();
       import_vscode2.window.showInformationMessage("TyportHDL Language Server restarted.");
     }));
   } else {
@@ -22814,6 +22886,11 @@ async function activate2(context) {
 }
 function deactivate2() {
   if (client2) {
+    if (restartTimer !== void 0) {
+      clearTimeout(restartTimer);
+      restartTimer = void 0;
+    }
+    userStopped = true;
     return client2.stop();
   }
   return deactivate();
