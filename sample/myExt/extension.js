@@ -342,6 +342,11 @@
                 n.Uri.parse('memfs:/sample-folder/alu.typort'),
                 a.encode(s.file_alu),
                 { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl_ops.typort'),
+                a.encode(s.file_hdl_ops),
+                { create: !0, overwrite: !0 }
               );
           }
           stat(t) {
@@ -1050,9 +1055,9 @@ module simpleALU {
     result := a + b
 }
 
-def mod1 = simpleALU()
+def mod1 = simpleALU.create
 println("=== Simple ALU (UInt + UInt) ===")
-println(moduleTreeVL(mod1))
+println(moduleTreeVL(mod1.tree))
 
 // --- Example 2: UInt + Nat (via Into trait) ---
 // UInt[8] + 42: Nat is auto-converted to UInt[8] via Into[UInt[8]]
@@ -1063,9 +1068,148 @@ module adderNat {
     result := a + 42
 }
 
-def mod2 = adderNat()
+def mod2 = adderNat.create
 println("=== UInt + Nat (via Into) ===")
-println(moduleTreeVL(mod2))
+println(moduleTreeVL(mod2.tree))
+
+`
+          ),
+          (e.file_hdl_ops =
+            `
+
+// ============================================================
+// HDL Operations Examples
+// Bit extraction, slicing, bool operators, sub-modules
+// ============================================================
+
+// ============================================================
+// Example 1: Single-bit extraction via apply[N]
+// Use a.apply[N] to extract a single bit from a UInt/Bits/SInt
+// ============================================================
+module bitExtract {
+    let a = UInt[8]
+    let bit0 = Bool
+    let bit7 = Bool
+    bit0 := a.apply[0]
+    bit7 := a.apply[7]
+}
+println("=== Example 1: Bit extraction via apply[N] ===")
+println(moduleTreeVL(bitExtract.create.tree))
+
+// ============================================================
+// Example 2: Bracket sugar a[N] (desugars to a.apply[N])
+// ============================================================
+module bracketSugar {
+    let a = UInt[8]
+    let lsb = Bool
+    let msb = Bool
+    lsb := a[0]
+    msb := a[7]
+}
+println("=== Example 2: Bracket sugar a[N] ===")
+println(moduleTreeVL(bracketSugar.create.tree))
+
+// ============================================================
+// Example 3: Range extraction via slice[hi, lo]
+// Returns a narrower type of width (hi - lo + 1)
+// ============================================================
+module sliceExample {
+    let a = UInt[8]
+    let low_nibble = UInt[4]
+    let high_nibble = UInt[4]
+    low_nibble := a.slice[3, 0]
+    high_nibble := a.slice[7, 4]
+}
+println("=== Example 3: Range extraction via slice[hi, lo] ===")
+println(moduleTreeVL(sliceExample.create.tree))
+
+// ============================================================
+// Example 4: Bool logic operators (&&, ||, !, ^)
+// ============================================================
+module boolOps {
+    let a = Bool
+    let b = Bool
+    let and_result = Bool
+    let or_result = Bool
+    let not_result = Bool
+    let xor_result = Bool
+    and_result := a && b
+    or_result := a || b
+    not_result := !a
+    xor_result := a ^ b
+}
+println("=== Example 4: Bool operators (&&, ||, !, ^) ===")
+println(moduleTreeVL(boolOps.create.tree))
+
+// ============================================================
+// Example 5: LHS bit selection — assign to individual bits
+// t[N] := x desugars to t.apply[N] := x on the LHS
+// ============================================================
+module lhsBitsel {
+    let t = UInt[8]
+    let x = Bool
+    t[0] := x
+    t[7] := x
+}
+println("=== Example 5: LHS bit selection t[N] := x ===")
+println(moduleTreeVL(lhsBitsel.create.tree))
+
+// ============================================================
+// Example 6: Combining apply, slice, and comparisons
+// ============================================================
+module comparator {
+    let a = UInt[8]
+    let b = UInt[8]
+    let msb_a = Bool
+    let msb_b = Bool
+    let eq = Bool
+    msb_a := a[7]
+    msb_b := b[7]
+    eq := a === b
+}
+println("=== Example 6: Comparator with bit extraction ===")
+println(moduleTreeVL(comparator.create.tree))
+
+// ============================================================
+// Example 7: Sub-module instantiation
+// Define a reusable adder and instantiate it in a top module
+// ============================================================
+module myAdder[w: Nat] {
+    input a = UInt[w]
+    input b = UInt[w]
+    output sum = UInt[w + 1]
+    sum := a +^ b
+}
+
+module topWithAdder {
+    input a = UInt[8]
+    input b = UInt[8]
+    let _adder = myAdder.create[8]
+    let inst = mkInstance("u_adder", "myAdder")
+}
+println("=== Example 7: Sub-module instantiation ===")
+println(moduleTreeVL(topWithAdder.create.tree))
+
+// ============================================================
+// Example 8: Bit concatenation (##) — SpinalHDL style
+// ============================================================
+module concatExample {
+    let a = Bits[4]
+    let b = Bits[4]
+    let cat_bb = Bits[8]
+    let flag = Bool
+    let cat_flag = Bits[5]
+    let x = UInt[8]
+    let y = UInt[8]
+    let cat_uu = UInt[16]
+    let cat_ub = UInt[12]
+    cat_bb := a ## b
+    cat_flag := flag ## a
+    cat_uu := x ## y
+    cat_ub := x ## b
+}
+println("=== Example 8: Bit concatenation (##) ===")
+println(moduleTreeVL(concatExample.create.tree))
 
 `
           ),

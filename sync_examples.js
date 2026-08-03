@@ -48,8 +48,13 @@ function escapeForJsTemplate(str) {
     .replace(/\$\{/g, '\\${');
 }
 
-// Read extension.js
+// Read extension.js — normalize CRLF to LF for reliable searching.
+// The file may be CRLF on Windows (git autocrlf) or LF on CI.
 let extJs = fs.readFileSync(EXT_JS, 'utf-8');
+const isCrlf = extJs.includes('\r\n');
+const hasBom = extJs.charCodeAt(0) === 0xfeff;
+if (hasBom) extJs = extJs.slice(1); // strip BOM, re-add on write
+if (isCrlf) extJs = extJs.replace(/\r\n/g, '\n');
 
 let changed = 0;
 
@@ -100,6 +105,8 @@ for (const file of files) {
 }
 
 if (changed > 0) {
+  if (isCrlf) extJs = extJs.replace(/\n/g, '\r\n');
+  if (hasBom) extJs = '\uFEFF' + extJs;
   fs.writeFileSync(EXT_JS, extJs, 'utf-8');
   console.log(`\nUpdated ${changed} file(s) in extension.js`);
 } else {
