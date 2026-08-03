@@ -26,7 +26,18 @@ if (!fs.existsSync(SRC_DIR)) {
   process.exit(1);
 }
 
-const files = fs.readdirSync(SRC_DIR).filter(f => f.endsWith('.typort')).sort();
+const files = [];
+function collectTyport(dir, prefix) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      collectTyport(path.join(dir, entry.name), prefix + entry.name + '/');
+    } else if (entry.name.endsWith('.typort')) {
+      files.push(prefix + entry.name);
+    }
+  }
+}
+collectTyport(SRC_DIR, '');
+files.sort();
 if (files.length === 0) {
   console.warn('No .typort files found in', SRC_DIR);
   process.exit(0);
@@ -64,8 +75,9 @@ for (const file of files) {
     fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n')
   );
 
-  // Build the export name: e.file_<filename_without_ext>
-  const exportName = 'e.file_' + file.replace(/\.typort$/, '');
+  // Build the export name: e.file_<path_without_ext>, with '-' and '/' -> '_'
+  // e.g. hdl/01-basics.typort -> e.file_hdl_01_basics
+  const exportName = 'e.file_' + file.replace(/\.typort$/, '').replace(/[-\/]/g, '_');
 
   // Find the export assignment in extension.js
   const exportStart = extJs.indexOf(`${exportName} =\n            \``);
