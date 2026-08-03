@@ -328,6 +328,7 @@
           }
           seed() {
             this.createDirectory(n.Uri.parse('memfs:/sample-folder/')),
+              this.createDirectory(n.Uri.parse('memfs:/sample-folder/hdl/')),
               this.writeFile(
                 n.Uri.parse('memfs:/sample-folder/typeclass_complex.typort'),
                 a.encode(s.file_typeclass_complex),
@@ -346,6 +347,56 @@
               this.writeFile(
                 n.Uri.parse('memfs:/sample-folder/hdl_ops.typort'),
                 a.encode(s.file_hdl_ops),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/01-basics.typort'),
+                a.encode(s.file_hdl_01_basics),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/02-arithmetic.typort'),
+                a.encode(s.file_hdl_02_arithmetic),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/03-bitwise.typort'),
+                a.encode(s.file_hdl_03_bitwise),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/04-compare.typort'),
+                a.encode(s.file_hdl_04_compare),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/05-bool.typort'),
+                a.encode(s.file_hdl_05_bool),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/06-select-cat.typort'),
+                a.encode(s.file_hdl_06_select_cat),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/07-registers.typort'),
+                a.encode(s.file_hdl_07_registers),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/08-control-flow.typort'),
+                a.encode(s.file_hdl_08_control_flow),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/09-hierarchy.typort'),
+                a.encode(s.file_hdl_09_hierarchy),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/10-bundle.typort'),
+                a.encode(s.file_hdl_10_bundle),
                 { create: !0, overwrite: !0 }
               );
           }
@@ -1210,6 +1261,561 @@ module concatExample {
 }
 println("=== Example 8: Bit concatenation (##) ===")
 println(moduleTreeVL(concatExample.create.tree))
+
+`
+          ),
+                    (e.file_hdl_01_basics =
+            `
+
+// ============================================================
+// HDL Example 01: 信号声明 (Signal Declarations)
+//
+//   let     — 内部 wire
+//   input   — 输入端口
+//   output  — 输出端口
+//   reg     — 寄存器
+//   auto*   — BindingName 自动命名（信号名 = let 绑定名）
+//
+// 模块可参数化宽度：module name[w: Nat]
+// ============================================================
+
+module basicDecls[w: Nat] {
+    let a = UInt[w]
+    let b = Bits[w]
+    let c = SInt[w]
+    let d = Bool
+    input x = UInt[w]
+    output y = UInt[w]
+    reg r = UInt[w]
+    y := a + x
+    r := y
+}
+println("=== 01a: basicDecls (参数化宽度 + 各类声明) ===")
+println(moduleTreeVL(basicDecls.create[8].tree))
+
+module autoNames {
+    let mywire = autoUInt(8)
+    let myinput = autoUIntInput(8)
+    let myreg = autoUIntReg(8)
+    let myinit = autoUIntRegInit(8, 5)
+    let mybool = autoBool
+    let myoutput = autoUIntOutput(8)
+    myreg := mywire + myinput
+    myoutput := mybool.mux(myreg, myinit)
+}
+println("=== 01b: autoNames (auto* 自动命名) ===")
+println(moduleTreeVL(autoNames.create.tree))
+
+`
+          ),
+          (e.file_hdl_02_arithmetic =
+            `
+
+// ============================================================
+// HDL Example 02: 算术运算 (Arithmetic)
+//
+//   +   -   保持位宽，溢出截断
+//   +^  -^  结果宽度 +1（进位/借位）
+//   *   UInt[w1] * UInt[w2] -> UInt[w1+w2]（不丢精度）
+//   Nat 字面量可直接参与运算（自动转换）
+//   .neg  SInt 取负
+// ============================================================
+
+module arithmeticUInt {
+    let a = UInt[8]
+    let b = UInt[8]
+    let sum = UInt[8]
+    let diff = UInt[8]
+    let carry = UInt[9]
+    let borrow = UInt[9]
+    let prod = UInt[16]
+    let add_nat = UInt[8]
+    let mul_nat = UInt[8]
+    sum := a + b
+    diff := a - b
+    carry := a +^ b
+    borrow := a -^ b
+    prod := a * b
+    add_nat := a + 5
+    mul_nat := a * 3
+}
+println("=== 02a: arithmeticUInt (+ - +^ -^ * 与 Nat 字面量) ===")
+println(moduleTreeVL(arithmeticUInt.create.tree))
+
+module arithmeticSInt {
+    let a = SInt[8]
+    let b = SInt[8]
+    let sum = SInt[8]
+    let carry = SInt[9]
+    let neg = SInt[8]
+    sum := a + b
+    carry := a +^ b
+    neg := a.neg
+}
+println("=== 02b: arithmeticSInt (SInt 运算与取负) ===")
+println(moduleTreeVL(arithmeticSInt.create.tree))
+
+`
+          ),
+          (e.file_hdl_03_bitwise =
+            `
+
+// ============================================================
+// HDL Example 03: 位运算 (Bitwise)
+//
+//   &  |  ^  ~    按位与/或/异或/取反
+//   <<  >>        （编译期 Nat 常量移位）
+//   andR orR xorR 归约运算 -> Bool
+// ============================================================
+
+module bitwiseOps {
+    let a = Bits[8]
+    let b = Bits[8]
+    let and_r = Bits[8]
+    let or_r = Bits[8]
+    let xor_r = Bits[8]
+    let not_r = Bits[8]
+    let shl = Bits[8]
+    let shr = Bits[8]
+    let all_ones = Bool
+    let any_one = Bool
+    let parity = Bool
+    and_r := a & b
+    or_r := a | b
+    xor_r := a ^ b
+    not_r := ~a
+    shl := a << 2
+    shr := b >> 1
+    all_ones := a.andR
+    any_one := b.orR
+    parity := a.xorR
+}
+println("=== 03: bitwiseOps (按位 + 移位 + 归约) ===")
+println(moduleTreeVL(bitwiseOps.create.tree))
+
+module bitwiseUInt {
+    let a = UInt[8]
+    let b = UInt[8]
+    let and_r = UInt[8]
+    let not_r = UInt[8]
+    and_r := a & b
+    not_r := ~a
+}
+println("=== 03b: bitwiseUInt (UInt 按位运算) ===")
+println(moduleTreeVL(bitwiseUInt.create.tree))
+
+`
+          ),
+          (e.file_hdl_04_compare =
+            `
+
+// ============================================================
+// HDL Example 04: 比较运算 (Comparison)
+//
+//   <  <=  >  >=    大小比较，两侧位宽必须一致
+//   ===  =/=         相等/不等
+//   结果恒为 Bool
+//   Nat 字面量可直接参与比较
+// ============================================================
+
+module compareUInt {
+    let a = UInt[8]
+    let b = UInt[8]
+    let lt = Bool
+    let le = Bool
+    let gt = Bool
+    let ge = Bool
+    let eq = Bool
+    let ne = Bool
+    lt := a < b
+    le := a <= b
+    gt := a > b
+    ge := a >= b
+    eq := a === b
+    ne := a =/= b
+}
+println("=== 04a: compareUInt (UInt 比较) ===")
+println(moduleTreeVL(compareUInt.create.tree))
+
+module compareNat {
+    let a = UInt[8]
+    let eq42 = Bool
+    let lt100 = Bool
+    let ne0 = Bool
+    eq42 := a === 42
+    lt100 := a < 100
+    ne0 := a =/= 0
+}
+println("=== 04b: compareNat (与 Nat 字面量比较) ===")
+println(moduleTreeVL(compareNat.create.tree))
+
+module compareSInt {
+    let a = SInt[8]
+    let b = SInt[8]
+    let lt = Bool
+    let eq = Bool
+    lt := a < b
+    eq := a === b
+}
+println("=== 04c: compareSInt (SInt 比较) ===")
+println(moduleTreeVL(compareSInt.create.tree))
+
+`
+          ),
+          (e.file_hdl_05_bool =
+            `
+
+// ============================================================
+// HDL Example 05: 布尔逻辑 (Bool Logic)
+//
+//   &&  ||  !  ^    逻辑与/或/非/异或
+//   .mux(a, b)      条件多路选择（SpinalHDL 风格）
+//   cond ? a : b    C 风格三目运算符（脱糖为 .mux）
+//   asBits/asUInt/asSInt  Bool -> Bits[1]/UInt[1]/SInt[1]
+// ============================================================
+
+module boolLogic {
+    let a = Bool
+    let b = Bool
+    let and_r = Bool
+    let or_r = Bool
+    let not_r = Bool
+    let xor_r = Bool
+    and_r := a && b
+    or_r := a || b
+    not_r := !a
+    xor_r := a ^ b
+}
+println("=== 05a: boolLogic (&& || ! ^) ===")
+println(moduleTreeVL(boolLogic.create.tree))
+
+module boolMux {
+    let sel = Bool
+    let a = UInt[8]
+    let b = UInt[8]
+    let out = UInt[8]
+    out := sel.mux(a, b)
+}
+println("=== 05b: boolMux (三目选择) ===")
+println(moduleTreeVL(boolMux.create.tree))
+
+module boolTernary {
+    let cond = Bool
+    let x = UInt[8]
+    let y = UInt[8]
+    let out = UInt[8]
+    out := cond ? x : y
+}
+println("=== 05c: boolTernary (C 风格三目 ? :) ===")
+println(moduleTreeVL(boolTernary.create.tree))
+
+module boolCast {
+    let c = Bool
+    let b = Bits[1]
+    let u = UInt[1]
+    let s = SInt[1]
+    b := c.asBits
+    u := c.asUInt
+    s := c.asSInt
+}
+println("=== 05d: boolCast (Bool 类型转换) ===")
+println(moduleTreeVL(boolCast.create.tree))
+
+`
+          ),
+          (e.file_hdl_06_select_cat =
+            `
+
+// ============================================================
+// HDL Example 06: 位提取 / 切片 / 拼接 (Bit Select & Cat)
+//
+//   a.apply[N]   取单 bit -> Bool（a[N] 是语法糖）
+//   a.slice[hi, lo]  取范围 -> 宽度 (hi-lo+1) 的类型
+//   t[N] := x     LHS 位选赋值
+//   a ## b        拼接，结果宽度 = 左宽 + 右宽
+// ============================================================
+
+module bitSelect {
+    let a = UInt[8]
+    let bit0 = Bool
+    let bit7 = Bool
+    let low4 = UInt[4]
+    let hi4 = UInt[4]
+    bit0 := a.apply[0]
+    bit7 := a[7]
+    low4 := a.slice[3, 0]
+    hi4 := a.slice[7, 4]
+}
+println("=== 06a: bitSelect (apply / 方括号 / slice) ===")
+println(moduleTreeVL(bitSelect.create.tree))
+
+module lhsBitsel {
+    let t = UInt[8]
+    let x = Bool
+    t[0] := x
+    t[7] := x
+}
+println("=== 06b: lhsBitsel (LHS 位选赋值) ===")
+println(moduleTreeVL(lhsBitsel.create.tree))
+
+module concat {
+    let a = Bits[4]
+    let b = Bits[4]
+    let f = Bool
+    let x = UInt[8]
+    let r_bb = Bits[8]
+    let r_bf = Bits[5]
+    let r_fb = Bits[5]
+    let r_uu = UInt[16]
+    let r_xf = UInt[9]
+    r_bb := a ## b
+    r_bf := a ## f
+    r_fb := f ## a
+    r_uu := x ## x
+    r_xf := x ## f
+}
+println("=== 06c: concat (## 拼接, 含 Bool) ===")
+println(moduleTreeVL(concat.create.tree))
+
+`
+          ),
+          (e.file_hdl_07_registers =
+            `
+
+// ============================================================
+// HDL Example 07: 寄存器 (Registers)
+//
+//   reg x = UInt[8]         普通寄存器（自动加 clk 端口）
+//   reg x = UInt[8] init 42 带异步复位初值（自动加 reset 端口）
+//   regNext(value)      延迟一拍（任意 Data，SpinalHDL 风格）
+//   regNextWhen(v, cond) 条件延迟
+//   when 块内的 :=          条件寄存器赋值
+// ============================================================
+
+module regBasic {
+    reg r = UInt[8]
+    let a = UInt[8]
+    r := a
+}
+println("=== 07a: regBasic (普通寄存器) ===")
+println(moduleTreeVL(regBasic.create.tree))
+
+module regInit {
+    reg r = UInt[8] init 42
+    let a = UInt[8]
+    r := a + 1
+}
+println("=== 07b: regInit (复位初值 42) ===")
+println(moduleTreeVL(regInit.create.tree))
+
+module regNextDemo {
+    let a = UInt[8]
+    let d = regNext(a)
+}
+println("=== 07c: regNextDemo (延迟一拍) ===")
+println(moduleTreeVL(regNextDemo.create.tree))
+
+module regNextAny {
+    let a = UInt[8]
+    let b = Bits[8]
+    let c = Bool
+    let e = SInt[4]
+    let da = regNext(a)
+    let db = regNext(b)
+    let dc = regNext(c)
+    let de = regNext(e)
+}
+println("=== 07d: regNextAny (任意 Data 类型) ===")
+println(moduleTreeVL(regNextAny.create.tree))
+
+module regNextWhenDemo {
+    let a = UInt[8]
+    let en = Bool
+    let d = regNextWhen(a, en)
+}
+println("=== 07e: regNextWhenDemo (条件延迟) ===")
+println(moduleTreeVL(regNextWhenDemo.create.tree))
+
+module regInWhen {
+    reg r = UInt[8]
+    let a = UInt[8]
+    let en = Bool
+    when en {
+        r := a
+    }
+}
+println("=== 07f: regInWhen (when 内寄存器赋值) ===")
+println(moduleTreeVL(regInWhen.create.tree))
+
+`
+          ),
+          (e.file_hdl_08_control_flow =
+            `
+
+// ============================================================
+// HDL Example 08: 控制流 (Control Flow)
+//
+//   when cond { ... } otherwise { ... }
+//   when ... elsewhen cond2 { ... } otherwise { ... }
+//   switch sel { is v { ... } is v2 { ... } default { ... } }
+//
+// 注意：when 的 otherwise 分支会先生成（作为默认赋值），
+// 再生成条件分支（保证 Verilog 生成正确）。
+// ============================================================
+
+module whenExample {
+    let a = UInt[8]
+    let b = UInt[8]
+    let sel = Bool
+    let out = UInt[8]
+    when sel {
+        out := a
+    } otherwise {
+        out := b
+    }
+}
+println("=== 08a: whenExample (when/otherwise) ===")
+println(moduleTreeVL(whenExample.create.tree))
+
+module whenElseWhen {
+    let a = UInt[8]
+    let b = UInt[8]
+    let c = UInt[8]
+    let sel = UInt[2]
+    let out = UInt[8]
+    when sel === 0 {
+        out := a
+    } elsewhen sel === 1 {
+        out := b
+    } otherwise {
+        out := c
+    }
+}
+println("=== 08b: whenElseWhen (elsewhen 链) ===")
+println(moduleTreeVL(whenElseWhen.create.tree))
+
+module switchExample {
+    let sel = UInt[4]
+    let a = UInt[4]
+    let b = UInt[4]
+    let c = UInt[4]
+    let result = UInt[4]
+    switch sel {
+        is 0 { result := a }
+        is 1 { result := b }
+        default { result := c }
+    }
+}
+println("=== 08c: switchExample (switch 语句) ===")
+println(moduleTreeVL(switchExample.create.tree))
+
+`
+          ),
+          (e.file_hdl_09_hierarchy =
+            `
+
+// ============================================================
+// HDL Example 09: 模块层次 (Module Hierarchy)
+//
+//   \`let u = myAdder.create[8]\`  在模块体内自动记录子模块实例
+//   \`u.a := a\`                   SpinalHDL 风格层次化端口连接
+//   allModulesVL(tree)           多模块 Verilog 输出
+//
+// 端口在模块头声明：\`input a = UInt[w]\`（Bool 端口放最后或最前）。
+// 实例的端口以字段形式暴露（u.a 是带类型的 subSignal 句柄），
+// 父模块通过 \`u.port := sig\` 连接，生成器自动聚合到实例行。
+// ============================================================
+
+module myAdder[w: Nat]
+    input a = UInt[w]
+    input b = UInt[w]
+    output sum = UInt[w]
+    input en = Bool
+{
+    sum := a + b
+}
+
+module topWithAdder {
+    input a = UInt[8]
+    input b = UInt[8]
+    let u = myAdder.create[8]
+}
+println("=== 09a: topWithAdder (自动实例化) ===")
+println(moduleTreeVL(topWithAdder.create.tree))
+
+module topWithPorts {
+    input a = UInt[8]
+    input b = UInt[8]
+    input en = Bool
+    let u = myAdder.create[8]
+    u.a := a
+    u.b := b
+    u.en := en
+    u.sum := a + b
+}
+println("=== 09b: topWithPorts (u.a := sig 层次化连接) ===")
+println(moduleTreeVL(topWithPorts.create.tree))
+
+// 多模块输出：把两个模块树合并成一颗 ModuleTree，
+// 再用 allModulesVL 生成全部模块的 Verilog。
+def buildMultiTree(): ModuleTree =
+    let tree_adder = myAdder.create[8].tree;
+    let tree_top = topWithAdder.create.tree;
+    let md_adder = headModuleDef(tree_adder.data);
+    let md_top = headModuleDef(tree_top.data);
+    ModuleTree.mk(2, md_top :: md_adder :: nil)
+
+println("=== 09c: allModulesVL (多模块 Verilog) ===")
+println(allModulesVL(buildMultiTree()))
+
+`
+          ),
+          (e.file_hdl_10_bundle =
+            `
+
+// ============================================================
+// HDL Example 10: Bundle（SpinalHDL 风格结构化 IO）
+//
+//   #[derive(Bundle)] struct ... — 自动生成：
+//     1. impl Bundle（字段级批量赋值 :=）
+//     2. impl Into[Self]（供 Expr 宏使用）
+//     3. create_TypeName(prefix) 信号工厂
+//
+//   master := slave  批量赋值（逐字段 assign）
+// ============================================================
+
+#[derive(Bundle)]
+struct AxiLite {
+    awaddr: UInt[32]
+    awvalid: Bool
+    awready: Bool
+    wdata: UInt[32]
+    wvalid: Bool
+    wready: Bool
+}
+
+module bundleTop {
+    let master = create_AxiLite("m_")
+    let slave = create_AxiLite("s_")
+    master := slave
+}
+println("=== 10a: bundleTop (derive(Bundle) 批量赋值) ===")
+println(moduleTreeVL(bundleTop.create.tree))
+
+// 参数化 Bundle：宽度来自类型参数
+#[derive(Bundle)]
+struct MyBus[w: Nat] {
+    data: UInt[w]
+    valid: Bool
+}
+
+module bundleParam {
+    let bus1 = create_MyBus[8]("bus1_")
+    let bus2 = create_MyBus[8]("bus2_")
+    bus1 := bus2
+}
+println("=== 10b: bundleParam (参数化 Bundle) ===")
+println(moduleTreeVL(bundleParam.create.tree))
 
 `
           ),
