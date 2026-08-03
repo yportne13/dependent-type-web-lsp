@@ -22637,9 +22637,6 @@ async function startLanguageServer(context, wasm) {
   const clientOptions = {
     documentSelector: [{ language: "typort" }],
     outputChannel: channel,
-    synchronize: {
-      fileEvents: import_vscode.workspace.createFileSystemWatcher("**/.clientrc")
-    },
     uriConverters: (0, import_wasm_wasi_lsp.createUriConverters)()
   };
   const newClient = new import_vscode_languageclient.LanguageClient("lspClient", "LSP Client", serverOptions, clientOptions);
@@ -22680,12 +22677,6 @@ async function activate(context) {
       }
     })
   );
-  const CountFilesRequest = new import_vscode_languageclient.RequestType("wasm-language-server/countFiles");
-  context.subscriptions.push(import_vscode.commands.registerCommand("vscode-samples.wasm-language-server.countFiles", async () => {
-    const folder = import_vscode.workspace.workspaceFolders[0].uri;
-    const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
-    import_vscode.window.showInformationMessage(`The workspace contains ${result} files.`);
-  }));
   const ExpandMacroRequest = new import_vscode_languageclient.RequestType("typort-hdl/expandMacro");
   context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.expandMacro", async () => {
     const editor = import_vscode.window.activeTextEditor;
@@ -22744,6 +22735,7 @@ function deactivate() {
 // src/extension.desktop.ts
 var client2;
 var statusBarItem2;
+var logChannel;
 function updateStatusBar2(state) {
   if (!statusBarItem2) return;
   switch (state) {
@@ -22779,22 +22771,18 @@ async function activate2(context) {
     if (pick.label.includes("Restart")) {
       import_vscode2.commands.executeCommand("typort-hdl.restartLanguageServer");
     } else if (pick.label.includes("Log")) {
-      const channel2 = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
-      channel2.show();
+      logChannel?.show();
     }
   }));
   const config = import_vscode2.workspace.getConfiguration("typort-hdl");
   const mode = config.get("lsp-mode", "wasm");
   if (mode === "cli") {
     const command = config.get("cli-server.path", "") || "typort";
-    const channel2 = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
-    channel2.appendLine(`Starting CLI language server: ${command} lsp`);
+    logChannel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
+    logChannel.appendLine(`Starting CLI language server: ${command} lsp`);
     const clientOptions = {
       documentSelector: [{ language: "typort" }],
-      outputChannel: channel2,
-      synchronize: {
-        fileEvents: import_vscode2.workspace.createFileSystemWatcher("**/.clientrc")
-      }
+      outputChannel: logChannel
     };
     updateStatusBar2(import_node2.State.Starting);
     client2 = new import_node2.LanguageClient("lspClient", "LSP Client", { command, args: ["lsp"] }, clientOptions);
