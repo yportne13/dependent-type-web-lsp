@@ -5,9 +5,26 @@ require("vscode-languageclient/node");
 const vscode_1 = require("vscode");
 const node_1 = require("vscode-languageclient/node");
 const extension_1 = require("./extension");
+// Maximum number of consecutive unexpected server exits before we stop
+// retrying automatically and ask the user to restart the server manually.
+const MAX_CONSECUTIVE_CRASHES = 5;
+// Delay before restarting a crashed server to avoid a crash-restart storm.
+const AUTO_RESTART_DELAY_MS = 1000;
 let client;
 let statusBarItem;
 let logChannel;
+// CLI server settings, resolved once in activate().
+let cliCommand = 'typort';
+let cliArgs = ['lsp'];
+let cliClientOptions;
+// Number of consecutive unexpected server exits. Reset to 0 whenever the
+// server successfully reaches State.Running (automatic or manual restart).
+let consecutiveCrashCount = 0;
+// True while a stop is user-initiated (manual restart command / extension
+// deactivation). Such stops must not be treated as crashes.
+let userStopped = false;
+// Pending auto-restart timer after an unexpected server exit.
+let restartTimer;
 function updateStatusBar(state) {
     if (!statusBarItem)
         return;
@@ -24,7 +41,74 @@ function updateStatusBar(state) {
             statusBarItem.text = '$(warning) TyPort';
             statusBarItem.tooltip = 'TyportHDL language server stopped';
             break;
+        case node_1.State.StartFailed:
+            statusBarItem.text = '$(error) TyPort';
+            statusBarItem.tooltip = 'TyportHDL language server failed to start';
+            break;
     }
+}
+/**
+ * Creates a fresh LanguageClient for the CLI server and starts it.
+ * Shared by the initial activation, the manual restart command and the
+ * automatic restart after a server crash.
+ */
+async function startClient() {
+    if (!cliClientOptions)
+        return;
+    updateStatusBar(node_1.State.Starting);
+    const newClient = new node_1.LanguageClient('lspClient', 'LSP Client', { command: cliCommand, args: cliArgs }, cliClientOptions);
+    newClient.onDidChangeState(handleStateChange);
+    client = newClient;
+    try {
+        await newClient.start();
+    }
+    catch (error) {
+        newClient.error(`Start failed`, error, 'force');
+    }
+    if (newClient.state === node_1.State.Running) {
+        updateStatusBar(node_1.State.Running);
+    }
+}
+/**
+ * Reacts to language client state changes: updates the status bar, resets the
+ * consecutive crash counter on a successful start and, on an unexpected stop
+ * (server crash), schedules an automatic restart (up to 5 consecutive times).
+ */
+function handleStateChange(e) {
+    updateStatusBar(e.newState);
+    if (e.newState === node_1.State.Running) {
+        // A server that (re)started successfully breaks the chain of
+        // consecutive crashes.
+        consecutiveCrashCount = 0;
+        return;
+    }
+    if (e.newState !== node_1.State.Stopped) {
+        return;
+    }
+    // From here on the server stopped. Distinguish an unexpected exit (crash)
+    // from a stop we triggered ourselves.
+    if (userStopped) {
+        return;
+    }
+    if (restartTimer !== undefined) {
+        return; // A restart is already scheduled.
+    }
+    consecutiveCrashCount += 1;
+    if (consecutiveCrashCount >= MAX_CONSECUTIVE_CRASHES) {
+        logChannel?.appendLine(`Server exited unexpectedly ${MAX_CONSECUTIVE_CRASHES} times in a row. Stopping automatic restarts; please restart the language server manually.`);
+        void vscode_1.window.showErrorMessage('TyportHDL language server crashed 5 times in a row. Please restart it manually.', 'Restart').then((action) => {
+            if (action === 'Restart') {
+                void vscode_1.commands.executeCommand('typort-hdl.restartLanguageServer');
+            }
+        });
+        return;
+    }
+    logChannel?.appendLine(`Server exited unexpectedly, restarting (attempt ${consecutiveCrashCount}/${MAX_CONSECUTIVE_CRASHES})...`);
+    updateStatusBar(node_1.State.Starting);
+    restartTimer = setTimeout(() => {
+        restartTimer = undefined;
+        void startClient();
+    }, AUTO_RESTART_DELAY_MS);
 }
 async function activate(context) {
     // Create shared status bar
@@ -55,37 +139,57 @@ async function activate(context) {
     const config = vscode_1.workspace.getConfiguration('typort-hdl');
     const mode = config.get('lsp-mode', 'wasm');
     if (mode === 'cli') {
-        const command = config.get('cli-server.path', '') || 'typort';
+        cliCommand = config.get('cli-server.path', '') || 'typort';
+        cliArgs = ['lsp'];
         logChannel = vscode_1.window.createOutputChannel('TyportHDL Language Server', { log: true });
-        logChannel.appendLine(`Starting CLI language server: ${command} lsp`);
-        const clientOptions = {
+        logChannel.appendLine(`Starting CLI language server: ${cliCommand} lsp`);
+        cliClientOptions = {
             documentSelector: [{ language: "typort" }],
             outputChannel: logChannel,
+            errorHandler: {
+                error: (_error, _message, count) => {
+                    // Match the library default: tolerate up to 3 consecutive
+                    // connection errors before shutting the server down.
+                    if (count !== undefined && count <= 3) {
+                        return { action: node_1.ErrorAction.Continue };
+                    }
+                    return { action: node_1.ErrorAction.Shutdown };
+                },
+                closed: () => {
+                    // Never let the library restart the server by itself: the
+                    // built-in restart has no consecutive-crash limit and no
+                    // delay, which would conflict with the restart logic here.
+                    // All restarts are managed via handleStateChange.
+                    return { action: node_1.CloseAction.DoNotRestart, message: 'Language server process exited', handled: true };
+                },
+            },
         };
-        updateStatusBar(node_1.State.Starting);
-        client = new node_1.LanguageClient('lspClient', 'LSP Client', { command, args: ['lsp'] }, clientOptions);
-        client.onDidChangeState((e) => updateStatusBar(e.newState));
-        try {
-            await client.start();
-        }
-        catch (error) {
-            client.error(`Start failed`, error, 'force');
-        }
-        updateStatusBar(node_1.State.Running);
+        await startClient();
         context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.restartLanguageServer', async () => {
-            if (client) {
-                await client.stop();
+            // The user takes control: cancel any pending automatic restart and
+            // break the chain of consecutive crashes.
+            if (restartTimer !== undefined) {
+                clearTimeout(restartTimer);
+                restartTimer = undefined;
             }
-            updateStatusBar(node_1.State.Starting);
-            client = new node_1.LanguageClient('lspClient', 'LSP Client', { command, args: ['lsp'] }, clientOptions);
-            client.onDidChangeState((e) => updateStatusBar(e.newState));
+            consecutiveCrashCount = 0;
+            // Mark the stop as user-initiated so that it is not counted as a
+            // crash by handleStateChange.
+            userStopped = true;
             try {
-                await client.start();
+                if (client) {
+                    try {
+                        await client.stop();
+                    }
+                    catch (error) {
+                        client.error(`Stopping server failed`, error, 'force');
+                    }
+                }
             }
-            catch (error) {
-                client.error(`Start failed`, error, 'force');
+            finally {
+                userStopped = false;
             }
-            updateStatusBar(node_1.State.Running);
+            await startClient();
             vscode_1.window.showInformationMessage('TyportHDL Language Server restarted.');
         }));
     }
@@ -96,6 +200,13 @@ async function activate(context) {
 exports.activate = activate;
 function deactivate() {
     if (client) {
+        // The extension is going down: cancel a pending automatic restart and
+        // mark the final stop as user-initiated so no restart is attempted.
+        if (restartTimer !== undefined) {
+            clearTimeout(restartTimer);
+            restartTimer = undefined;
+        }
+        userStopped = true;
         return client.stop();
     }
     return (0, extension_1.deactivate)();
