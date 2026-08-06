@@ -793,6 +793,90 @@ def subst_eg: Eq(5 + 0, 5) = trans(add_zero_right(5), rfl)
 println(subst_eg)
 // This proves 5+0 = 5 by rewriting the left side of add_zero_left(5) using add_comm!
 
+// ============================================================
+// Calc-chain variants.
+// Each \`def <name>_calc ... = calc { ... }\` re-proves the same
+// proposition as its non-calc original using the calc chain
+// syntax \`lhs = rhs by proof\` (see docs/calc-reasoning-design.md).
+// The printlns below must print exactly the same values as the
+// originals above.
+// ============================================================
+
+// 1a-calc: zero_add_comm via a two-step chain
+//   0 + n = n     by add_zero_left(n)
+//   n     = n + 0 by symm(add_zero_right(n))
+def zero_add_comm_calc(n: Nat): Eq(0 + n, n + 0) =
+    calc {
+        0 + n = n by add_zero_left(n)
+        n = n + 0 by symm(add_zero_right(n))
+    }
+
+println(zero_add_comm_calc(5))
+
+// 3-calc: add_one_succ via the same two trans steps as the original
+//   n + 1       = succ(n + 0) by add_succ_right(n, 0)
+//   succ(n + 0) = succ(n)     by cong(succ, add_zero_right(n))
+def add_one_succ_calc(n: Nat): Eq(n + 1, succ(n)) =
+    calc {
+        n + 1 = succ(n + 0) by add_succ_right(n, 0)
+        succ(n + 0) = succ(n) by cong(succ, add_zero_right(n))
+    }
+
+println(add_one_succ_calc(3))
+
+// 5-calc: chain_eg via a two-step chain
+//   7 + 0 = 7     by add_zero_right(7)
+//   7     = 0 + 7 by symm(add_zero_left(7))
+def chain_eg_calc: Eq(7 + 0, 0 + 7) =
+    calc {
+        7 + 0 = 7 by add_zero_right(7)
+        7 = 0 + 7 by symm(add_zero_left(7))
+    }
+
+println(chain_eg_calc)
+
+// 6-calc: add_cong_complex via a two-step chain (the two nested cong
+//   steps of add_cong, inlined)
+//   (5 + 0) + (0 + 7) = 5 + (0 + 7) by cong(x => x + (0 + 7), add_zero_right(5))
+//   5 + (0 + 7)       = 5 + 7       by cong(x => 5 + x, add_zero_left(7))
+def add_cong_complex_calc: Eq((5 + 0) + (0 + 7), 5 + 7) =
+    calc {
+        (5 + 0) + (0 + 7) = 5 + (0 + 7) by cong(x => x + (0 + 7), add_zero_right(5))
+        5 + (0 + 7) = 5 + 7 by cong(x => 5 + x, add_zero_left(7))
+    }
+
+println(add_cong_complex_calc)
+
+// 8-calc: add_permute via a three-step chain (mirrors calc_three_step)
+//   (a + b) + c = a + (b + c)     by add_assoc(a, b, c)
+//   a + (b + c) = a + (c + b)     by cong(x => a + x, add_comm(b, c))
+//   a + (c + b) = (a + c) + b     by symm(add_assoc(a, c, b))
+def add_permute_calc(a: Nat, b: Nat, c: Nat): Eq((a + b) + c, (a + c) + b) =
+    calc {
+        (a + b) + c = a + (b + c) by add_assoc(a, b, c)
+        a + (b + c) = a + (c + b) by cong(x => a + x, add_comm(b, c))
+        a + (c + b) = (a + c) + b by symm(add_assoc(a, c, b))
+    }
+
+println(add_permute_calc(1, 2, 3))
+
+// 10-calc: subst_eg via the same trans(add_zero_right(5), rfl) chain
+//   5 + 0 = 5 by add_zero_right(5)
+//   5     = 5 by rfl
+def subst_eg_calc: Eq(5 + 0, 5) =
+    calc {
+        5 + 0 = 5 by add_zero_right(5)
+        5 = 5 by rfl
+    }
+
+println(subst_eg_calc)
+// The \`calc\` block swallows the newline after its closing \`}\` (the macro
+// literal-token matcher skips one EndLine, see docs/calc-reasoning-design.md
+// 9.3), so the declaration loop cannot sync on a trailing println at EOF.
+// Re-printing the original here gives the parser its final sync point and
+// verifies that the calc variant prints exactly the same value.
+println(subst_eg)
+
 `
           ),
           (e.file_typeclass_complex =
@@ -1926,36 +2010,36 @@ def add_right_eq(a: Nat, b: Nat, c: Nat, h: Eq a b): Eq (a + c) (b + c) =
     match c {
         case zero =>
             let r: Eq (a + 0) (b + 0) = calc {
-                a + 0 = [add_zero_right(a)] a
-                a = [h] b
-                b = [symm(add_zero_right(b))] b + 0
+                a + 0 = a by add_zero_right(a)
+                a = b by h
+                b = b + 0 by symm(add_zero_right(b))
             };
             r
         case succ(k) => let ih = add_right_eq(a, b, k, h);
             calc {
-                a + succ(k) = [add_succ_right(a, k)] succ(a + k)
-                succ(a + k) = [cong_succ(ih)] succ(b + k)
-                succ(b + k) = [symm(add_succ_right(b, k))] b + succ(k)
+                a + succ(k) = succ(a + k) by add_succ_right(a, k)
+                succ(a + k) = succ(b + k) by cong_succ(ih)
+                succ(b + k) = b + succ(k) by symm(add_succ_right(b, k))
             }
     }
 
 // add_left_eq: a = b → c + a = c + b (congruence on the left operand, via add_comm)
 def add_left_eq(a: Nat, b: Nat, c: Nat, h: Eq a b): Eq (c + a) (c + b) =
     calc {
-        c + a = [add_comm(c, a)] a + c
-        a + c = [add_right_eq(a, b, c, h)] b + c
-        b + c = [symm(add_comm(c, b))] c + b
+        c + a = a + c by add_comm(c, a)
+        a + c = b + c by add_right_eq(a, b, c, h)
+        b + c = c + b by symm(add_comm(c, b))
     }
 
 // double_distrib: double(x + y) = double(x) + double(y)
 // double(n) is defined as n + n, so this is a chain of assoc/comm rewrites.
 def double_distrib(x: Nat, y: Nat): Eq (double(x + y)) (double(x) + double(y)) =
     calc {
-        double(x + y) = [symm(add_assoc(x + y, x, y))] ((x + y) + x) + y
-        ((x + y) + x) + y = [add_right_eq((x + y) + x, x + (y + x), y, add_assoc(x, y, x))] (x + (y + x)) + y
-        (x + (y + x)) + y = [add_right_eq(x + (y + x), x + (x + y), y, add_left_eq(y + x, x + y, x, add_comm(y, x)))] (x + (x + y)) + y
-        (x + (x + y)) + y = [add_right_eq(x + (x + y), (x + x) + y, y, symm(add_assoc(x, x, y)))] ((x + x) + y) + y
-        ((x + x) + y) + y = [add_assoc(x + x, y, y)] (x + x) + (y + y)
+        double(x + y) = ((x + y) + x) + y by symm(add_assoc(x + y, x, y))
+        ((x + y) + x) + y = (x + (y + x)) + y by add_right_eq((x + y) + x, x + (y + x), y, add_assoc(x, y, x))
+        (x + (y + x)) + y = (x + (x + y)) + y by add_right_eq(x + (y + x), x + (x + y), y, add_left_eq(y + x, x + y, x, add_comm(y, x)))
+        (x + (x + y)) + y = ((x + x) + y) + y by add_right_eq(x + (x + y), (x + x) + y, y, symm(add_assoc(x, x, y)))
+        ((x + x) + y) + y = (x + x) + (y + y) by add_assoc(x + x, y, y)
     }
 
 // double_mul: double(x) * z = double(x * z) — by induction on z
@@ -1964,8 +2048,8 @@ def double_mul(x: Nat, z: Nat): Eq(double(x)*z, double(x*z)) =
         case zero => rfl
         case succ(n) => let ih = double_mul(x, n);
             calc {
-                double(x) + double(x)*n = [add_left_eq(double(x)*n, double(x*n), double(x), ih)] double(x) + double(x*n)
-                double(x) + double(x*n) = [symm(double_distrib(x, x*n))] double(x + x*n)
+                double(x) + double(x)*n = double(x) + double(x*n) by add_left_eq(double(x)*n, double(x*n), double(x), ih)
+                double(x) + double(x*n) = double(x + x*n) by symm(double_distrib(x, x*n))
             }
     }
 
@@ -2008,9 +2092,9 @@ def add1_left(a: Nat, b: Nat): Eq ((a + b) + 1) ((a + 1) + b) = symm(add_succ_le
 def double_step(m: Nat, sum_x: Nat, carry_s: Nat, result_r: Nat, h: Eq (sum_x + pow2(m) * carry_s) result_r):
     Eq (double(sum_x) + double(pow2(m)) * carry_s) (double(result_r)) =
     calc {
-        double(sum_x) + double(pow2(m)) * carry_s = [add_left_eq(double(pow2(m)) * carry_s, double(pow2(m) * carry_s), double(sum_x), ps_mul(m, carry_s))] double(sum_x) + double(pow2(m) * carry_s)
-        double(sum_x) + double(pow2(m) * carry_s) = [symm(double_distrib(sum_x, pow2(m) * carry_s))] double(sum_x + pow2(m) * carry_s)
-        double(sum_x + pow2(m) * carry_s) = [cong(double, h)] double(result_r)
+        double(sum_x) + double(pow2(m)) * carry_s = double(sum_x) + double(pow2(m) * carry_s) by add_left_eq(double(pow2(m)) * carry_s, double(pow2(m) * carry_s), double(sum_x), ps_mul(m, carry_s))
+        double(sum_x) + double(pow2(m) * carry_s) = double(sum_x + pow2(m) * carry_s) by symm(double_distrib(sum_x, pow2(m) * carry_s))
+        double(sum_x + pow2(m) * carry_s) = double(result_r) by cong(double, h)
     }
 
 // add1_step: if sum_x + pow2(m)*carry_s = result_r
@@ -2019,8 +2103,8 @@ def double_step(m: Nat, sum_x: Nat, carry_s: Nat, result_r: Nat, h: Eq (sum_x + 
 def add1_step(m: Nat, sum_x: Nat, carry_s: Nat, result_r: Nat, h: Eq (sum_x + pow2(m) * carry_s) result_r):
     Eq ((double(sum_x) + 1) + double(pow2(m)) * carry_s) (double(result_r) + 1) =
     calc {
-        (double(sum_x) + 1) + double(pow2(m)) * carry_s = [symm(add1_left(double(sum_x), double(pow2(m)) * carry_s))] (double(sum_x) + double(pow2(m)) * carry_s) + 1
-        (double(sum_x) + double(pow2(m)) * carry_s) + 1 = [add_right_eq(double(sum_x) + double(pow2(m)) * carry_s, double(result_r), 1, double_step(m, sum_x, carry_s, result_r, h))] double(result_r) + 1
+        (double(sum_x) + 1) + double(pow2(m)) * carry_s = (double(sum_x) + double(pow2(m)) * carry_s) + 1 by symm(add1_left(double(sum_x), double(pow2(m)) * carry_s))
+        (double(sum_x) + double(pow2(m)) * carry_s) + 1 = double(result_r) + 1 by add_right_eq(double(sum_x) + double(pow2(m)) * carry_s, double(result_r), 1, double_step(m, sum_x, carry_s, result_r, h))
     }
 
 // add1_step2: like add1_step, but the target is written as the sum of
@@ -2028,8 +2112,8 @@ def add1_step(m: Nat, sum_x: Nat, carry_s: Nat, result_r: Nat, h: Eq (sum_x + po
 def add1_step2(m: Nat, sum_x: Nat, carry_s: Nat, nat_a: Nat, nat_b: Nat, ih: Eq (sum_x + pow2(m) * carry_s) (nat_a + nat_b)):
     Eq ((double(sum_x) + 1) + double(pow2(m)) * carry_s) ((double(nat_a) + double(nat_b)) + 1) =
     calc {
-        (double(sum_x) + 1) + double(pow2(m)) * carry_s = [add1_step(m, sum_x, carry_s, nat_a + nat_b, ih)] double(nat_a + nat_b) + 1
-        double(nat_a + nat_b) + 1 = [add_right_eq(double(nat_a + nat_b), double(nat_a) + double(nat_b), 1, double_distrib(nat_a, nat_b))] (double(nat_a) + double(nat_b)) + 1
+        (double(sum_x) + 1) + double(pow2(m)) * carry_s = double(nat_a + nat_b) + 1 by add1_step(m, sum_x, carry_s, nat_a + nat_b, ih)
+        double(nat_a + nat_b) + 1 = (double(nat_a) + double(nat_b)) + 1 by add_right_eq(double(nat_a + nat_b), double(nat_a) + double(nat_b), 1, double_distrib(nat_a, nat_b))
     }
 
 // ============================================================
@@ -2098,33 +2182,33 @@ def vec_adder_correct[n: Nat](ci: Boolean, a: Vec[Boolean] n, b: Vec[Boolean] n)
                     case (false, false, false) =>
                         let ret: Eq(s1, double_a + double_b) =
                             calc {
-                                double(sum_x) + double(pow2(m)) * carry_s = [double_step(m, sum_x, carry_s, result_r, ih)] double(nat_a + nat_b)
-                                double(nat_a + nat_b) = [double_distrib(nat_a, nat_b)] double(nat_a) + double(nat_b)
+                                double(sum_x) + double(pow2(m)) * carry_s = double(nat_a + nat_b) by double_step(m, sum_x, carry_s, result_r, ih)
+                                double(nat_a + nat_b) = double(nat_a) + double(nat_b) by double_distrib(nat_a, nat_b)
                             };
                         ret
                     // (F,F,T): sum=1, co=0 — the +1 lands on the right half
                     case (false, false, true) =>
                         let ret: Eq(s2, double_a + (double_b + 1)) =
                             calc {
-                                (double(sum_x) + 1) + double(pow2(m)) * carry_s = [add1_step2(m, sum_x, carry_s, nat_a, nat_b, ih)] (double(nat_a) + double(nat_b)) + 1
-                                (double(nat_a) + double(nat_b)) + 1 = [add_assoc(double_a, double_b, 1)] double(nat_a) + (double(nat_b) + 1)
+                                (double(sum_x) + 1) + double(pow2(m)) * carry_s = (double(nat_a) + double(nat_b)) + 1 by add1_step2(m, sum_x, carry_s, nat_a, nat_b, ih)
+                                (double(nat_a) + double(nat_b)) + 1 = double(nat_a) + (double(nat_b) + 1) by add_assoc(double_a, double_b, 1)
                             };
                         ret
                     // (F,T,F): sum=1, co=0 — the +1 lands on the left half
                     case (false, true, false) =>
                         let ret: Eq(s2, (double_a + 1) + double_b) =
                             calc {
-                                (double(sum_x) + 1) + double(pow2(m)) * carry_s = [add1_step2(m, sum_x, carry_s, nat_a, nat_b, ih)] (double(nat_a) + double(nat_b)) + 1
-                                (double(nat_a) + double(nat_b)) + 1 = [add1_left(double_a, double_b)] (double(nat_a) + 1) + double(nat_b)
+                                (double(sum_x) + 1) + double(pow2(m)) * carry_s = (double(nat_a) + double(nat_b)) + 1 by add1_step2(m, sum_x, carry_s, nat_a, nat_b, ih)
+                                (double(nat_a) + double(nat_b)) + 1 = (double(nat_a) + 1) + double(nat_b) by add1_left(double_a, double_b)
                             };
                         ret
                     // (F,T,T): sum=0, co=1 — both +1s merge into +2, carried one column up
                     case (false, true, true) =>
                         let ret: Eq(s1, (double_a + 1) + (double_b + 1)) =
                             calc {
-                                double(sum_x) + double(pow2(m)) * carry_s = [double_step(m, sum_x, carry_s, result_r + 1, ih)] double(result_r + 1)
-                                double(nat_a + nat_b + 1) = [double_add_one(nat_a, nat_b)] double(nat_a) + double(nat_b) + 2
-                                double(nat_a) + double(nat_b) + 2 = [symm(add_succ_succ(double_a, double_b))] (double(nat_a) + 1) + (double(nat_b) + 1)
+                                double(sum_x) + double(pow2(m)) * carry_s = double(result_r + 1) by double_step(m, sum_x, carry_s, result_r + 1, ih)
+                                double(nat_a + nat_b + 1) = double(nat_a) + double(nat_b) + 2 by double_add_one(nat_a, nat_b)
+                                double(nat_a) + double(nat_b) + 2 = (double(nat_a) + 1) + (double(nat_b) + 1) by symm(add_succ_succ(double_a, double_b))
                             };
                         ret
                     // (T,F,F): sum=1, co=0 — the input carry supplies the +1 directly
@@ -2133,26 +2217,26 @@ def vec_adder_correct[n: Nat](ci: Boolean, a: Vec[Boolean] n, b: Vec[Boolean] n)
                     case (true, false, true) =>
                         let ret: Eq(s1, double_a + (double_b + 1) + 1) =
                             calc {
-                                double(sum_x) + double(pow2(m)) * carry_s = [double_step(m, sum_x, carry_s, result_r + 1, ih)] double(result_r + 1)
-                                double(nat_a + nat_b + 1) = [double_add_one(nat_a, nat_b)] double(nat_a) + double(nat_b) + 2
-                                double(nat_a) + double(nat_b) + 2 = [symm(rearrange2_r(double_a, double_b))] double(nat_a) + (double(nat_b) + 1) + 1
+                                double(sum_x) + double(pow2(m)) * carry_s = double(result_r + 1) by double_step(m, sum_x, carry_s, result_r + 1, ih)
+                                double(nat_a + nat_b + 1) = double(nat_a) + double(nat_b) + 2 by double_add_one(nat_a, nat_b)
+                                double(nat_a) + double(nat_b) + 2 = double(nat_a) + (double(nat_b) + 1) + 1 by symm(rearrange2_r(double_a, double_b))
                             };
                         ret
                     // (T,T,F): sum=0, co=1 — same, with the carried 2 in the middle
                     case (true, true, false) =>
                         let ret: Eq(s1, (double_a + 1) + double_b + 1) =
                             calc {
-                                double(sum_x) + double(pow2(m)) * carry_s = [double_step(m, sum_x, carry_s, result_r + 1, ih)] double(result_r + 1)
-                                double(nat_a + nat_b + 1) = [double_add_one(nat_a, nat_b)] double(nat_a) + double(nat_b) + 2
-                                double(nat_a) + double(nat_b) + 2 = [symm(rearrange3_r(double_a, double_b))] (double(nat_a) + 1) + double(nat_b) + 1
+                                double(sum_x) + double(pow2(m)) * carry_s = double(result_r + 1) by double_step(m, sum_x, carry_s, result_r + 1, ih)
+                                double(nat_a + nat_b + 1) = double(nat_a) + double(nat_b) + 2 by double_add_one(nat_a, nat_b)
+                                double(nat_a) + double(nat_b) + 2 = (double(nat_a) + 1) + double(nat_b) + 1 by symm(rearrange3_r(double_a, double_b))
                             };
                         ret
                     // (T,T,T): sum=1, co=1 — both +1s and the carry: +2 shifted up, +1 kept
                     case (true, true, true) =>
                         let ret: Eq(s2, ((double_a + 1) + (double_b + 1)) + 1) =
                             calc {
-                                (double(sum_x) + 1) + double(pow2(m)) * carry_s = [add1_step(m, sum_x, carry_s, result_r + 1, ih)] double(result_r + 1) + 1
-                                double(nat_a + nat_b + 1) + 1 = [add_right_eq(double(nat_a + nat_b + 1), (double_a + 1) + (double_b + 1), 1, trans(double_add_one(nat_a, nat_b), symm(add_succ_succ(double_a, double_b))))] ((double(nat_a) + 1) + (double(nat_b) + 1)) + 1
+                                (double(sum_x) + 1) + double(pow2(m)) * carry_s = double(result_r + 1) + 1 by add1_step(m, sum_x, carry_s, result_r + 1, ih)
+                                double(nat_a + nat_b + 1) + 1 = ((double(nat_a) + 1) + (double(nat_b) + 1)) + 1 by add_right_eq(double(nat_a + nat_b + 1), (double_a + 1) + (double_b + 1), 1, trans(double_add_one(nat_a, nat_b), symm(add_succ_succ(double_a, double_b))))
                             };
                         ret
                 }
@@ -2176,8 +2260,8 @@ def to_nat_snoc[len: Nat](v: Vec[Boolean] len, x: Boolean):
             // head bit 0, appended bit 1: the weight 2^(k+1) is the doubled tail
             case (cons(false, ys), true) =>
                 let r: Eq (double(to_nat(snoc(ys, true)))) (double(to_nat(ys)) + double(pow2(k))) = calc {
-                    double(to_nat(snoc(ys, true))) = [cong(double, to_nat_snoc(ys, true))] double(to_nat(ys) + pow2(k) * bool_to_nat(true))
-                    double(to_nat(ys) + pow2(k) * bool_to_nat(true)) = [double_distrib(to_nat(ys), pow2(k))] double(to_nat(ys)) + double(pow2(k))
+                    double(to_nat(snoc(ys, true))) = double(to_nat(ys) + pow2(k) * bool_to_nat(true)) by cong(double, to_nat_snoc(ys, true))
+                    double(to_nat(ys) + pow2(k) * bool_to_nat(true)) = double(to_nat(ys)) + double(pow2(k)) by double_distrib(to_nat(ys), pow2(k))
                 };
                 r
             // head bit 1, appended bit 0: double + 1
@@ -2186,8 +2270,8 @@ def to_nat_snoc[len: Nat](v: Vec[Boolean] len, x: Boolean):
             // head bit 1, appended bit 1: (2*tail + 1) + 2^(k+1) = 2*(tail + 2^k) + 1
             case (cons(true, ys), true) =>
                 calc {
-                    succ(double(to_nat(snoc(ys, true)))) = [cong_succ(cong(double, to_nat_snoc(ys, true)))] succ(double(to_nat(ys) + pow2(k) * bool_to_nat(true)))
-                    double(to_nat(ys) + pow2(k)) + 1 = [symm(add1_step(k, to_nat(ys), 1, to_nat(ys) + pow2(k), rfl))] (double(to_nat(ys)) + 1) + double(pow2(k))
+                    succ(double(to_nat(snoc(ys, true)))) = succ(double(to_nat(ys) + pow2(k) * bool_to_nat(true))) by cong_succ(cong(double, to_nat_snoc(ys, true)))
+                    double(to_nat(ys) + pow2(k)) + 1 = (double(to_nat(ys)) + 1) + double(pow2(k)) by symm(add1_step(k, to_nat(ys), 1, to_nat(ys) + pow2(k), rfl))
                 }
         }
     }
@@ -2200,8 +2284,8 @@ def to_nat_snoc[len: Nat](v: Vec[Boolean] len, x: Boolean):
 def vec_add_correct[len: Nat](a: Vec[Boolean] len, b: Vec[Boolean] len):
     Eq(to_nat(vec_add(a, b)), to_nat(a) + to_nat(b)) =
     calc {
-        to_nat(vec_add(a, b)) = [to_nat_snoc(vec_adder(false, a, b)._1, vec_adder(false, a, b)._2)] to_nat(vec_adder(false, a, b)._1) + pow2(len) * bool_to_nat(vec_adder(false, a, b)._2)
-        to_nat(vec_adder(false, a, b)._1) + pow2(len) * bool_to_nat(vec_adder(false, a, b)._2) = [vec_adder_correct(false, a, b)] to_nat(a) + to_nat(b) + bool_to_nat(false)
+        to_nat(vec_add(a, b)) = to_nat(vec_adder(false, a, b)._1) + pow2(len) * bool_to_nat(vec_adder(false, a, b)._2) by to_nat_snoc(vec_adder(false, a, b)._1, vec_adder(false, a, b)._2)
+        to_nat(vec_adder(false, a, b)._1) + pow2(len) * bool_to_nat(vec_adder(false, a, b)._2) = to_nat(a) + to_nat(b) + bool_to_nat(false) by vec_adder_correct(false, a, b)
     }
 
 // ============================================================
