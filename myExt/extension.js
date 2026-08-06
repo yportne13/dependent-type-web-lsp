@@ -403,6 +403,16 @@
                 n.Uri.parse('memfs:/sample-folder/adder_proof.typort'),
                 a.encode(s.file_adder_proof),
                 { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/11-memory.typort'),
+                a.encode(s.file_hdl_11_memory),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/12-adder-tree.typort'),
+                a.encode(s.file_hdl_12_adder_tree),
+                { create: !0, overwrite: !0 }
               );
           }
           stat(t) {
@@ -2303,7 +2313,197 @@ println("=== adder_proof.typort loaded ===")
 
 `
           ),
-          (e.debuggableFile =
+                    (e.file_hdl_11_memory =
+            `
+
+// ============================================================
+// HDL Example 11: 内存 (Memory)
+//
+//   let myRam = memUInt(8, 64)      64 × 8 位内存（自动命名）
+//   let myBits = memBits(4, 16)     16 × 4 位内存
+//   let myFlag = memBool(16)        16 个 1 位标志位
+//   myRam.write(addr, data, en)     同步写端口
+//   let rd = myRam.readSync(addr)   同步读（生成寄存器，按 bn 命名）
+//   let rd = myRam.readAsync(addr)  组合读（返回 mem[addr] 表达式）
+//   let rd = myRam.readSyncCC(addr, cd) 跨时钟域读
+//
+// NOTE: debug（cargo test）构建对 module 体内的大 Nat 字面量有栈深度限制
+// （与 Mem 无关，\`createWidth("x", 256)\` 同样触发）；发布构建无此问题。
+// ============================================================
+
+module memWriteRead {
+    let myRam = memUInt(8, 64)
+    let addr = UInt[8]
+    let d = UInt[8]
+    let en = Bool
+    myRam.write(addr, d, en)
+    let rd = myRam.readSync(addr)
+}
+println("=== 11a: memWriteRead (同步写 + 同步读) ===")
+println(moduleTreeVL(memWriteRead.create.tree))
+
+module memAsyncRead {
+    let myRam = memUInt(8, 32)
+    let addr = UInt[8]
+    let rd = myRam.readAsync(addr)
+    let out = UInt[8]
+    out := rd
+}
+println("=== 11b: memAsyncRead (组合读) ===")
+println(moduleTreeVL(memAsyncRead.create.tree))
+
+module memMixedTypes {
+    let myBits = memBits(4, 16)
+    let baddr = UInt[8]
+    let bd = Bits[4]
+    myBits.write(baddr, bd, Bool.mk(None, literal(1)))
+    let brd = myBits.readSync(baddr)
+
+    let myFlag = memBool(16)
+    let faddr = UInt[8]
+    let fd = Bool
+    let fen = Bool
+    myFlag.write(faddr, fd, fen)
+    let frd = myFlag.readSync(faddr)
+}
+println("=== 11c: memMixedTypes (Bits/Bool 内存) ===")
+println(moduleTreeVL(memMixedTypes.create.tree))
+
+module memReadInWhen {
+    let myRam = memUInt(8, 16)
+    let addr = UInt[8]
+    let d = UInt[8]
+    let en = Bool
+    when en {
+        myRam.write(addr, d, en)
+    }
+}
+println("=== 11d: memReadInWhen (when 内写内存) ===")
+println(moduleTreeVL(memReadInWhen.create.tree))
+
+`
+          ),
+          (e.file_hdl_12_adder_tree =
+            `
+
+// ============================================================
+// HDL Example 12: 加法树 (Adder Tree) — 位宽随深度增长
+//
+//   对 Vec[UInt[w]] 构造加法树：
+//     adder_tree_step  一层：相邻元素两两 (a +^ b)，奇数个时末元素
+//                      补一个 0 位（Bool ## UInt 加宽 1 位）
+//     adder_tree       递归合并到只剩 1 个元素
+//   结果位宽 = w + log2Up(size)（size ≥ 1，log2Up = ceil(log2)）
+//
+//   递归产生的位宽是嵌套公式（w + log2Up (div2Up (len + 1) + 1)
+//   这种形状），最终用 .cast + Eq 证明（core/eq.typort 的 Cast
+//   trait）把它精确地变成 w + log2Up size：
+//     def cast(prove: Eq(Self, U)): U
+//   UInt 不再有自己特殊的 cast（旧的 Le 证明版本已删除），一切
+//   类型转换都走这个等宽证明。
+// ============================================================
+
+// 奇数个元素时，把最后那个元素补一个 0 位：
+// Bool ## UInt[width] : UInt[width + 1]（hdl-ops.typort 的 Cat 实现）
+def widenOne[width: Nat](x: UInt[width]): UInt[width + 1] =
+    Bool.mk(None, literal(0)) ## x
+
+// 一层加法树：相邻元素用 +^（结果位宽 +1）。
+// len 个元素配对后剩 div2Up len 个（div2Up = ceil(len/2)，hdl-core.typort）。
+def adder_tree_step[width: Nat, len: Nat](x: Vec[UInt[width]] len): Vec[UInt[width + 1]] (div2Up len) =
+    match x {
+        case cons(a, cons(b, tail)) => (a +^ b) :: (adder_tree_step tail)
+        case cons(a, nil) => (widenOne a) :: nil
+        case nil => nil
+    }
+
+// ---- 位宽引理（calc 形式）----
+// 递归一步后位宽 +1 出现在类型的最外层括号：
+//   (width + 1) + log2Up len   （递归调用的结果位宽）
+//   (width + log2Up len) + 1   （把它“挪进”log2Up 之后）
+// 两者定义性相等（Nat 加法对第二个参数归纳），核心一步是
+// add_succ_left： (succ width) + L = succ (width + L)。
+def uint_cast_prove[width: Nat, len: Nat]: Eq (UInt[(width + 1) + (log2Up len)]) (UInt[(width + (log2Up len)) + 1]) =
+    calc {
+        UInt[(width + 1) + (log2Up len)] = UInt[(width + (log2Up len)) + 1] by cong (t => UInt[t]) (add_succ_left (width) (log2Up len))
+    }
+
+// 用 Eq 证明做等宽转换的小助手：就是 core/eq.typort 的 Cast trait 的
+// .cast（def cast(prove: Eq(Self, U)): U），套上一层命名参数是为了
+// 在顶层作用域调用——在 match 分支深处直接写 \`t.cast (uint_cast_prove[width])\`
+// 会让 trait 实例元变量带着不完整的作用域 spine 悬空（编译器 bug，
+// 顶层 no_metas 检查时越界）。转换本身没有任何特殊 cast。
+def cast_uint[width: Nat, len: Nat](t: UInt[(width + 1) + (log2Up len)]): UInt[(width + (log2Up len)) + 1] =
+    t.cast (uint_cast_prove[width])
+
+// 完整加法树：输入至少 1 个元素（Vec[UInt[w]] (len + 1)），
+// 结果位宽 w + log2Up (len + 1) = w + log2Up size。
+//
+// 递归分支：
+//   1) 只剩 1 个元素（len = 0）：直接返回，位宽 w + log2Up 1 = w。
+//   2) 至少 2 个元素：先做一层配对（adder_tree_step），再递归；
+//      递归结果的位宽是 (w + 1) + log2Up (div2Up (len + 1) + 1) 这种
+//      嵌套公式，cast_uint 用 uint_cast_prove 把它证明成目标位宽
+//      w + log2Up (len + 1)（div2Up/log2Up 的递归定义性归约在
+//      unifier 里闭合，证明本身只负责外层加法重排）。
+def adder_tree[width: Nat, len: Nat](x: Vec[UInt[width]] (len + 1)): UInt[width + log2Up (len + 1)] =
+    match x {
+        case cons(a, nil) => a
+        case cons(a, cons(b, tail)) =>
+            let t = adder_tree[width = width + 1] (adder_tree_step x);
+            cast_uint t
+    }
+
+// ============================================================
+// 使用示例：8 个 UInt[8] 输入 → UInt[8 + log2Up 8] = UInt[11]
+// ============================================================
+
+module adderTree8 {
+    let a0 = UInt[8]
+    let a1 = UInt[8]
+    let a2 = UInt[8]
+    let a3 = UInt[8]
+    let a4 = UInt[8]
+    let a5 = UInt[8]
+    let a6 = UInt[8]
+    let a7 = UInt[8]
+    let sum = UInt[11]
+    sum := adder_tree (a0 :: a1 :: a2 :: a3 :: a4 :: a5 :: a6 :: a7 :: nil)
+}
+println("=== 12a: adderTree8 (8 x UInt[8] -> UInt[11]) ===")
+println(moduleTreeVL(adderTree8.create.tree))
+
+// 4 个 UInt[16] 输入 → UInt[16 + log2Up 4] = UInt[18]
+module adderTree4 {
+    let b0 = UInt[16]
+    let b1 = UInt[16]
+    let b2 = UInt[16]
+    let b3 = UInt[16]
+    let sum = UInt[18]
+    sum := adder_tree (b0 :: b1 :: b2 :: b3 :: nil)
+}
+println("=== 12b: adderTree4 (4 x UInt[16] -> UInt[18]) ===")
+println(moduleTreeVL(adderTree4.create.tree))
+
+// 3 个 UInt[8] 输入（奇数个，触发 widenOne 路径）→ UInt[8 + log2Up 3] = UInt[10]
+module adderTree3 {
+    let c0 = UInt[8]
+    let c1 = UInt[8]
+    let c2 = UInt[8]
+    let sum = UInt[10]
+    sum := adder_tree (c0 :: c1 :: c2 :: nil)
+}
+println("=== 12c: adderTree3 (3 x UInt[8] -> UInt[10], 奇数个元素) ===")
+println(moduleTreeVL(adderTree3.create.tree))
+
+// 运行时验证：log2Up 求值
+println(8 + (log2Up 8))
+println(16 + (log2Up 4))
+println(8 + (log2Up 3))
+
+`
+          ),
+(e.debuggableFile =
             "# VS Code Mock Debug\n\nThis is a starter sample for developing VS Code debug adapters.\n\n**Mock Debug** simulates a debug adapter for Visual Studio Code.\nIt supports *step*, *continue*, *breakpoints*, *exceptions*, and\n*variable access* but it is not connected to any real debugger.\n\nThe sample is meant as an educational piece showing how to implement a debug\nadapter for VS Code. It can be used as a starting point for developing a real adapter.\n\nMore information about how to develop a new debug adapter can be found\n[here](https://code.visualstudio.com/docs/extensions/example-debuggers).\nOr discuss debug adapters on Gitter:\n[![Gitter Chat](https://img.shields.io/badge/chat-online-brightgreen.svg)](https://gitter.im/Microsoft/vscode)\n\n## Using Mock Debug\n\n* Install the **Mock Debug** extension in VS Code.\n* Create a new 'program' file 'readme.md' and enter several lines of arbitrary text.\n* Switch to the debug viewlet and press the gear dropdown.\n* Select the debug environment \"Mock Debug\".\n* Press the green 'play' button to start debugging.\n\nYou can now 'step through' the 'readme.md' file, set and hit breakpoints, and run into exceptions (if the word exception appears in a line).\n\n![Mock Debug](file.jpg)\n\n## Build and Run\n\n[![build status](https://travis-ci.org/Microsoft/vscode-mock-debug.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-mock-debug)\n[![build status](https://ci.appveyor.com/api/projects/status/empmw5q1tk6h1fly/branch/master?svg=true)](https://ci.appveyor.com/project/weinand/vscode-mock-debug)\n\n\n* Clone the project [https://github.com/Microsoft/vscode-mock-debug.git](https://github.com/Microsoft/vscode-mock-debug.git)\n* Open the project folder in VS Code.\n* Press 'F5' to build and launch Mock Debug in another VS Code window. In that window:\n* Open a new workspace, create a new 'program' file 'readme.md' and enter several lines of arbitrary text.\n* Switch to the debug viewlet and press the gear dropdown.\n* Select the debug environment \"Mock Debug\".\n* Press 'F5' to start debugging."),
           (e.getImageFile = function () {
             const t = atob(
