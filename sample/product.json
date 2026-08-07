@@ -22,7 +22,7 @@
 	  "scheme": "memfs",
 	  "path": "/sample-folder"
 	},
-	"settings": {
+	"configurationDefaults": {
 	  "files.autoSave": "off"
 	},
 	"additionalBuiltinExtensions": [
