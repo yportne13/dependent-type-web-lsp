@@ -32,6 +32,11 @@ jobs:
           mv node_modules depend
           mv depend/vscode-web/dist/node_modules depend/vscode-web/dist/depend
 
+      - name: Slim unused builtin extensions (shrink web demo)
+        run: |
+          cd sample/
+          node slim-extensions.js
+
       - name: Patch product.json for GitHub Pages
         run: |
           cd sample/
