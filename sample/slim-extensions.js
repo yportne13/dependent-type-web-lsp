@@ -21,6 +21,7 @@ const path = require('path');
 const EXT_DIR = path.join(__dirname, 'depend', 'vscode-web', 'dist', 'extensions');
 
 // Extensions to remove (dir name == extension id).
+// Tier 1: full language services never activated by a .typort-only demo.
 const REMOVE = [
   'typescript-language-features', // 16M — tsserver language service
   'html-language-features',       // 7.1M
@@ -29,6 +30,48 @@ const REMOVE = [
   'css-language-features',        // 1.4M
   'markdown-math',                // 891K
   'latex',                        // 650K
+  // Tier 2: plain syntax-highlighting extensions for languages the demo
+  // never opens. Safe: vscode tolerates absent builtins (dir scan at startup).
+  'javascript',
+  'typescript-basics',
+  'objective-c',
+  'ipynb',
+  'php',
+  'swift',
+  'csharp',
+  'python',
+  'less',
+  'scss',
+  'perl',
+  'go',
+  'shellscript',
+  'ruby',
+  'julia',
+  'r',
+  'razor',
+  'java',
+  'fsharp',
+  'coffeescript',
+  'powershell',
+  'groovy',
+  'sql',
+  'yaml',
+  'rust',
+  'bat',
+  'xml',
+  'pug',
+  'handlebars',
+  'lua',
+  'vb',
+  'restructuredtext',
+  'make',
+  'shaderlab',
+  'hlsl',
+  'clojure',
+  'ini',
+  'dart',
+  'docker',
+  'log',
 ];
 
 if (!fs.existsSync(EXT_DIR)) {
@@ -45,4 +88,16 @@ for (const name of REMOVE) {
     removedDirs++;
   }
 }
-console.log('done: removed ' + removedDirs + ' extension dir(s)');
+
+// --- Also drop the language-detection model (1.5M). ---
+// Only used to auto-detect a file's language when it has no extension; the
+// demo opens .typort files only, so it never fires. Verified: workbench
+// tolerates its absence (no console errors).
+const LD = path.join(__dirname, 'depend', 'vscode-web', 'dist', 'depend', '@vscode', 'vscode-languagedetection');
+if (fs.existsSync(LD)) {
+  fs.rmSync(LD, { recursive: true, force: true });
+  console.log('  rm -rf depend/@vscode/vscode-languagedetection');
+  removedDirs++;
+}
+
+console.log('done: removed ' + removedDirs + ' item(s)');
