@@ -1880,28 +1880,43 @@ println(allModulesVL(buildMultiTree()))
 //   #[derive(Bundle)] struct ... — 自动生成：
 //     1. impl Bundle（字段级批量赋值 :=，自动跳过 input 端口 LHS）
 //     2. impl Into[Self]（供 Expr 宏使用）
-//     3. create_TypeName[bn: BindingName] — 自动命名信号工厂
+//     3. TypeName.create[bn: BindingName] — 自动命名信号工厂
 //        （let 绑定名 + "_" + 字段名，如 master 的 awaddr → "master_awaddr"）
-//     4. asMaster / asSlave — 方向化实例方法（SpinalHDL 语义）
-//        （字段带 in()/out() 标记时生成：asMaster 把驱动字段做成 output
-//        端口、接收字段做成 input 端口，asSlave 反之）
+//
+//   字段不带方向标记（struct 里没有 in()/out()）；方向在
+//   impl IMasterSlave 时引入（SpinalHDL 语义）：
+//     4. impl IMasterSlave for X — asMaster 里用 in()/out()/inout()
+//        声明每个字段从 master 视角的方向；asSlave 由 asMaster 自动翻转。
 //
 //   master := slave  批量赋值（逐字段 assign）
 // ============================================================
 
 #[derive(Bundle)]
 struct AxiLite {
-    awaddr: out(UInt[32])
-    awvalid: out(Bool)
-    awready: in(Bool)
-    wdata: out(UInt[32])
-    wvalid: out(Bool)
-    wready: in(Bool)
+    awaddr: UInt[32]
+    awvalid: Bool
+    awready: Bool
+    wdata: UInt[32]
+    wvalid: Bool
+    wready: Bool
+}
+
+// 方向在此引入：awaddr/awvalid/wdata/wvalid 由 master 驱动（out），
+// awready/wready 由 master 接收（in）。asSlave 自动生成（方向翻转）。
+impl IMasterSlave for AxiLite {
+    def asMaster: AxiLite =
+        let _ = out(this.awaddr);
+        let _ = out(this.awvalid);
+        let _ = in(this.awready);
+        let _ = out(this.wdata);
+        let _ = out(this.wvalid);
+        let _ = in(this.wready);
+        this
 }
 
 module bundleTop {
-    let master = create_AxiLite
-    let slave = create_AxiLite
+    let master = AxiLite.create
+    let slave = AxiLite.create
     master := slave
 }
 println("=== 10a: bundleTop (derive(Bundle) 批量赋值) ===")
@@ -1915,26 +1930,75 @@ struct MyBus[w: Nat] {
 }
 
 module bundleParam {
-    let bus1 = create_MyBus[8]
-    let bus2 = create_MyBus[8]
+    let bus1 = MyBus.create[8]
+    let bus2 = MyBus.create[8]
     bus1 := bus2
 }
 println("=== 10b: bundleParam (参数化 Bundle) ===")
 println(moduleTreeVL(bundleParam.create.tree))
 
-// master/slave 方向化：同一个 AxiLite，字段方向用 in()/out() 标记
-// （master 视角）。create_AxiLite.asMaster 把驱动字段做成 output 端口、
-// 接收字段做成 input 端口；asSlave 反之 —— 与 SpinalHDL 的
+// master/slave 方向化：同一个 AxiLite，方向来自 impl IMasterSlave 的
+// asMaster 规范（master 视角）。AxiLite.create.asMaster 把 out 字段做成
+// output 端口、in 字段做成 input 端口；asSlave 反之 —— 与 SpinalHDL 的
 // AxiLite4().asMaster() / .asSlave() 一致。:= 只驱动可驱动字段（跳过
 // input 端口），因此 master/slave 可以双向对连成一个 AXI pass-through。
 module bundleMasterSlave {
-    let master = create_AxiLite.asMaster
-    let slave = create_AxiLite.asSlave
+    let master = AxiLite.create.asMaster
+    let slave = AxiLite.create.asSlave
     master := slave
     slave := master
 }
 println("=== 10c: bundleMasterSlave (master/slave 方向化端口) ===")
 println(moduleTreeVL(bundleMasterSlave.create.tree))
+
+// 嵌套 Bundle:OuterBus.create 递归创建 inner(InnerBus.create[bn] 显式传
+// 绑定名),命名链延续——let outer = OuterBus.create 得到
+// outer_value / outer_strobe / outer_ready;\`:=\` 同样递归逐字段赋值。
+#[derive(Bundle)]
+struct InnerBus {
+    value: UInt[8]
+    strobe: Bool
+}
+
+#[derive(Bundle)]
+struct OuterBus {
+    inner: InnerBus
+    ready: Bool
+}
+
+module bundleNested {
+    let outer1 = OuterBus.create
+    let outer2 = OuterBus.create
+    outer1 := outer2
+}
+println("=== 10d: bundleNested (嵌套 Bundle) ===")
+println(moduleTreeVL(bundleNested.create.tree))
+
+// 嵌套方向化(Axi4 ⊃ Axi4AW 风格):子 bundle 自己实现 IMasterSlave,
+// 父的 asMaster 里 out(this.inner) 让整个子 bundle 按自己的 asMaster
+// 方向创建、in(this.ready) 反之;命名链延续(master_value 等)。
+impl IMasterSlave for InnerBus {
+    def asMaster: InnerBus =
+        let _ = out(this.value);
+        let _ = out(this.strobe);
+        this
+}
+
+impl IMasterSlave for OuterBus {
+    def asMaster: OuterBus =
+        let _ = out(this.inner);
+        let _ = in(this.ready);
+        this
+}
+
+module bundleNestedMasterSlave {
+    let master = OuterBus.create.asMaster
+    let slave  = OuterBus.create.asSlave
+    master := slave
+    slave := master
+}
+println("=== 10e: bundleNestedMasterSlave (嵌套方向化) ===")
+println(moduleTreeVL(bundleNestedMasterSlave.create.tree))
 
 `
           ),
