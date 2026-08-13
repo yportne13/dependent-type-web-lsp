@@ -1886,7 +1886,8 @@ println(allModulesVL(buildMultiTree()))
 //   字段不带方向标记（struct 里没有 in()/out()）；方向在
 //   impl IMasterSlave 时引入（SpinalHDL 语义）：
 //     4. impl IMasterSlave for X — asMaster 里用 in()/out()/inout()
-//        声明每个字段从 master 视角的方向；asSlave 由 asMaster 自动翻转。
+//        声明每个字段从 master 视角的方向；asSlave 由 asMaster 自动翻转；
+//        嵌套 bundle 字段用 out/in 递归子 bundle 的方向（见 10e）。
 //
 //   master := slave  批量赋值（逐字段 assign）
 // ============================================================
@@ -1945,8 +1946,7 @@ println(moduleTreeVL(bundleParam.create.tree))
 module bundleMasterSlave {
     let master = AxiLite.create.asMaster
     let slave = AxiLite.create.asSlave
-    master := slave
-    slave := master
+    master <> slave
 }
 println("=== 10c: bundleMasterSlave (master/slave 方向化端口) ===")
 println(moduleTreeVL(bundleMasterSlave.create.tree))
@@ -1994,8 +1994,7 @@ impl IMasterSlave for OuterBus {
 module bundleNestedMasterSlave {
     let master = OuterBus.create.asMaster
     let slave  = OuterBus.create.asSlave
-    master := slave
-    slave := master
+    master <> slave
 }
 println("=== 10e: bundleNestedMasterSlave (嵌套方向化) ===")
 println(moduleTreeVL(bundleNestedMasterSlave.create.tree))
