@@ -1377,6 +1377,11 @@ println(moduleTreeVL(concatExample.create.tree))
 //   reg     — 寄存器
 //   auto*   — BindingName 自动命名（信号名 = let 绑定名）
 //
+//   let x = a + b — 表达式 let 也生成命名 wire（LetNamed）：
+//                   wire [7:0] x; assign x = (a + b);
+//                   后续使用引用 x，不再内联表达式。
+//                   已声明信号（工厂产物/端口）的 let 是纯别名，不额外建 wire。
+//
 // 模块可参数化宽度：module name[w: Nat]
 // ============================================================
 
@@ -1393,6 +1398,18 @@ module basicDecls[w: Nat] {
 }
 println("=== 01a: basicDecls (参数化宽度 + 各类声明) ===")
 println(moduleTreeVL(basicDecls.create[8].tree))
+
+module exprLet {
+    input a = UInt[8]
+    input b = UInt[8]
+    output y = UInt[8]
+    let x = a + b
+    let sel = x > b
+    let picked = sel.mux(x, a)
+    y := picked
+}
+println("=== 01a2: exprLet (表达式 let → 命名 wire) ===")
+println(moduleTreeVL(exprLet.create.tree))
 
 module autoNames {
     let mywire = autoUInt(8)
@@ -1759,9 +1776,13 @@ println(moduleTreeVL(regInWhen.create.tree))
 //   when cond { ... } otherwise { ... }
 //   when ... elsewhen cond2 { ... } otherwise { ... }
 //   switch sel { is v { ... } is v2 { ... } default { ... } }
+//   for i in lo until hi { ... }   ← 编译期循环展开（见 08d–08f）
 //
 // 注意：when 的 otherwise 分支会作为 if/else 的 else 分支生成
 // （when/elsewhen 体在前、otherwise 在后，生成 if ... else if ... else）。
+//
+// when/switch 是运行时控制流（生成 mux/if），for 是编译期控制流
+// （elaboration 时直接展开成 N 份信号），两者互补。
 // ============================================================
 
 module whenExample {
@@ -1809,6 +1830,45 @@ module switchExample {
 }
 println("=== 08c: switchExample (switch 语句) ===")
 println(moduleTreeVL(switchExample.create.tree))
+
+// ============================================================
+// for i in lo until hi { ... } — 编译期循环展开
+//
+//   • 半开区间 [lo, hi)：hi <= lo 时一次都不展开（无信号生成）
+//   • 每次迭代展开一份循环体，体内 let 声明的信号自动带索引后缀：
+//     x → x_0, x_1, ...；嵌套时 名_i_j
+//   • 循环索引是当次迭代的 Nat 常量，可直接参与位宽表达式
+// ============================================================
+
+module forUnroll {
+    input a = UInt[8]
+    for i in 0 until 4 {
+        let x = UInt[8]
+        x := a
+    }
+}
+println("=== 08d: forUnroll (展开命名：x_0..x_3) ===")
+println(moduleTreeVL(forUnroll.create.tree))
+
+module forWidths {
+    for w in 0 until 3 {
+        let v = UInt[w + 2]
+    }
+}
+println("=== 08e: forWidths (索引参与位宽：[1:0]/[2:0]/[3:0]) ===")
+println(moduleTreeVL(forWidths.create.tree))
+
+module forNested {
+    input a = UInt[8]
+    for i in 0 until 2 {
+        for j in 0 until 2 {
+            let cell = UInt[8]
+            cell := a
+        }
+    }
+}
+println("=== 08f: forNested (嵌套命名：cell_0_0..cell_1_1) ===")
+println(moduleTreeVL(forNested.create.tree))
 
 `
           ),
