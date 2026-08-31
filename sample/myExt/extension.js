@@ -1458,7 +1458,7 @@ module exprLet {
     let picked = sel.mux(x, a)
     y := picked
 }
-println("=== 01a2: exprLet (表达式 let → 命名 wire) ===")
+println("=== 01b: exprLet (表达式 let → 命名 wire) ===")
 println(moduleTreeVL(exprLet.create.tree))
 
 module autoNames {
@@ -1471,7 +1471,7 @@ module autoNames {
     myreg := mywire + myinput
     myoutput := mybool.mux(myreg, myinit)
 }
-println("=== 01b: autoNames (auto* 自动命名) ===")
+println("=== 01c: autoNames (auto* 自动命名) ===")
 println(moduleTreeVL(autoNames.create.tree))
 
 `
@@ -1558,7 +1558,7 @@ module bitwiseOps {
     any_one := b.orR
     parity := a.xorR
 }
-println("=== 03: bitwiseOps (按位 + 移位 + 归约) ===")
+println("=== 03a: bitwiseOps (按位 + 移位 + 归约) ===")
 println(moduleTreeVL(bitwiseOps.create.tree))
 
 module bitwiseUInt {
