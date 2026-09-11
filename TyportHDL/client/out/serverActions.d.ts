@@ -6,7 +6,7 @@ export type Backend = 'wasm' | 'cli';
 export declare const ENGINE_KEY = "cli-server.engine";
 export declare const BACKEND_KEY = "lsp-mode";
 /** `twin` (the L13 performance elaborator) is the only value that opts in. */
-export declare function readEngine(): Engine;
+export declare function readEngine(backend: Backend): Engine;
 export declare function readBackend(): Backend;
 export interface ServerActionHost {
     /** Backend the running client was started with. */

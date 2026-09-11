@@ -63,7 +63,7 @@ async function startClient() {
     updateStatusBar(node_1.State.Starting);
     // Re-read the engine on every start so a switch from the status bar takes
     // effect on the restart that follows it.
-    cliEnv = (0, serverActions_1.readEngine)() === 'twin' ? { TYPORT_LSP_ENGINE: 'twin' } : undefined;
+    cliEnv = (0, serverActions_1.readEngine)('cli') === 'twin' ? { TYPORT_LSP_ENGINE: 'twin' } : undefined;
     // `options.env` replaces the child environment, so merge the parent's.
     // Only set when an engine is selected so the default spawn is unchanged.
     // (`process` is read off globalThis because this project's tsconfig only
@@ -173,7 +173,7 @@ async function activate(context) {
         cliCommand = config.get('cli-server.path', '') || 'typort';
         cliArgs = ['lsp'];
         logChannel = vscode_1.window.createOutputChannel('TyportHDL Language Server', { log: true });
-        logChannel.appendLine(`Starting CLI language server: ${cliCommand} lsp (engine: ${(0, serverActions_1.readEngine)()})`);
+        logChannel.appendLine(`Starting CLI language server: ${cliCommand} lsp (engine: ${(0, serverActions_1.readEngine)('cli')})`);
         cliClientOptions = {
             documentSelector: [{ language: "typort" }],
             outputChannel: logChannel,

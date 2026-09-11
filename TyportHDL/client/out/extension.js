@@ -52,7 +52,7 @@ async function startLanguageServer(context, wasm, canUseTwin) {
         channel = vscode_1.window.createOutputChannel('TyportHDL Language Server', { log: true });
     }
     const serverOptions = async () => {
-        const engine = canUseTwin ? (0, serverActions_1.readEngine)() : 'reference';
+        const engine = canUseTwin ? (0, serverActions_1.readEngine)('wasm') : 'reference';
         const options = {
             stdio: (0, wasm_wasi_lsp_1.createStdioOptions)(),
             mountPoints: [
