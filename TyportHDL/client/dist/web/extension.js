@@ -21816,9 +21816,23 @@ var import_vscode = require("vscode");
 var SECTION = "typort-hdl";
 var ENGINE_KEY = "cli-server.engine";
 var BACKEND_KEY = "lsp-mode";
-function readEngine() {
-  const value = import_vscode.workspace.getConfiguration(SECTION).get(ENGINE_KEY, "reference");
-  return value.toLowerCase() === "twin" ? "twin" : "reference";
+var UNSET_ENGINE = {
+  // The WASM backend is the out-of-the-box experience: default to the fast
+  // L13 twin. The CLI backend is a power-user path and keeps the low-memory
+  // reference engine unless the setting is set explicitly.
+  wasm: "twin",
+  cli: "reference"
+};
+function explicitEngine() {
+  const inspect = import_vscode.workspace.getConfiguration(SECTION).inspect(ENGINE_KEY);
+  return inspect?.workspaceFolderValue ?? inspect?.workspaceValue ?? inspect?.globalValue;
+}
+function readEngine(backend) {
+  const explicit = explicitEngine();
+  if (explicit !== void 0) {
+    return explicit.toLowerCase() === "twin" ? "twin" : "reference";
+  }
+  return UNSET_ENGINE[backend];
 }
 async function writeSetting(key, value) {
   const config = import_vscode.workspace.getConfiguration(SECTION);
@@ -21831,7 +21845,7 @@ function radio(selected, label) {
 function serverActionItems(host) {
   const items = [];
   if (host.canUseTwin) {
-    const engine = readEngine();
+    const engine = readEngine(host.backend);
     items.push(
       { label: "Elaboration engine", kind: import_vscode.QuickPickItemKind.Separator },
       {
@@ -21869,7 +21883,7 @@ function serverActionItems(host) {
   return items;
 }
 async function applyEngine(engine, host) {
-  if (engine === readEngine()) {
+  if (engine === readEngine(host.backend)) {
     return;
   }
   if (!host.canUseTwin) {
@@ -21943,7 +21957,7 @@ async function startLanguageServer(context, wasm, canUseTwin) {
     channel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
   }
   const serverOptions = async () => {
-    const engine = canUseTwin ? readEngine() : "reference";
+    const engine = canUseTwin ? readEngine("wasm") : "reference";
     const options = {
       stdio: (0, import_wasm_wasi_lsp.createStdioOptions)(),
       mountPoints: [

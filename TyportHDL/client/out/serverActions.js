@@ -14,10 +14,31 @@ const vscode_1 = require("vscode");
 const SECTION = 'typort-hdl';
 exports.ENGINE_KEY = 'cli-server.engine';
 exports.BACKEND_KEY = 'lsp-mode';
+/** Engine used when the setting has not been set explicitly. */
+const UNSET_ENGINE = {
+    // The WASM backend is the out-of-the-box experience: default to the fast
+    // L13 twin. The CLI backend is a power-user path and keeps the low-memory
+    // reference engine unless the setting is set explicitly.
+    wasm: 'twin',
+    cli: 'reference',
+};
+/**
+ * The user-set value, ignoring the schema default. `get()` alone cannot be
+ * used here: the schema default (`twin`, see package.json) would be
+ * indistinguishable from an explicit choice, and the CLI backend needs the
+ * opposite fallback.
+ */
+function explicitEngine() {
+    const inspect = vscode_1.workspace.getConfiguration(SECTION).inspect(exports.ENGINE_KEY);
+    return inspect?.workspaceFolderValue ?? inspect?.workspaceValue ?? inspect?.globalValue;
+}
 /** `twin` (the L13 performance elaborator) is the only value that opts in. */
-function readEngine() {
-    const value = vscode_1.workspace.getConfiguration(SECTION).get(exports.ENGINE_KEY, 'reference');
-    return value.toLowerCase() === 'twin' ? 'twin' : 'reference';
+function readEngine(backend) {
+    const explicit = explicitEngine();
+    if (explicit !== undefined) {
+        return explicit.toLowerCase() === 'twin' ? 'twin' : 'reference';
+    }
+    return UNSET_ENGINE[backend];
 }
 exports.readEngine = readEngine;
 function readBackend() {
@@ -44,7 +65,7 @@ function radio(selected, label) {
 function serverActionItems(host) {
     const items = [];
     if (host.canUseTwin) {
-        const engine = readEngine();
+        const engine = readEngine(host.backend);
         items.push({ label: 'Elaboration engine', kind: vscode_1.QuickPickItemKind.Separator }, {
             label: radio(engine === 'reference', 'Reference'),
             description: 'baseline; lower memory',
@@ -73,7 +94,7 @@ function serverActionItems(host) {
 }
 exports.serverActionItems = serverActionItems;
 async function applyEngine(engine, host) {
-    if (engine === readEngine()) {
+    if (engine === readEngine(host.backend)) {
         return;
     }
     if (!host.canUseTwin) {
