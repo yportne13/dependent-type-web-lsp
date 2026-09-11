@@ -21806,15 +21806,114 @@ module.exports = __toCommonJS(extension_web_exports);
 var import_browser = __toESM(require_main3());
 
 // src/extension.ts
-var import_vscode = require("vscode");
+var import_vscode2 = require("vscode");
 var import_vscode_languageclient = __toESM(require_api3());
 var import_v1 = __toESM(require_v1());
 var import_wasm_wasi_lsp = __toESM(require_main4());
+
+// src/serverActions.ts
+var import_vscode = require("vscode");
+var SECTION = "typort-hdl";
+var ENGINE_KEY = "cli-server.engine";
+var BACKEND_KEY = "lsp-mode";
+function readEngine() {
+  const value = import_vscode.workspace.getConfiguration(SECTION).get(ENGINE_KEY, "reference");
+  return value.toLowerCase() === "twin" ? "twin" : "reference";
+}
+async function writeSetting(key, value) {
+  const config = import_vscode.workspace.getConfiguration(SECTION);
+  const target = config.inspect(key)?.workspaceValue !== void 0 ? import_vscode.ConfigurationTarget.Workspace : import_vscode.ConfigurationTarget.Global;
+  await config.update(key, value, target);
+}
+function radio(selected, label) {
+  return `${selected ? "$(circle-filled)" : "$(circle-outline)"} ${label}`;
+}
+function serverActionItems(host) {
+  const items = [];
+  if (host.canUseTwin) {
+    const engine = readEngine();
+    items.push(
+      { label: "Elaboration engine", kind: import_vscode.QuickPickItemKind.Separator },
+      {
+        label: radio(engine === "reference", "Reference"),
+        description: "baseline; lower memory",
+        engine: "reference"
+      },
+      {
+        label: radio(engine === "twin", "Twin (performance)"),
+        description: host.backend === "cli" ? "~3.8x faster per edit, ~2x memory" : "~3.8x faster per edit; raises the WASM memory ceiling",
+        engine: "twin"
+      }
+    );
+  }
+  if (host.canUseCli) {
+    items.push(
+      { label: "Language server backend", kind: import_vscode.QuickPickItemKind.Separator },
+      {
+        label: radio(host.backend === "wasm", "WASM (built-in)"),
+        description: "bundled server.wasm; no external binary",
+        backend: "wasm"
+      },
+      {
+        label: radio(host.backend === "cli", "CLI (external typort)"),
+        description: "spawns `typort lsp`",
+        backend: "cli"
+      }
+    );
+  }
+  items.push(
+    { label: "", kind: import_vscode.QuickPickItemKind.Separator },
+    { label: "$(debug-restart) Restart Language Server", action: "restart" },
+    { label: "$(output) Show Log", action: "log" }
+  );
+  return items;
+}
+async function applyEngine(engine, host) {
+  if (engine === readEngine()) {
+    return;
+  }
+  if (!host.canUseTwin) {
+    import_vscode.window.showInformationMessage("The twin engine is not available in this host.");
+    return;
+  }
+  await writeSetting(ENGINE_KEY, engine);
+  await host.restart();
+}
+async function applyBackend(backend, host) {
+  if (backend === host.backend) {
+    return;
+  }
+  if (backend === "cli" && !host.canUseCli) {
+    import_vscode.window.showInformationMessage("The CLI backend is not available in this host.");
+    return;
+  }
+  await writeSetting(BACKEND_KEY, backend);
+  await import_vscode.commands.executeCommand("workbench.action.reloadWindow");
+}
+async function showServerActions(host) {
+  const pick = await import_vscode.window.showQuickPick(serverActionItems(host), {
+    placeHolder: "Language Server Actions"
+  });
+  if (!pick) {
+    return;
+  }
+  if (pick.engine) {
+    await applyEngine(pick.engine, host);
+  } else if (pick.backend) {
+    await applyBackend(pick.backend, host);
+  } else if (pick.action === "restart") {
+    await host.restart();
+  } else if (pick.action === "log") {
+    host.showLog();
+  }
+}
+
+// src/extension.ts
 var client;
 var channel;
 var statusBarItem;
 function createStatusBarItem() {
-  const item = import_vscode.window.createStatusBarItem(import_vscode.StatusBarAlignment.Left, 0);
+  const item = import_vscode2.window.createStatusBarItem(import_vscode2.StatusBarAlignment.Left, 0);
   item.name = "TyportHDL Language Server";
   item.text = "$(sync~spin) TyPort";
   item.tooltip = "Starting TyportHDL Language Server...";
@@ -21837,21 +21936,32 @@ function updateStatusBar(state) {
       break;
   }
 }
-async function startLanguageServer(context, wasm) {
+var WASM_INITIAL_PAGES = 640;
+var WASM_MAX_PAGES = 32768;
+async function startLanguageServer(context, wasm, canUseTwin) {
   if (!channel) {
-    channel = import_vscode.window.createOutputChannel("TyportHDL Language Server", { log: true });
+    channel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
   }
   const serverOptions = async () => {
+    const engine = canUseTwin ? readEngine() : "reference";
     const options = {
       stdio: (0, import_wasm_wasi_lsp.createStdioOptions)(),
       mountPoints: [
         { kind: "workspaceFolder" }
-      ]
+      ],
+      // The WASM guest reads this through `Engine::from_env`; without it
+      // the server always elaborates with the reference engine.
+      env: engine === "twin" ? { TYPORT_LSP_ENGINE: "twin" } : void 0
     };
-    const filename = import_vscode.Uri.joinPath(context.extensionUri, "client", "server.wasm");
-    const bits = await import_vscode.workspace.fs.readFile(filename);
+    const filename = import_vscode2.Uri.joinPath(context.extensionUri, "client", "server.wasm");
+    const bits = await import_vscode2.workspace.fs.readFile(filename);
     const module2 = await WebAssembly.compile(bits);
-    const process2 = await wasm.createProcess("lsp-server", module2, { initial: 640, maximum: 16e3, shared: true }, options);
+    const process2 = await wasm.createProcess(
+      "lsp-server",
+      module2,
+      { initial: WASM_INITIAL_PAGES, maximum: WASM_MAX_PAGES, shared: true },
+      options
+    );
     const decoder = new TextDecoder("utf-8");
     process2.stderr.onData((data) => {
       channel.append(decoder.decode(data));
@@ -21871,20 +21981,32 @@ async function startLanguageServer(context, wasm) {
   }
   return newClient;
 }
-async function activate(context) {
+async function restartLanguageServer(context, wasm, canUseTwin) {
+  if (client) {
+    await client.stop();
+  }
+  updateStatusBar(import_vscode_languageclient.State.Starting);
+  client = await startLanguageServer(context, wasm, canUseTwin);
+  client.onDidChangeState((e) => {
+    updateStatusBar(e.newState);
+  });
+  updateStatusBar(import_vscode_languageclient.State.Running);
+}
+async function activate(context, options = {}) {
   const wasm = await import_v1.Wasm.load();
+  const canUseTwin = options.canUseTwin ?? false;
   statusBarItem = createStatusBarItem();
   context.subscriptions.push(statusBarItem);
   statusBarItem.show();
   updateStatusBar(import_vscode_languageclient.State.Starting);
-  client = await startLanguageServer(context, wasm);
+  client = await startLanguageServer(context, wasm, canUseTwin);
   client.onDidChangeState((e) => {
     updateStatusBar(e.newState);
   });
   updateStatusBar(import_vscode_languageclient.State.Running);
   const BuiltinContentRequest = new import_vscode_languageclient.RequestType("typort-hdl/builtinContent");
   context.subscriptions.push(
-    import_vscode.workspace.registerTextDocumentContentProvider("builtin", {
+    import_vscode2.workspace.registerTextDocumentContentProvider("builtin", {
       async provideTextDocumentContent(uri) {
         if (!client) {
           return void 0;
@@ -21902,8 +22024,8 @@ async function activate(context) {
     })
   );
   const ExpandMacroRequest = new import_vscode_languageclient.RequestType("typort-hdl/expandMacro");
-  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.expandMacro", async () => {
-    const editor = import_vscode.window.activeTextEditor;
+  context.subscriptions.push(import_vscode2.commands.registerCommand("typort-hdl.expandMacro", async () => {
+    const editor = import_vscode2.window.activeTextEditor;
     if (!editor || !client) {
       return;
     }
@@ -21912,42 +22034,31 @@ async function activate(context) {
     try {
       const result = await client.sendRequest(ExpandMacroRequest, { uri, position });
       if (result) {
-        const doc = await import_vscode.workspace.openTextDocument({
+        const doc = await import_vscode2.workspace.openTextDocument({
           content: result.expanded_text,
           language: "typort"
         });
-        await import_vscode.window.showTextDocument(doc, { preview: true });
+        await import_vscode2.window.showTextDocument(doc, { preview: true });
       } else {
-        import_vscode.window.showInformationMessage("No macro expansion found at cursor position.");
+        import_vscode2.window.showInformationMessage("No macro expansion found at cursor position.");
       }
     } catch (error) {
-      import_vscode.window.showErrorMessage(`Expand macro failed: ${error}`);
+      import_vscode2.window.showErrorMessage(`Expand macro failed: ${error}`);
     }
   }));
-  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
-    if (client) {
-      await client.stop();
-    }
-    updateStatusBar(import_vscode_languageclient.State.Starting);
-    client = await startLanguageServer(context, wasm);
-    client.onDidChangeState((e) => {
-      updateStatusBar(e.newState);
-    });
-    updateStatusBar(import_vscode_languageclient.State.Running);
-    import_vscode.window.showInformationMessage("TyportHDL Language Server restarted.");
+  context.subscriptions.push(import_vscode2.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
+    await restartLanguageServer(context, wasm, canUseTwin);
+    import_vscode2.window.showInformationMessage("TyportHDL Language Server restarted.");
   }));
-  context.subscriptions.push(import_vscode.commands.registerCommand("typort-hdl.showServerActions", async () => {
+  context.subscriptions.push(import_vscode2.commands.registerCommand("typort-hdl.showServerActions", () => {
     if (!client) return;
-    const pick = await import_vscode.window.showQuickPick([
-      { label: "$(debug-restart) Restart Language Server", description: "Restart the TyportHDL language server" },
-      { label: "$(output) Show Log", description: "Open the language server output channel" }
-    ], { placeHolder: "Language Server Actions" });
-    if (!pick) return;
-    if (pick.label.includes("Restart")) {
-      import_vscode.commands.executeCommand("typort-hdl.restartLanguageServer");
-    } else if (pick.label.includes("Log")) {
-      channel.show();
-    }
+    return showServerActions({
+      backend: "wasm",
+      canUseCli: options.canUseCli ?? false,
+      canUseTwin,
+      restart: () => restartLanguageServer(context, wasm, canUseTwin),
+      showLog: () => channel.show()
+    });
   }));
 }
 function deactivate() {
