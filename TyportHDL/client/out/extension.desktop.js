@@ -5,6 +5,7 @@ require("vscode-languageclient/node");
 const vscode_1 = require("vscode");
 const node_1 = require("vscode-languageclient/node");
 const extension_1 = require("./extension");
+const serverActions_1 = require("./serverActions");
 // Maximum number of consecutive unexpected server exits before we stop
 // retrying automatically and ask the user to restart the server manually.
 const MAX_CONSECUTIVE_CRASHES = 5;
@@ -60,6 +61,9 @@ async function startClient() {
     if (!cliClientOptions)
         return;
     updateStatusBar(node_1.State.Starting);
+    // Re-read the engine on every start so a switch from the status bar takes
+    // effect on the restart that follows it.
+    cliEnv = (0, serverActions_1.readEngine)() === 'twin' ? { TYPORT_LSP_ENGINE: 'twin' } : undefined;
     // `options.env` replaces the child environment, so merge the parent's.
     // Only set when an engine is selected so the default spawn is unchanged.
     // (`process` is read off globalThis because this project's tsconfig only
@@ -80,6 +84,34 @@ async function startClient() {
     if (newClient.state === node_1.State.Running) {
         updateStatusBar(node_1.State.Running);
     }
+}
+/**
+ * User-initiated restart of the CLI server. Cancels a pending automatic
+ * restart and marks the stop as intentional so it is not counted as a crash.
+ * Shared by the restart command and the status-bar action picker.
+ */
+async function restartCliClient() {
+    if (restartTimer !== undefined) {
+        clearTimeout(restartTimer);
+        restartTimer = undefined;
+    }
+    consecutiveCrashCount = 0;
+    userStopped = true;
+    try {
+        if (client) {
+            try {
+                await client.stop();
+            }
+            catch (error) {
+                client.error(`Stopping server failed`, error, 'force');
+            }
+        }
+    }
+    finally {
+        userStopped = false;
+    }
+    await startClient();
+    vscode_1.window.showInformationMessage('TyportHDL Language Server restarted.');
 }
 /**
  * Reacts to language client state changes: updates the status bar, resets the
@@ -131,32 +163,17 @@ async function activate(context) {
     statusBarItem.command = 'typort-hdl.showServerActions';
     context.subscriptions.push(statusBarItem);
     statusBarItem.show();
-    // Register shared commands
-    context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.showServerActions', async () => {
-        if (!client)
-            return;
-        const pick = await vscode_1.window.showQuickPick([
-            { label: '$(debug-restart) Restart Language Server', description: 'Restart the TyportHDL language server' },
-            { label: '$(output) Show Log', description: 'Open the language server output channel' },
-        ], { placeHolder: 'Language Server Actions' });
-        if (!pick)
-            return;
-        if (pick.label.includes('Restart')) {
-            vscode_1.commands.executeCommand('typort-hdl.restartLanguageServer');
-        }
-        else if (pick.label.includes('Log')) {
-            logChannel?.show();
-        }
-    }));
+    // The action picker is registered per backend below: the CLI branch wires
+    // it to the in-place restart, the WASM branch to `activateWasm`, which
+    // registers it itself. Registering it here as well would double-register
+    // `typort-hdl.showServerActions`.
     const config = vscode_1.workspace.getConfiguration('typort-hdl');
     const mode = config.get('lsp-mode', 'wasm');
     if (mode === 'cli') {
         cliCommand = config.get('cli-server.path', '') || 'typort';
         cliArgs = ['lsp'];
-        const engine = config.get('cli-server.engine', 'reference');
-        cliEnv = engine === 'twin' ? { TYPORT_LSP_ENGINE: 'twin' } : undefined;
         logChannel = vscode_1.window.createOutputChannel('TyportHDL Language Server', { log: true });
-        logChannel.appendLine(`Starting CLI language server: ${cliCommand} lsp (engine: ${engine})`);
+        logChannel.appendLine(`Starting CLI language server: ${cliCommand} lsp (engine: ${(0, serverActions_1.readEngine)()})`);
         cliClientOptions = {
             documentSelector: [{ language: "typort" }],
             outputChannel: logChannel,
@@ -179,36 +196,21 @@ async function activate(context) {
             },
         };
         await startClient();
-        context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.restartLanguageServer', async () => {
-            // The user takes control: cancel any pending automatic restart and
-            // break the chain of consecutive crashes.
-            if (restartTimer !== undefined) {
-                clearTimeout(restartTimer);
-                restartTimer = undefined;
-            }
-            consecutiveCrashCount = 0;
-            // Mark the stop as user-initiated so that it is not counted as a
-            // crash by handleStateChange.
-            userStopped = true;
-            try {
-                if (client) {
-                    try {
-                        await client.stop();
-                    }
-                    catch (error) {
-                        client.error(`Stopping server failed`, error, 'force');
-                    }
-                }
-            }
-            finally {
-                userStopped = false;
-            }
-            await startClient();
-            vscode_1.window.showInformationMessage('TyportHDL Language Server restarted.');
+        context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.restartLanguageServer', () => restartCliClient()));
+        context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.showServerActions', () => {
+            if (!client)
+                return;
+            return (0, serverActions_1.showServerActions)({
+                backend: 'cli',
+                canUseCli: true,
+                canUseTwin: true,
+                restart: () => restartCliClient(),
+                showLog: () => logChannel?.show(),
+            });
         }));
     }
     else {
-        await (0, extension_1.activate)(context);
+        await (0, extension_1.activate)(context, { canUseCli: true, canUseTwin: true });
     }
 }
 exports.activate = activate;
