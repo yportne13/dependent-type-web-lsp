@@ -47,19 +47,21 @@ function updateStatusBar(state) {
 // peak measured natively, vs ~200 MB for the reference engine).
 const WASM_INITIAL_PAGES = 640; // 41,943,040 bytes
 const WASM_MAX_PAGES = 32768; // 2,147,483,648 bytes
-async function startLanguageServer(context, wasm, canUseTwin) {
+async function startLanguageServer(context, wasm) {
     if (!channel) {
         channel = vscode_1.window.createOutputChannel('TyportHDL Language Server', { log: true });
     }
     const serverOptions = async () => {
-        const engine = canUseTwin ? (0, serverActions_1.readEngine)('wasm') : 'reference';
+        // Re-read on every (re)start so a settings change to the `reference`
+        // escape hatch takes effect on the restart that follows it.
+        const engine = (0, serverActions_1.readEngine)('wasm');
         const options = {
             stdio: (0, wasm_wasi_lsp_1.createStdioOptions)(),
             mountPoints: [
                 { kind: 'workspaceFolder' },
             ],
-            // Pass the engine explicitly. The server defaults to the twin, but
-            // the web host cannot run it, so `reference` must be spelled out.
+            // Pass the engine explicitly: the server's own default is the twin,
+            // and this is the only channel that can select `reference`.
             env: { TYPORT_LSP_ENGINE: engine },
         };
         const filename = vscode_1.Uri.joinPath(context.extensionUri, 'client', 'server.wasm');
@@ -87,12 +89,12 @@ async function startLanguageServer(context, wasm, canUseTwin) {
     return newClient;
 }
 /** Stop the running client and start a fresh one (status bar + command). */
-async function restartLanguageServer(context, wasm, canUseTwin) {
+async function restartLanguageServer(context, wasm) {
     if (client) {
         await client.stop();
     }
     updateStatusBar(vscode_languageclient_1.State.Starting);
-    client = await startLanguageServer(context, wasm, canUseTwin);
+    client = await startLanguageServer(context, wasm);
     client.onDidChangeState((e) => {
         updateStatusBar(e.newState);
     });
@@ -100,13 +102,12 @@ async function restartLanguageServer(context, wasm, canUseTwin) {
 }
 async function activate(context, options = {}) {
     const wasm = await v1_1.Wasm.load();
-    const canUseTwin = options.canUseTwin ?? false;
     // Status bar
     statusBarItem = createStatusBarItem();
     context.subscriptions.push(statusBarItem);
     statusBarItem.show();
     updateStatusBar(vscode_languageclient_1.State.Starting);
-    client = await startLanguageServer(context, wasm, canUseTwin);
+    client = await startLanguageServer(context, wasm);
     // Track language client state changes → update status bar
     client.onDidChangeState((e) => {
         updateStatusBar(e.newState);
@@ -156,7 +157,7 @@ async function activate(context, options = {}) {
     }));
     // ── Restart server ────────────────────────────────────────────────────
     context.subscriptions.push(vscode_1.commands.registerCommand('typort-hdl.restartLanguageServer', async () => {
-        await restartLanguageServer(context, wasm, canUseTwin);
+        await restartLanguageServer(context, wasm);
         vscode_1.window.showInformationMessage('TyportHDL Language Server restarted.');
     }));
     // ── Status bar actions ────────────────────────────────────────────────
@@ -166,7 +167,7 @@ async function activate(context, options = {}) {
         return (0, serverActions_1.showServerActions)({
             backend: 'wasm',
             canUseCli: options.canUseCli ?? false,
-            restart: () => restartLanguageServer(context, wasm, canUseTwin),
+            restart: () => restartLanguageServer(context, wasm),
             showLog: () => channel.show(),
         });
     }));

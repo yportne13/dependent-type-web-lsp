@@ -206,7 +206,7 @@ async function activate(context) {
         }));
     }
     else {
-        await (0, extension_1.activate)(context, { canUseCli: true, canUseTwin: true });
+        await (0, extension_1.activate)(context, { canUseCli: true });
     }
 }
 exports.activate = activate;
