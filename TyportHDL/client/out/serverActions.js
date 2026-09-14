@@ -4,9 +4,11 @@
  *
  * Shared by the WASM entry (`extension.ts`, used on web and on the desktop
  * WASM backend) and the desktop entry (`extension.desktop.ts`, CLI backend).
- * The picker exposes the two elaboration backends and the two engines; the
- * engine only takes effect on the CLI backend, so selecting `twin` from a
- * WASM host first offers to move to the CLI backend.
+ * The picker switches the language server backend (WASM vs CLI); the
+ * elaboration engine is no longer a user-facing choice — both backends run the
+ * L13 performance twin. `readEngine` still honors an explicit
+ * `typort-hdl.cli-server.engine = "reference"` setting as a baseline escape
+ * hatch, and the web host (which cannot run the twin) is pinned to it.
  * ------------------------------------------------------------------------------------------ */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.showServerActions = exports.serverActionItems = exports.readBackend = exports.readEngine = exports.BACKEND_KEY = exports.ENGINE_KEY = void 0;
@@ -16,17 +18,15 @@ exports.ENGINE_KEY = 'cli-server.engine';
 exports.BACKEND_KEY = 'lsp-mode';
 /** Engine used when the setting has not been set explicitly. */
 const UNSET_ENGINE = {
-    // The WASM backend is the out-of-the-box experience: default to the fast
-    // L13 twin. The CLI backend is a power-user path and keeps the low-memory
-    // reference engine unless the setting is set explicitly.
+    // The L13 twin is the engine; the reference elaborator is only a debug
+    // escape hatch (explicit setting) and the web host's fallback.
     wasm: 'twin',
-    cli: 'reference',
+    cli: 'twin',
 };
 /**
  * The user-set value, ignoring the schema default. `get()` alone cannot be
  * used here: the schema default (`twin`, see package.json) would be
- * indistinguishable from an explicit choice, and the CLI backend needs the
- * opposite fallback.
+ * indistinguishable from an explicit choice.
  */
 function explicitEngine() {
     const inspect = vscode_1.workspace.getConfiguration(SECTION).inspect(exports.ENGINE_KEY);
@@ -64,20 +64,6 @@ function radio(selected, label) {
 /** Builds the picker entries; exported for tests / callers that pre-filter. */
 function serverActionItems(host) {
     const items = [];
-    if (host.canUseTwin) {
-        const engine = readEngine(host.backend);
-        items.push({ label: 'Elaboration engine', kind: vscode_1.QuickPickItemKind.Separator }, {
-            label: radio(engine === 'reference', 'Reference'),
-            description: 'baseline; lower memory',
-            engine: 'reference',
-        }, {
-            label: radio(engine === 'twin', 'Twin (performance)'),
-            description: host.backend === 'cli'
-                ? '~3.8x faster per edit, ~2x memory'
-                : '~3.8x faster per edit; raises the WASM memory ceiling',
-            engine: 'twin',
-        });
-    }
     if (host.canUseCli) {
         items.push({ label: 'Language server backend', kind: vscode_1.QuickPickItemKind.Separator }, {
             label: radio(host.backend === 'wasm', 'WASM (built-in)'),
@@ -93,18 +79,6 @@ function serverActionItems(host) {
     return items;
 }
 exports.serverActionItems = serverActionItems;
-async function applyEngine(engine, host) {
-    if (engine === readEngine(host.backend)) {
-        return;
-    }
-    if (!host.canUseTwin) {
-        vscode_1.window.showInformationMessage('The twin engine is not available in this host.');
-        return;
-    }
-    // Both backends read the setting at spawn, so a restart applies it.
-    await writeSetting(exports.ENGINE_KEY, engine);
-    await host.restart();
-}
 async function applyBackend(backend, host) {
     if (backend === host.backend) {
         return;
@@ -125,10 +99,7 @@ async function showServerActions(host) {
     if (!pick) {
         return;
     }
-    if (pick.engine) {
-        await applyEngine(pick.engine, host);
-    }
-    else if (pick.backend) {
+    if (pick.backend) {
         await applyBackend(pick.backend, host);
     }
     else if (pick.action === 'restart') {

@@ -1,5 +1,5 @@
 import { QuickPickItem } from 'vscode';
-/** Elaboration engine passed to the CLI server as `TYPORT_LSP_ENGINE`. */
+/** Elaboration engine passed to the server as `TYPORT_LSP_ENGINE`. */
 export type Engine = 'reference' | 'twin';
 /** Language server backend the extension is running. */
 export type Backend = 'wasm' | 'cli';
@@ -17,12 +17,9 @@ export interface ServerActionHost {
     showLog(): void;
     /** Whether this host can spawn the external CLI server (desktop). */
     readonly canUseCli: boolean;
-    /** Whether this host can run the twin engine at all. */
-    readonly canUseTwin: boolean;
 }
 type ActionItem = QuickPickItem & {
     action?: string;
-    engine?: Engine;
     backend?: Backend;
 };
 /** Builds the picker entries; exported for tests / callers that pre-filter. */

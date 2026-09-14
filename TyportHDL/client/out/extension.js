@@ -58,9 +58,9 @@ async function startLanguageServer(context, wasm, canUseTwin) {
             mountPoints: [
                 { kind: 'workspaceFolder' },
             ],
-            // The WASM guest reads this through `Engine::from_env`; without it
-            // the server always elaborates with the reference engine.
-            env: engine === 'twin' ? { TYPORT_LSP_ENGINE: 'twin' } : undefined,
+            // Pass the engine explicitly. The server defaults to the twin, but
+            // the web host cannot run it, so `reference` must be spelled out.
+            env: { TYPORT_LSP_ENGINE: engine },
         };
         const filename = vscode_1.Uri.joinPath(context.extensionUri, 'client', 'server.wasm');
         const bits = await vscode_1.workspace.fs.readFile(filename);
@@ -166,7 +166,6 @@ async function activate(context, options = {}) {
         return (0, serverActions_1.showServerActions)({
             backend: 'wasm',
             canUseCli: options.canUseCli ?? false,
-            canUseTwin,
             restart: () => restartLanguageServer(context, wasm, canUseTwin),
             showLog: () => channel.show(),
         });
