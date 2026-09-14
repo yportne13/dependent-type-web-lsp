@@ -21817,11 +21817,10 @@ var SECTION = "typort-hdl";
 var ENGINE_KEY = "cli-server.engine";
 var BACKEND_KEY = "lsp-mode";
 var UNSET_ENGINE = {
-  // The WASM backend is the out-of-the-box experience: default to the fast
-  // L13 twin. The CLI backend is a power-user path and keeps the low-memory
-  // reference engine unless the setting is set explicitly.
+  // The L13 twin is the engine; the reference elaborator is only a debug
+  // escape hatch (explicit setting) and the web host's fallback.
   wasm: "twin",
-  cli: "reference"
+  cli: "twin"
 };
 function explicitEngine() {
   const inspect = import_vscode.workspace.getConfiguration(SECTION).inspect(ENGINE_KEY);
@@ -21844,22 +21843,6 @@ function radio(selected, label) {
 }
 function serverActionItems(host) {
   const items = [];
-  if (host.canUseTwin) {
-    const engine = readEngine(host.backend);
-    items.push(
-      { label: "Elaboration engine", kind: import_vscode.QuickPickItemKind.Separator },
-      {
-        label: radio(engine === "reference", "Reference"),
-        description: "baseline; lower memory",
-        engine: "reference"
-      },
-      {
-        label: radio(engine === "twin", "Twin (performance)"),
-        description: host.backend === "cli" ? "~3.8x faster per edit, ~2x memory" : "~3.8x faster per edit; raises the WASM memory ceiling",
-        engine: "twin"
-      }
-    );
-  }
   if (host.canUseCli) {
     items.push(
       { label: "Language server backend", kind: import_vscode.QuickPickItemKind.Separator },
@@ -21882,17 +21865,6 @@ function serverActionItems(host) {
   );
   return items;
 }
-async function applyEngine(engine, host) {
-  if (engine === readEngine(host.backend)) {
-    return;
-  }
-  if (!host.canUseTwin) {
-    import_vscode.window.showInformationMessage("The twin engine is not available in this host.");
-    return;
-  }
-  await writeSetting(ENGINE_KEY, engine);
-  await host.restart();
-}
 async function applyBackend(backend, host) {
   if (backend === host.backend) {
     return;
@@ -21911,9 +21883,7 @@ async function showServerActions(host) {
   if (!pick) {
     return;
   }
-  if (pick.engine) {
-    await applyEngine(pick.engine, host);
-  } else if (pick.backend) {
+  if (pick.backend) {
     await applyBackend(pick.backend, host);
   } else if (pick.action === "restart") {
     await host.restart();
@@ -21963,9 +21933,9 @@ async function startLanguageServer(context, wasm, canUseTwin) {
       mountPoints: [
         { kind: "workspaceFolder" }
       ],
-      // The WASM guest reads this through `Engine::from_env`; without it
-      // the server always elaborates with the reference engine.
-      env: engine === "twin" ? { TYPORT_LSP_ENGINE: "twin" } : void 0
+      // Pass the engine explicitly. The server defaults to the twin, but
+      // the web host cannot run it, so `reference` must be spelled out.
+      env: { TYPORT_LSP_ENGINE: engine }
     };
     const filename = import_vscode2.Uri.joinPath(context.extensionUri, "client", "server.wasm");
     const bits = await import_vscode2.workspace.fs.readFile(filename);
@@ -22069,7 +22039,6 @@ async function activate(context, options = {}) {
     return showServerActions({
       backend: "wasm",
       canUseCli: options.canUseCli ?? false,
-      canUseTwin,
       restart: () => restartLanguageServer(context, wasm, canUseTwin),
       showLog: () => channel.show()
     });
