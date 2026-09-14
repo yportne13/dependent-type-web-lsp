@@ -22594,7 +22594,7 @@ var ENGINE_KEY = "cli-server.engine";
 var BACKEND_KEY = "lsp-mode";
 var UNSET_ENGINE = {
   // The L13 twin is the engine; the reference elaborator is only a debug
-  // escape hatch (explicit setting) and the web host's fallback.
+  // escape hatch (explicit setting).
   wasm: "twin",
   cli: "twin"
 };
@@ -22698,19 +22698,19 @@ function updateStatusBar(state) {
 }
 var WASM_INITIAL_PAGES = 640;
 var WASM_MAX_PAGES = 32768;
-async function startLanguageServer(context, wasm, canUseTwin) {
+async function startLanguageServer(context, wasm) {
   if (!channel) {
     channel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
   }
   const serverOptions = async () => {
-    const engine = canUseTwin ? readEngine("wasm") : "reference";
+    const engine = readEngine("wasm");
     const options = {
       stdio: (0, import_wasm_wasi_lsp.createStdioOptions)(),
       mountPoints: [
         { kind: "workspaceFolder" }
       ],
-      // Pass the engine explicitly. The server defaults to the twin, but
-      // the web host cannot run it, so `reference` must be spelled out.
+      // Pass the engine explicitly: the server's own default is the twin,
+      // and this is the only channel that can select `reference`.
       env: { TYPORT_LSP_ENGINE: engine }
     };
     const filename = import_vscode2.Uri.joinPath(context.extensionUri, "client", "server.wasm");
@@ -22741,12 +22741,12 @@ async function startLanguageServer(context, wasm, canUseTwin) {
   }
   return newClient;
 }
-async function restartLanguageServer(context, wasm, canUseTwin) {
+async function restartLanguageServer(context, wasm) {
   if (client) {
     await client.stop();
   }
   updateStatusBar(import_vscode_languageclient.State.Starting);
-  client = await startLanguageServer(context, wasm, canUseTwin);
+  client = await startLanguageServer(context, wasm);
   client.onDidChangeState((e) => {
     updateStatusBar(e.newState);
   });
@@ -22754,12 +22754,11 @@ async function restartLanguageServer(context, wasm, canUseTwin) {
 }
 async function activate(context, options = {}) {
   const wasm = await import_v1.Wasm.load();
-  const canUseTwin = options.canUseTwin ?? false;
   statusBarItem = createStatusBarItem();
   context.subscriptions.push(statusBarItem);
   statusBarItem.show();
   updateStatusBar(import_vscode_languageclient.State.Starting);
-  client = await startLanguageServer(context, wasm, canUseTwin);
+  client = await startLanguageServer(context, wasm);
   client.onDidChangeState((e) => {
     updateStatusBar(e.newState);
   });
@@ -22807,7 +22806,7 @@ async function activate(context, options = {}) {
     }
   }));
   context.subscriptions.push(import_vscode2.commands.registerCommand("typort-hdl.restartLanguageServer", async () => {
-    await restartLanguageServer(context, wasm, canUseTwin);
+    await restartLanguageServer(context, wasm);
     import_vscode2.window.showInformationMessage("TyportHDL Language Server restarted.");
   }));
   context.subscriptions.push(import_vscode2.commands.registerCommand("typort-hdl.showServerActions", () => {
@@ -22815,7 +22814,7 @@ async function activate(context, options = {}) {
     return showServerActions({
       backend: "wasm",
       canUseCli: options.canUseCli ?? false,
-      restart: () => restartLanguageServer(context, wasm, canUseTwin),
+      restart: () => restartLanguageServer(context, wasm),
       showLog: () => channel.show()
     });
   }));
@@ -22976,7 +22975,7 @@ async function activate2(context) {
       });
     }));
   } else {
-    await activate(context, { canUseCli: true, canUseTwin: true });
+    await activate(context, { canUseCli: true });
   }
 }
 function deactivate2() {
