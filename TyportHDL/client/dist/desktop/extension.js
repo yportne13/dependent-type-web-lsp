@@ -912,15 +912,15 @@ var require_disposable = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Disposable = void 0;
-    var Disposable2;
-    (function(Disposable3) {
+    var Disposable;
+    (function(Disposable2) {
       function create(func) {
         return {
           dispose: func
         };
       }
-      Disposable3.create = create;
-    })(Disposable2 || (exports2.Disposable = Disposable2 = {}));
+      Disposable2.create = create;
+    })(Disposable || (exports2.Disposable = Disposable = {}));
   }
 });
 
@@ -22638,12 +22638,6 @@ function serverActionItems(host) {
       engine: "twin"
     }
   );
-  if (host.liveness) {
-    items.push(
-      { label: "Status", kind: import_vscode.QuickPickItemKind.Separator },
-      { label: `$(pulse) Language server: ${host.liveness()}` }
-    );
-  }
   if (host.canUseCli) {
     items.push(
       { label: "Language server backend", kind: import_vscode.QuickPickItemKind.Separator },
@@ -22749,7 +22743,6 @@ var WASM_MAX_PAGES = 32768;
 async function startLanguageServer(context, wasm) {
   if (!channel) {
     channel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
-    trackServerActivity(channel);
   }
   const serverOptions = async () => {
     const engine = readEngine("wasm");
@@ -22804,125 +22797,6 @@ async function restartLanguageServer(context, wasm) {
     updateStatusBar(e.newState);
   });
   updateStatusBar(import_vscode_languageclient.State.Running);
-  watchServerLiveness(context, wasm);
-}
-var PingRequest = new import_vscode_languageclient.RequestType("typort-hdl/ping");
-var WATCHDOG_INTERVAL_MS = 2e4;
-var WATCHDOG_TIMEOUT_MS = 1e4;
-var WATCHDOG_MISSES = 6;
-var watchdog;
-var autoRestarts = 0;
-var MAX_AUTO_RESTARTS = 3;
-var lastServerActivity = Date.now();
-var lastProbeOkAt = 0;
-var probeMisses = 0;
-var lastProbeError = "";
-function describeServerLiveness() {
-  if (lastProbeOkAt === 0) {
-    return probeMisses === 0 ? "starting (no probe answered yet)" : `not answering yet (${probeMisses} failed probes)`;
-  }
-  const age = Math.round((Date.now() - lastProbeOkAt) / 1e3);
-  if (probeMisses === 0) {
-    return `responding (last probe ${age}s ago)`;
-  }
-  return `NOT answering (${probeMisses} probes missed, last response ${age}s ago` + (lastProbeError ? `; ${lastProbeError}` : "") + ")";
-}
-var SERVER_LOG_TAIL = 40;
-var serverLogTail = [];
-function trackServerActivity(channel2) {
-  for (const method of ["append", "appendLine"]) {
-    const original = channel2[method].bind(channel2);
-    channel2[method] = (...args) => {
-      lastServerActivity = Date.now();
-      const text = args.map((a) => String(a)).join(" ").trim();
-      if (text) {
-        for (const line of text.split("\n")) {
-          serverLogTail.push(line.trim());
-        }
-        if (serverLogTail.length > SERVER_LOG_TAIL) {
-          serverLogTail.splice(0, serverLogTail.length - SERVER_LOG_TAIL);
-        }
-      }
-      return original(...args);
-    };
-  }
-}
-function withTimeout(p, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`no response within ${ms}ms`)), ms);
-    p.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      }
-    );
-  });
-}
-function watchServerLiveness(context, wasm) {
-  watchdog?.dispose();
-  const watched = client;
-  if (!watched) {
-    return;
-  }
-  lastProbeOkAt = 0;
-  probeMisses = 0;
-  lastProbeError = "";
-  let misses = 0;
-  let reported = false;
-  watchdog = new import_vscode2.Disposable(() => clearInterval(timer));
-  const timer = setInterval(async () => {
-    if (reported || client !== watched) {
-      return;
-    }
-    try {
-      await withTimeout(watched.sendRequest(PingRequest, null), WATCHDOG_TIMEOUT_MS);
-      misses = 0;
-      lastServerActivity = Date.now();
-      lastProbeOkAt = Date.now();
-    } catch (error) {
-      misses += 1;
-      probeMisses = misses;
-      lastProbeError = String(error).slice(0, 160);
-      if (misses < WATCHDOG_MISSES || Date.now() - lastServerActivity < WATCHDOG_MISSES * WATCHDOG_INTERVAL_MS) {
-        return;
-      }
-      reported = true;
-      updateStatusBar(import_vscode_languageclient.State.Stopped);
-      const detail = [
-        `engine: ${activeEngine ?? "unknown"}   probe misses: ${misses}   silence: ~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s`,
-        `last probe error: ${lastProbeError || "(none)"}`,
-        "",
-        `last ${serverLogTail.length} server log lines (most recent last):`,
-        ...serverLogTail
-      ].join("\n");
-      channel.error(
-        `TyportHDL: the language server stopped answering ${misses} liveness probes (~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s of silence). It either died or is stuck; its last log lines are shown in the dialog and above. Restart to recover.`
-      );
-      channel.appendLine(detail);
-      let restartNote = 'Use "Restart Language Server" to recover.';
-      if (autoRestarts < MAX_AUTO_RESTARTS) {
-        autoRestarts += 1;
-        restartNote = `Restarted automatically (${autoRestarts}/${MAX_AUTO_RESTARTS}).`;
-        await restartLanguageServer(context, wasm);
-      }
-      const pick = await import_vscode2.window.showErrorMessage(
-        `TyportHDL: the language server stopped responding (${restartNote}) The lines below are its last log entries \u2014 please keep them.`,
-        { modal: true, detail },
-        "Restart Language Server",
-        "Show Log"
-      );
-      if (pick === "Restart Language Server") {
-        await restartLanguageServer(context, wasm);
-      } else if (pick === "Show Log") {
-        channel.show();
-      }
-    }
-  }, WATCHDOG_INTERVAL_MS);
-  context.subscriptions.push(watchdog);
 }
 async function activate(context, options = {}) {
   const wasm = await import_v1.Wasm.load();
@@ -22935,7 +22809,6 @@ async function activate(context, options = {}) {
     updateStatusBar(e.newState);
   });
   updateStatusBar(import_vscode_languageclient.State.Running);
-  watchServerLiveness(context, wasm);
   const BuiltinContentRequest = new import_vscode_languageclient.RequestType("typort-hdl/builtinContent");
   context.subscriptions.push(
     import_vscode2.workspace.registerTextDocumentContentProvider("builtin", {
@@ -22987,7 +22860,6 @@ async function activate(context, options = {}) {
     return showServerActions({
       backend: "wasm",
       engine: activeEngine ?? readEngine("wasm"),
-      liveness: describeServerLiveness,
       canUseCli: options.canUseCli ?? false,
       restart: () => restartLanguageServer(context, wasm),
       showLog: () => channel.show()
