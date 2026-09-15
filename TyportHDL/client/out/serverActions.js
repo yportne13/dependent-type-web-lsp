@@ -71,6 +71,18 @@ function radio(selected, label) {
 /** Builds the picker entries; exported for tests / callers that pre-filter. */
 function serverActionItems(host) {
     const items = [];
+    items.push({ label: 'Elaboration engine', kind: vscode_1.QuickPickItemKind.Separator }, {
+        label: radio(host.engine === 'reference', 'Reference'),
+        description: 'baseline elaborator; ~0.3 GB in the web host',
+        engine: 'reference',
+    }, {
+        label: radio(host.engine === 'twin', 'Twin (performance)'),
+        description: 'faster per edit, ~2x memory (~1.2 GB in the web host)',
+        engine: 'twin',
+    });
+    if (host.liveness) {
+        items.push({ label: 'Status', kind: vscode_1.QuickPickItemKind.Separator }, { label: `$(pulse) Language server: ${host.liveness()}` });
+    }
     if (host.canUseCli) {
         items.push({ label: 'Language server backend', kind: vscode_1.QuickPickItemKind.Separator }, {
             label: radio(host.backend === 'wasm', 'WASM (built-in)'),
@@ -86,6 +98,18 @@ function serverActionItems(host) {
     return items;
 }
 exports.serverActionItems = serverActionItems;
+/**
+ * Switch the elaboration engine.  Both hosts re-read `typort-hdl.cli-server.engine`
+ * when they (re)start, so this takes effect in place — no window reload.
+ */
+async function applyEngine(engine, host) {
+    if (engine === host.engine) {
+        return;
+    }
+    await writeSetting(exports.ENGINE_KEY, engine);
+    await host.restart();
+    vscode_1.window.showInformationMessage(`TyportHDL: elaboration engine = ${engine}.`);
+}
 async function applyBackend(backend, host) {
     if (backend === host.backend) {
         return;
@@ -106,7 +130,10 @@ async function showServerActions(host) {
     if (!pick) {
         return;
     }
-    if (pick.backend) {
+    if (pick.engine) {
+        await applyEngine(pick.engine, host);
+    }
+    else if (pick.backend) {
         await applyBackend(pick.backend, host);
     }
     else if (pick.action === 'restart') {

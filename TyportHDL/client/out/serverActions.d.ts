@@ -11,16 +11,21 @@ export declare function readBackend(): Backend;
 export interface ServerActionHost {
     /** Backend the running client was started with. */
     readonly backend: Backend;
+    /** Engine the running client was started with. */
+    readonly engine: Engine;
     /** Restart the client in place, re-reading settings. */
     restart(): Promise<void>;
     /** Reveal the language server log channel. */
     showLog(): void;
     /** Whether this host can spawn the external CLI server (desktop). */
     readonly canUseCli: boolean;
+    /** Human-readable liveness of the running server, when known. */
+    readonly liveness?: () => string;
 }
 type ActionItem = QuickPickItem & {
     action?: string;
     backend?: Backend;
+    engine?: Engine;
 };
 /** Builds the picker entries; exported for tests / callers that pre-filter. */
 export declare function serverActionItems(host: ServerActionHost): ActionItem[];

@@ -199,6 +199,7 @@ async function activate(context) {
                 return;
             return (0, serverActions_1.showServerActions)({
                 backend: 'cli',
+                engine: (0, serverActions_1.readEngine)('cli'),
                 canUseCli: true,
                 restart: () => restartCliClient(),
                 showLog: () => logChannel?.show(),
