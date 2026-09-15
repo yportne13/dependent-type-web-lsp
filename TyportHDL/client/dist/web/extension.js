@@ -21817,9 +21817,15 @@ var SECTION = "typort-hdl";
 var ENGINE_KEY = "cli-server.engine";
 var BACKEND_KEY = "lsp-mode";
 var UNSET_ENGINE = {
-  // The L13 twin is the engine; the reference elaborator is only a debug
-  // escape hatch (explicit setting).
-  wasm: "twin",
+  // The CLI backend runs the L13 twin.  The web (wasm) backend defaults to
+  // the reference elaborator: the twin's resident state needs ~1.2 GB of the
+  // wasm module's hard 2 GiB linear-memory ceiling (the SharedArrayBuffer
+  // maximum) for one proof-sized file, and a guest that cannot grow dies as a
+  // `RuntimeError: unreachable` trap that the client never sees — the status
+  // bar keeps claiming "running" while the server is gone.  The reference
+  // path needs ~0.33 GB for the same file.  Opt back in per machine with
+  // `typort-hdl.cli-server.engine = "twin"`.
+  wasm: "reference",
   cli: "twin"
 };
 function explicitEngine() {
