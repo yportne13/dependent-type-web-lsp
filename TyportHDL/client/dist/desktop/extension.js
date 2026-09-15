@@ -22825,11 +22825,22 @@ function describeServerLiveness() {
   }
   return `NOT answering (${probeMisses} probes missed, last response ${age}s ago` + (lastProbeError ? `; ${lastProbeError}` : "") + ")";
 }
+var SERVER_LOG_TAIL = 40;
+var serverLogTail = [];
 function trackServerActivity(channel2) {
   for (const method of ["append", "appendLine"]) {
     const original = channel2[method].bind(channel2);
     channel2[method] = (...args) => {
       lastServerActivity = Date.now();
+      const text = args.map((a) => String(a)).join(" ").trim();
+      if (text) {
+        for (const line of text.split("\n")) {
+          serverLogTail.push(line.trim());
+        }
+        if (serverLogTail.length > SERVER_LOG_TAIL) {
+          serverLogTail.splice(0, serverLogTail.length - SERVER_LOG_TAIL);
+        }
+      }
       return original(...args);
     };
   }
@@ -22876,11 +22887,20 @@ function watchServerLiveness(context, wasm) {
       }
       reported = true;
       updateStatusBar(import_vscode_languageclient.State.Stopped);
+      const detail = [
+        `engine: ${activeEngine ?? "unknown"}   probe misses: ${misses}   silence: ~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s`,
+        `last probe error: ${lastProbeError || "(none)"}`,
+        "",
+        `last ${serverLogTail.length} server log lines (most recent last):`,
+        ...serverLogTail
+      ].join("\n");
       channel.error(
-        `TyportHDL: the language server has not answered ${misses} liveness probes in a row (${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s). A wasm guest that hits the module's linear-memory ceiling dies without reporting an error, so restart the server to recover.`
+        `TyportHDL: the language server stopped answering ${misses} liveness probes (~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s of silence). It either died or is stuck; its last log lines are shown in the dialog and above. Restart to recover.`
       );
-      const pick = await import_vscode2.window.showWarningMessage(
-        "TyportHDL: the language server stopped responding.",
+      channel.appendLine(detail);
+      const pick = await import_vscode2.window.showErrorMessage(
+        "TyportHDL: the language server stopped responding. Its last log lines are below \u2014 please keep them.",
+        { modal: true, detail },
         "Restart Language Server",
         "Show Log"
       );

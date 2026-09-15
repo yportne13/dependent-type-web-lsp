@@ -154,14 +154,26 @@ function describeServerLiveness() {
  * Count every message the server writes to the output channel as a sign of
  * life, so a server that is busy (a long prelude prime emits no log line for a
  * while but is answering probes as soon as it returns to its main loop) is
- * never reported as dead.
+ * never reported as dead.  The last lines are kept so the watchdog can hand
+ * them over when the server goes quiet.
  */
+const SERVER_LOG_TAIL = 40;
+const serverLogTail = [];
 function trackServerActivity(channel) {
     for (const method of ['append', 'appendLine']) {
         const original = channel[method].bind(channel);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         channel[method] = (...args) => {
             lastServerActivity = Date.now();
+            const text = args.map((a) => String(a)).join(' ').trim();
+            if (text) {
+                for (const line of text.split('\n')) {
+                    serverLogTail.push(line.trim());
+                }
+                if (serverLogTail.length > SERVER_LOG_TAIL) {
+                    serverLogTail.splice(0, serverLogTail.length - SERVER_LOG_TAIL);
+                }
+            }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return original(...args);
         };
@@ -214,10 +226,18 @@ function watchServerLiveness(context, wasm) {
             }
             reported = true;
             updateStatusBar(vscode_languageclient_1.State.Stopped);
-            channel.error(`TyportHDL: the language server has not answered ${misses} liveness probes in a row ` +
-                `(${Math.round(misses * WATCHDOG_INTERVAL_MS / 1000)}s). A wasm guest that hits the module's ` +
-                `linear-memory ceiling dies without reporting an error, so restart the server to recover.`);
-            const pick = await vscode_1.window.showWarningMessage('TyportHDL: the language server stopped responding.', 'Restart Language Server', 'Show Log');
+            const detail = [
+                `engine: ${activeEngine ?? 'unknown'}   probe misses: ${misses}   silence: ~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1000)}s`,
+                `last probe error: ${lastProbeError || '(none)'}`,
+                '',
+                `last ${serverLogTail.length} server log lines (most recent last):`,
+                ...serverLogTail,
+            ].join('\n');
+            channel.error(`TyportHDL: the language server stopped answering ${misses} liveness probes ` +
+                `(~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1000)}s of silence). It either died or is stuck; ` +
+                `its last log lines are shown in the dialog and above. Restart to recover.`);
+            channel.appendLine(detail);
+            const pick = await vscode_1.window.showErrorMessage('TyportHDL: the language server stopped responding. Its last log lines are below — please keep them.', { modal: true, detail }, 'Restart Language Server', 'Show Log');
             if (pick === 'Restart Language Server') {
                 await restartLanguageServer(context, wasm);
             }
