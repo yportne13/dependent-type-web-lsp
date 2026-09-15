@@ -856,15 +856,15 @@ var require_disposable = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Disposable = void 0;
-    var Disposable;
-    (function(Disposable2) {
+    var Disposable2;
+    (function(Disposable3) {
       function create(func) {
         return {
           dispose: func
         };
       }
-      Disposable2.create = create;
-    })(Disposable || (exports.Disposable = Disposable = {}));
+      Disposable3.create = create;
+    })(Disposable2 || (exports.Disposable = Disposable2 = {}));
   }
 });
 
@@ -21931,6 +21931,7 @@ var WASM_MAX_PAGES = 32768;
 async function startLanguageServer(context, wasm) {
   if (!channel) {
     channel = import_vscode2.window.createOutputChannel("TyportHDL Language Server", { log: true });
+    trackServerActivity(channel);
   }
   const serverOptions = async () => {
     const engine = readEngine("wasm");
@@ -21981,6 +21982,78 @@ async function restartLanguageServer(context, wasm) {
     updateStatusBar(e.newState);
   });
   updateStatusBar(import_vscode_languageclient.State.Running);
+  watchServerLiveness(context, wasm);
+}
+var PingRequest = new import_vscode_languageclient.RequestType("typort-hdl/ping");
+var WATCHDOG_INTERVAL_MS = 2e4;
+var WATCHDOG_TIMEOUT_MS = 1e4;
+var WATCHDOG_MISSES = 6;
+var watchdog;
+var lastServerActivity = Date.now();
+function trackServerActivity(channel2) {
+  for (const method of ["append", "appendLine"]) {
+    const original = channel2[method].bind(channel2);
+    channel2[method] = (...args) => {
+      lastServerActivity = Date.now();
+      return original(...args);
+    };
+  }
+}
+function withTimeout(p, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no response within ${ms}ms`)), ms);
+    p.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+function watchServerLiveness(context, wasm) {
+  watchdog?.dispose();
+  const watched = client;
+  if (!watched) {
+    return;
+  }
+  let misses = 0;
+  let reported = false;
+  watchdog = new import_vscode2.Disposable(() => clearInterval(timer));
+  const timer = setInterval(async () => {
+    if (reported || client !== watched) {
+      return;
+    }
+    try {
+      await withTimeout(watched.sendRequest(PingRequest, null), WATCHDOG_TIMEOUT_MS);
+      misses = 0;
+      lastServerActivity = Date.now();
+    } catch {
+      misses += 1;
+      if (misses < WATCHDOG_MISSES || Date.now() - lastServerActivity < WATCHDOG_MISSES * WATCHDOG_INTERVAL_MS) {
+        return;
+      }
+      reported = true;
+      updateStatusBar(import_vscode_languageclient.State.Stopped);
+      channel.error(
+        `TyportHDL: the language server has not answered ${misses} liveness probes in a row (${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s). A wasm guest that hits the module's linear-memory ceiling dies without reporting an error, so restart the server to recover.`
+      );
+      const pick = await import_vscode2.window.showWarningMessage(
+        "TyportHDL: the language server stopped responding.",
+        "Restart Language Server",
+        "Show Log"
+      );
+      if (pick === "Restart Language Server") {
+        await restartLanguageServer(context, wasm);
+      } else if (pick === "Show Log") {
+        channel.show();
+      }
+    }
+  }, WATCHDOG_INTERVAL_MS);
+  context.subscriptions.push(watchdog);
 }
 async function activate(context, options = {}) {
   const wasm = await import_v1.Wasm.load();
@@ -21993,6 +22066,7 @@ async function activate(context, options = {}) {
     updateStatusBar(e.newState);
   });
   updateStatusBar(import_vscode_languageclient.State.Running);
+  watchServerLiveness(context, wasm);
   const BuiltinContentRequest = new import_vscode_languageclient.RequestType("typort-hdl/builtinContent");
   context.subscriptions.push(
     import_vscode2.workspace.registerTextDocumentContentProvider("builtin", {
