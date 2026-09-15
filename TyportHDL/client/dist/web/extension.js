@@ -21902,6 +21902,17 @@ async function showServerActions(host) {
 var client;
 var channel;
 var statusBarItem;
+var activeEngine;
+function engineTag() {
+  switch (activeEngine) {
+    case "reference":
+      return "Ref";
+    case "twin":
+      return "Twin";
+    default:
+      return "";
+  }
+}
 function createStatusBarItem() {
   const item = import_vscode2.window.createStatusBarItem(import_vscode2.StatusBarAlignment.Left, 0);
   item.name = "TyportHDL Language Server";
@@ -21911,18 +21922,20 @@ function createStatusBarItem() {
   return item;
 }
 function updateStatusBar(state) {
+  const tag = engineTag();
+  const suffix = tag ? " " + tag : "";
   switch (state) {
     case import_vscode_languageclient.State.Starting:
-      statusBarItem.text = "$(sync~spin) TyPort";
-      statusBarItem.tooltip = "Starting TyportHDL language server...";
+      statusBarItem.text = "$(sync~spin) TyPort" + suffix;
+      statusBarItem.tooltip = "Starting TyportHDL language server..." + (tag ? ` (engine: ${activeEngine})` : "");
       break;
     case import_vscode_languageclient.State.Running:
-      statusBarItem.text = "$(check) TyPort";
-      statusBarItem.tooltip = "TyportHDL language server running";
+      statusBarItem.text = "$(check) TyPort" + suffix;
+      statusBarItem.tooltip = "TyportHDL language server running" + (tag ? ` (engine: ${activeEngine})` : "");
       break;
     case import_vscode_languageclient.State.Stopped:
-      statusBarItem.text = "$(warning) TyPort";
-      statusBarItem.tooltip = "TyportHDL language server stopped";
+      statusBarItem.text = "$(warning) TyPort" + suffix;
+      statusBarItem.tooltip = "TyportHDL language server stopped" + (tag ? ` (engine: ${activeEngine})` : "");
       break;
   }
 }
@@ -21935,6 +21948,10 @@ async function startLanguageServer(context, wasm) {
   }
   const serverOptions = async () => {
     const engine = readEngine("wasm");
+    activeEngine = engine;
+    if (statusBarItem) {
+      updateStatusBar(import_vscode_languageclient.State.Starting);
+    }
     const options = {
       stdio: (0, import_wasm_wasi_lsp.createStdioOptions)(),
       mountPoints: [

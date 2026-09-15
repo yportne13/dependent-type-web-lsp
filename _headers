@@ -4,3 +4,15 @@
   Access-Control-Allow-Headers: Content-Type
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
+
+# The demo's own page and extensions must be revalidated on every load: VS Code
+# Web caches builtin extensions, and this is the only reliable way a rebuilt
+# extension.js / server.wasm reaches an existing browser profile (the extension
+# version alone is not a dependable cache key here).  The large vscode-web
+# assets keep the default caching.
+/index.html
+  Cache-Control: no-cache
+/TyportHDL/*
+  Cache-Control: no-cache
+/myExt/*
+  Cache-Control: no-cache
