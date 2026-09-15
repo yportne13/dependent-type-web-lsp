@@ -5,7 +5,7 @@ npm install
 npm install -g vsce
 npm run esbuild
 vsce package
-unzip TyportHDL-1.0.0.vsix -d ../../sample/TyportHDL-bak
+unzip "$(ls -t TyportHDL-*.vsix | head -1)" -d ../../sample/TyportHDL-bak
 cd ../..
 rm -rf sample/TyportHDL
 mv sample/TyportHDL-bak/extension sample/TyportHDL
