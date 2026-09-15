@@ -22696,7 +22696,7 @@ function updateStatusBar(state) {
       break;
   }
 }
-var WASM_INITIAL_PAGES = 640;
+var WASM_INITIAL_PAGES = 2048;
 var WASM_MAX_PAGES = 32768;
 async function startLanguageServer(context, wasm) {
   if (!channel) {
