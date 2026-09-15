@@ -22811,6 +22811,8 @@ var WATCHDOG_INTERVAL_MS = 2e4;
 var WATCHDOG_TIMEOUT_MS = 1e4;
 var WATCHDOG_MISSES = 6;
 var watchdog;
+var autoRestarts = 0;
+var MAX_AUTO_RESTARTS = 3;
 var lastServerActivity = Date.now();
 var lastProbeOkAt = 0;
 var probeMisses = 0;
@@ -22866,6 +22868,9 @@ function watchServerLiveness(context, wasm) {
   if (!watched) {
     return;
   }
+  lastProbeOkAt = 0;
+  probeMisses = 0;
+  lastProbeError = "";
   let misses = 0;
   let reported = false;
   watchdog = new import_vscode2.Disposable(() => clearInterval(timer));
@@ -22898,8 +22903,14 @@ function watchServerLiveness(context, wasm) {
         `TyportHDL: the language server stopped answering ${misses} liveness probes (~${Math.round(misses * WATCHDOG_INTERVAL_MS / 1e3)}s of silence). It either died or is stuck; its last log lines are shown in the dialog and above. Restart to recover.`
       );
       channel.appendLine(detail);
+      let restartNote = 'Use "Restart Language Server" to recover.';
+      if (autoRestarts < MAX_AUTO_RESTARTS) {
+        autoRestarts += 1;
+        restartNote = `Restarted automatically (${autoRestarts}/${MAX_AUTO_RESTARTS}).`;
+        await restartLanguageServer(context, wasm);
+      }
       const pick = await import_vscode2.window.showErrorMessage(
-        "TyportHDL: the language server stopped responding. Its last log lines are below \u2014 please keep them.",
+        `TyportHDL: the language server stopped responding (${restartNote}) The lines below are its last log entries \u2014 please keep them.`,
         { modal: true, detail },
         "Restart Language Server",
         "Show Log"
