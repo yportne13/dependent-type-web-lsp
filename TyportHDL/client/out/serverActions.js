@@ -80,9 +80,6 @@ function serverActionItems(host) {
         description: 'faster per edit, ~2x memory (~1.2 GB in the web host)',
         engine: 'twin',
     });
-    if (host.liveness) {
-        items.push({ label: 'Status', kind: vscode_1.QuickPickItemKind.Separator }, { label: `$(pulse) Language server: ${host.liveness()}` });
-    }
     if (host.canUseCli) {
         items.push({ label: 'Language server backend', kind: vscode_1.QuickPickItemKind.Separator }, {
             label: radio(host.backend === 'wasm', 'WASM (built-in)'),
