@@ -52,6 +52,7 @@ const WASM_MAX_PAGES = 32768; // 2,147,483,648 bytes
 async function startLanguageServer(context, wasm) {
     if (!channel) {
         channel = vscode_1.window.createOutputChannel('TyportHDL Language Server', { log: true });
+        trackServerActivity(channel);
     }
     const serverOptions = async () => {
         // Re-read on every (re)start so a settings change to the `reference`
@@ -101,6 +102,93 @@ async function restartLanguageServer(context, wasm) {
         updateStatusBar(e.newState);
     });
     updateStatusBar(vscode_languageclient_1.State.Running);
+    watchServerLiveness(context, wasm);
+}
+// ── Liveness watchdog ───────────────────────────────────────────────────────
+const PingRequest = new vscode_languageclient_1.RequestType('typort-hdl/ping');
+// ~2 minutes of unanswered probes before reporting: long enough that a busy
+// server (a slow prelude prime queues the probe; it is answered as soon as the
+// main loop returns) is never mistaken for a dead one.
+const WATCHDOG_INTERVAL_MS = 20000;
+const WATCHDOG_TIMEOUT_MS = 10000;
+const WATCHDOG_MISSES = 6;
+let watchdog;
+/** Timestamp of the last sign of life from the server (probe or log line). */
+let lastServerActivity = Date.now();
+/**
+ * Count every message the server writes to the output channel as a sign of
+ * life, so a server that is busy (a long prelude prime emits no log line for a
+ * while but is answering probes as soon as it returns to its main loop) is
+ * never reported as dead.
+ */
+function trackServerActivity(channel) {
+    for (const method of ['append', 'appendLine']) {
+        const original = channel[method].bind(channel);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        channel[method] = (...args) => {
+            lastServerActivity = Date.now();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return original(...args);
+        };
+    }
+}
+function withTimeout(p, ms) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`no response within ${ms}ms`)), ms);
+        p.then((value) => { clearTimeout(timer); resolve(value); }, (error) => { clearTimeout(timer); reject(error); });
+    });
+}
+/**
+ * Trailing-edge liveness probe for the wasm backend.
+ *
+ * A guest that dies — a wasm trap such as an allocation failure against the
+ * module's linear-memory ceiling — produces no close and no error event:
+ * `process.run()` never settles, so `@vscode/wasm-wasi-lsp` never fires end or
+ * error, the language client keeps its connection open, and the status bar
+ * goes on claiming the server is running while nothing is served.  Probing the
+ * main loop turns that silent death into a message in the output channel plus
+ * a restart prompt.
+ */
+function watchServerLiveness(context, wasm) {
+    watchdog?.dispose();
+    const watched = client;
+    if (!watched) {
+        return;
+    }
+    let misses = 0;
+    let reported = false;
+    watchdog = new vscode_1.Disposable(() => clearInterval(timer));
+    const timer = setInterval(async () => {
+        if (reported || client !== watched) {
+            return;
+        }
+        try {
+            await withTimeout(watched.sendRequest(PingRequest, null), WATCHDOG_TIMEOUT_MS);
+            misses = 0;
+            lastServerActivity = Date.now();
+        }
+        catch {
+            misses += 1;
+            // Any server log line resets the expectation: only a server that is
+            // silent *and* not answering is treated as gone.
+            if (misses < WATCHDOG_MISSES || Date.now() - lastServerActivity < WATCHDOG_MISSES * WATCHDOG_INTERVAL_MS) {
+                return;
+            }
+            reported = true;
+            updateStatusBar(vscode_languageclient_1.State.Stopped);
+            channel.error(`TyportHDL: the language server has not answered ${misses} liveness probes in a row ` +
+                `(${Math.round(misses * WATCHDOG_INTERVAL_MS / 1000)}s). A wasm guest that hits the module's ` +
+                `linear-memory ceiling dies without reporting an error, so restart the server to recover.`);
+            const pick = await vscode_1.window.showWarningMessage('TyportHDL: the language server stopped responding.', 'Restart Language Server', 'Show Log');
+            if (pick === 'Restart Language Server') {
+                await restartLanguageServer(context, wasm);
+            }
+            else if (pick === 'Show Log') {
+                channel.show();
+            }
+        }
+    }, WATCHDOG_INTERVAL_MS);
+    context.subscriptions.push(watchdog);
 }
 async function activate(context, options = {}) {
     const wasm = await v1_1.Wasm.load();
@@ -116,6 +204,7 @@ async function activate(context, options = {}) {
     });
     // After client is started, update to running state
     updateStatusBar(vscode_languageclient_1.State.Running);
+    watchServerLiveness(context, wasm);
     // ── Builtin content provider ──────────────────────────────────────────
     const BuiltinContentRequest = new vscode_languageclient_1.RequestType('typort-hdl/builtinContent');
     context.subscriptions.push(vscode_1.workspace.registerTextDocumentContentProvider('builtin', {
