@@ -21849,6 +21849,25 @@ function radio(selected, label) {
 }
 function serverActionItems(host) {
   const items = [];
+  items.push(
+    { label: "Elaboration engine", kind: import_vscode.QuickPickItemKind.Separator },
+    {
+      label: radio(host.engine === "reference", "Reference"),
+      description: "baseline elaborator; ~0.3 GB in the web host",
+      engine: "reference"
+    },
+    {
+      label: radio(host.engine === "twin", "Twin (performance)"),
+      description: "faster per edit, ~2x memory (~1.2 GB in the web host)",
+      engine: "twin"
+    }
+  );
+  if (host.liveness) {
+    items.push(
+      { label: "Status", kind: import_vscode.QuickPickItemKind.Separator },
+      { label: `$(pulse) Language server: ${host.liveness()}` }
+    );
+  }
   if (host.canUseCli) {
     items.push(
       { label: "Language server backend", kind: import_vscode.QuickPickItemKind.Separator },
@@ -21871,6 +21890,14 @@ function serverActionItems(host) {
   );
   return items;
 }
+async function applyEngine(engine, host) {
+  if (engine === host.engine) {
+    return;
+  }
+  await writeSetting(ENGINE_KEY, engine);
+  await host.restart();
+  import_vscode.window.showInformationMessage(`TyportHDL: elaboration engine = ${engine}.`);
+}
 async function applyBackend(backend, host) {
   if (backend === host.backend) {
     return;
@@ -21889,7 +21916,9 @@ async function showServerActions(host) {
   if (!pick) {
     return;
   }
-  if (pick.backend) {
+  if (pick.engine) {
+    await applyEngine(pick.engine, host);
+  } else if (pick.backend) {
     await applyBackend(pick.backend, host);
   } else if (pick.action === "restart") {
     await host.restart();
@@ -22007,6 +22036,19 @@ var WATCHDOG_TIMEOUT_MS = 1e4;
 var WATCHDOG_MISSES = 6;
 var watchdog;
 var lastServerActivity = Date.now();
+var lastProbeOkAt = 0;
+var probeMisses = 0;
+var lastProbeError = "";
+function describeServerLiveness() {
+  if (lastProbeOkAt === 0) {
+    return probeMisses === 0 ? "starting (no probe answered yet)" : `not answering yet (${probeMisses} failed probes)`;
+  }
+  const age = Math.round((Date.now() - lastProbeOkAt) / 1e3);
+  if (probeMisses === 0) {
+    return `responding (last probe ${age}s ago)`;
+  }
+  return `NOT answering (${probeMisses} probes missed, last response ${age}s ago` + (lastProbeError ? `; ${lastProbeError}` : "") + ")";
+}
 function trackServerActivity(channel2) {
   for (const method of ["append", "appendLine"]) {
     const original = channel2[method].bind(channel2);
@@ -22048,8 +22090,11 @@ function watchServerLiveness(context, wasm) {
       await withTimeout(watched.sendRequest(PingRequest, null), WATCHDOG_TIMEOUT_MS);
       misses = 0;
       lastServerActivity = Date.now();
-    } catch {
+      lastProbeOkAt = Date.now();
+    } catch (error) {
       misses += 1;
+      probeMisses = misses;
+      lastProbeError = String(error).slice(0, 160);
       if (misses < WATCHDOG_MISSES || Date.now() - lastServerActivity < WATCHDOG_MISSES * WATCHDOG_INTERVAL_MS) {
         return;
       }
@@ -22134,6 +22179,8 @@ async function activate(context, options = {}) {
     if (!client) return;
     return showServerActions({
       backend: "wasm",
+      engine: activeEngine ?? readEngine("wasm"),
+      liveness: describeServerLiveness,
       canUseCli: options.canUseCli ?? false,
       restart: () => restartLanguageServer(context, wasm),
       showLog: () => channel.show()
