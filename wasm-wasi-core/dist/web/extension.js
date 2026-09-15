@@ -4612,7 +4612,7 @@ var _Stream = class _Stream {
     promise.resolve();
   }
 };
-_Stream.BufferSize = 16384;
+_Stream.BufferSize = 1048576;
 var Stream = _Stream;
 var WritableStream = class extends Stream {
   constructor(encoding) {
