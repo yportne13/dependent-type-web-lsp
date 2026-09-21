@@ -405,13 +405,13 @@
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/11-memory.typort'),
-                a.encode(s.file_hdl_11_memory),
+                n.Uri.parse('memfs:/sample-folder/hdl/12-memory.typort'),
+                a.encode(s.file_hdl_12_memory),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/12-adder-tree.typort'),
-                a.encode(s.file_hdl_12_adder_tree),
+                n.Uri.parse('memfs:/sample-folder/hdl/13-adder-tree.typort'),
+                a.encode(s.file_hdl_13_adder_tree),
                 { create: !0, overwrite: !0 }
               ),              this.writeFile(
                 n.Uri.parse('memfs:/sample-folder/hdl/11-bundle-deep.typort'),
@@ -419,48 +419,63 @@
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/12-arithmetic2.typort'),
-                a.encode(s.file_hdl_12_arithmetic2),
+                n.Uri.parse('memfs:/sample-folder/hdl/14-arithmetic-extra.typort'),
+                a.encode(s.file_hdl_14_arithmetic_extra),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/13-inout.typort'),
-                a.encode(s.file_hdl_13_inout),
+                n.Uri.parse('memfs:/sample-folder/hdl/15-inout.typort'),
+                a.encode(s.file_hdl_15_inout),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/14-counter.typort'),
-                a.encode(s.file_hdl_14_counter),
+                n.Uri.parse('memfs:/sample-folder/hdl/16-counter.typort'),
+                a.encode(s.file_hdl_16_counter),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/15-output-reg.typort'),
-                a.encode(s.file_hdl_15_output_reg),
+                n.Uri.parse('memfs:/sample-folder/hdl/17-output-reg.typort'),
+                a.encode(s.file_hdl_17_output_reg),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/16-utils.typort'),
-                a.encode(s.file_hdl_16_utils),
+                n.Uri.parse('memfs:/sample-folder/hdl/18-utils.typort'),
+                a.encode(s.file_hdl_18_utils),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/17-stream.typort'),
-                a.encode(s.file_hdl_17_stream),
+                n.Uri.parse('memfs:/sample-folder/hdl/19-stream.typort'),
+                a.encode(s.file_hdl_19_stream),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/18-misc.typort'),
-                a.encode(s.file_hdl_18_misc),
+                n.Uri.parse('memfs:/sample-folder/hdl/20-misc.typort'),
+                a.encode(s.file_hdl_20_misc),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/19-crossclock.typort'),
-                a.encode(s.file_hdl_19_crossclock),
+                n.Uri.parse('memfs:/sample-folder/hdl/21-crossclock.typort'),
+                a.encode(s.file_hdl_21_crossclock),
                 { create: !0, overwrite: !0 }
               ),
               this.writeFile(
-                n.Uri.parse('memfs:/sample-folder/hdl/20-widthadapter.typort'),
-                a.encode(s.file_hdl_20_widthadapter),
+                n.Uri.parse('memfs:/sample-folder/hdl/22-widthadapter.typort'),
+                a.encode(s.file_hdl_22_widthadapter),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/23-verilog-compat.typort'),
+                a.encode(s.file_hdl_23_verilog_compat),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/24-verilog-practice.typort'),
+                a.encode(s.file_hdl_24_verilog_practice),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/25-verilog-reset.typort'),
+                a.encode(s.file_hdl_25_verilog_reset),
                 { create: !0, overwrite: !0 }
               );
 
@@ -2492,11 +2507,11 @@ println("=== adder_proof.typort loaded ===")
 
 `
           ),
-                    (e.file_hdl_11_memory =
+                    (e.file_hdl_12_memory =
             `
 
 // ============================================================
-// HDL Example 11: 内存 (Memory)
+// HDL Example 12: 内存 (Memory)
 //
 //   let myRam = memUInt(8, 64)      64 × 8 位内存（自动命名）
 //   let myBits = memBits(4, 16)     16 × 4 位内存
@@ -2518,7 +2533,7 @@ module memWriteRead {
     myRam.write(addr, d, en)
     let rd = myRam.readSync(addr)
 }
-println("=== 11a: memWriteRead (同步写 + 同步读) ===")
+println("=== 12a: memWriteRead (同步写 + 同步读) ===")
 println(moduleTreeVL(memWriteRead.create.tree))
 
 module memAsyncRead {
@@ -2528,7 +2543,7 @@ module memAsyncRead {
     let out = UInt[8]
     out := rd
 }
-println("=== 11b: memAsyncRead (组合读) ===")
+println("=== 12b: memAsyncRead (组合读) ===")
 println(moduleTreeVL(memAsyncRead.create.tree))
 
 module memMixedTypes {
@@ -2545,7 +2560,7 @@ module memMixedTypes {
     myFlag.write(faddr, fd, fen)
     let frd = myFlag.readSync(faddr)
 }
-println("=== 11c: memMixedTypes (Bits/Bool 内存) ===")
+println("=== 12c: memMixedTypes (Bits/Bool 内存) ===")
 println(moduleTreeVL(memMixedTypes.create.tree))
 
 module memReadInWhen {
@@ -2557,16 +2572,16 @@ module memReadInWhen {
         myRam.write(addr, d, en)
     }
 }
-println("=== 11d: memReadInWhen (when 内写内存) ===")
+println("=== 12d: memReadInWhen (when 内写内存) ===")
 println(moduleTreeVL(memReadInWhen.create.tree))
 
 `
           ),
-          (e.file_hdl_12_adder_tree =
+          (e.file_hdl_13_adder_tree =
             `
 
 // ============================================================
-// HDL Example 12: 加法树 (Adder Tree) — 位宽随深度增长
+// HDL Example 13: 加法树 (Adder Tree) — 位宽随深度增长
 //
 //   对 Vec[UInt[w]] 构造加法树：
 //     adder_tree_step  一层：相邻元素两两 (a +^ b)，奇数个时末元素
@@ -2649,7 +2664,7 @@ module adderTree8 {
     let sum = UInt[11]
     sum := adder_tree (a0 :: a1 :: a2 :: a3 :: a4 :: a5 :: a6 :: a7 :: nil)
 }
-println("=== 12a: adderTree8 (8 x UInt[8] -> UInt[11]) ===")
+println("=== 13a: adderTree8 (8 x UInt[8] -> UInt[11]) ===")
 println(moduleTreeVL(adderTree8.create.tree))
 
 // 4 个 UInt[16] 输入 → UInt[16 + log2Up 4] = UInt[18]
@@ -2661,7 +2676,7 @@ module adderTree4 {
     let sum = UInt[18]
     sum := adder_tree (b0 :: b1 :: b2 :: b3 :: nil)
 }
-println("=== 12b: adderTree4 (4 x UInt[16] -> UInt[18]) ===")
+println("=== 13b: adderTree4 (4 x UInt[16] -> UInt[18]) ===")
 println(moduleTreeVL(adderTree4.create.tree))
 
 // 3 个 UInt[8] 输入（奇数个，触发 widenOne 路径）→ UInt[8 + log2Up 3] = UInt[10]
@@ -2672,7 +2687,7 @@ module adderTree3 {
     let sum = UInt[10]
     sum := adder_tree (c0 :: c1 :: c2 :: nil)
 }
-println("=== 12c: adderTree3 (3 x UInt[8] -> UInt[10], 奇数个元素) ===")
+println("=== 13c: adderTree3 (3 x UInt[8] -> UInt[10], 奇数个元素) ===")
 println(moduleTreeVL(adderTree3.create.tree))
 
 // 运行时验证：log2Up 求值
@@ -2798,11 +2813,11 @@ println(moduleTreeVL(bundleDeepMS.create.tree))
 
 `
           ),
-          (e.file_hdl_12_arithmetic2 =
+          (e.file_hdl_14_arithmetic_extra =
             `
 
 // ============================================================
-// HDL Example 12: 除法/取模/宽度保持移位/abs/expand
+// HDL Example 14: 除法/取模/宽度保持移位/abs/expand
 //
 //   a / b   UInt/SInt 除法（SpinalHDL: 结果宽 = w(x)）
 //   a % b   UInt/SInt 取模
@@ -2829,7 +2844,7 @@ module divMod {
     srm := sa % sb
     q3 := a / 3
 }
-println("=== 12a: divMod (除法/取模) ===")
+println("=== 14a: divMod (除法/取模) ===")
 println(moduleTreeVL(divMod.create.tree))
 
 module varShift {
@@ -2850,7 +2865,7 @@ module varShift {
     s1 := sa |>> sh
     s2 := sa |<< sh
 }
-println("=== 12b: varShift (|<< / |>> 宽度保持变量移位) ===")
+println("=== 14b: varShift (|<< / |>> 宽度保持变量移位) ===")
 println(moduleTreeVL(varShift.create.tree))
 
 module absExpand {
@@ -2862,16 +2877,16 @@ module absExpand {
     ue := sa.asUInt.expand
     se := sa.expand
 }
-println("=== 12c: absExpand (abs / expand) ===")
+println("=== 14c: absExpand (abs / expand) ===")
 println(moduleTreeVL(absExpand.create.tree))
 
 `
           ),
-          (e.file_hdl_13_inout =
+          (e.file_hdl_15_inout =
             `
 
 // ============================================================
-// HDL Example 13: inout 双向端口 (tri-state)
+// HDL Example 15: inout 双向端口 (tri-state)
 //
 //   inout io = UInt[8]          模块端口: inout wire [7:0] io
 //   inout flag = Bool           inout wire flag
@@ -2895,7 +2910,7 @@ module inoutPorts {
     b := a + inside
     inside := a
 }
-println("=== 13a: inoutPorts (inout 端口声明) ===")
+println("=== 15a: inoutPorts (inout 端口声明) ===")
 println(moduleTreeVL(inoutPorts.create.tree))
 
 module inoutAuto {
@@ -2904,7 +2919,7 @@ module inoutAuto {
     let readback = autoUInt(8)
     readback := myio
 }
-println("=== 13b: inoutAuto (auto*InOut 自动命名) ===")
+println("=== 15b: inoutAuto (auto*InOut 自动命名) ===")
 println(moduleTreeVL(inoutAuto.create.tree))
 
 #[derive(Bundle)]
@@ -2927,16 +2942,16 @@ module bundleInOut {
     let slave = TriBus.create.asSlave
     master := slave
 }
-println("=== 13c: bundleInOut (Bundle inout 字段) ===")
+println("=== 15c: bundleInOut (Bundle inout 字段) ===")
 println(moduleTreeVL(bundleInOut.create.tree))
 
 `
           ),
-          (e.file_hdl_14_counter =
+          (e.file_hdl_16_counter =
             `
 
 // ============================================================
-// HDL Example 14: Counter（SpinalHDL 风格计数器）
+// HDL Example 16: Counter（SpinalHDL 风格计数器）
 //
 //   let cnt = counter(8)         自增计数器：每周期 cnt := cnt + 1
 //   let cnt = counterInc(8, en)  使能计数：when(en) { cnt := cnt + 1 }
@@ -2951,7 +2966,7 @@ module counterFree {
     wrap := cnt.willOverflow
     doubled := cnt.value +^ cnt.value
 }
-println("=== 14a: counterFree (自增计数器) ===")
+println("=== 16a: counterFree (自增计数器) ===")
 println(moduleTreeVL(counterFree.create.tree))
 
 module counterGated {
@@ -2960,7 +2975,7 @@ module counterGated {
     let wrap = Bool
     wrap := cnt.willOverflow
 }
-println("=== 14b: counterGated (使能计数) ===")
+println("=== 16b: counterGated (使能计数) ===")
 println(moduleTreeVL(counterGated.create.tree))
 
 module counterChain {
@@ -2970,16 +2985,16 @@ module counterChain {
     let count = UInt[16]
     count := hi.value ## lo.value
 }
-println("=== 14c: counterChain (计数器串接) ===")
+println("=== 16c: counterChain (计数器串接) ===")
 println(moduleTreeVL(counterChain.create.tree))
 
 `
           ),
-          (e.file_hdl_15_output_reg =
+          (e.file_hdl_17_output_reg =
             `
 
 // ============================================================
-// HDL Example 15: output reg 寄存器输出端口
+// HDL Example 17: output reg 寄存器输出端口
 //
 //   output reg x = UInt[8]            模块端口: output reg [7:0] x
 //   output reg x = UInt[8] init 5     同上 + 异步复位初值 5
@@ -3008,7 +3023,7 @@ module counterOut {
         flag := !flag
     }
 }
-println("=== 15a: counterOut (端口区 output reg + init + when 驱动) ===")
+println("=== 17a: counterOut (端口区 output reg + init + when 驱动) ===")
 println(moduleTreeVL(counterOut.create.tree))
 
 module signedOut {
@@ -3019,7 +3034,7 @@ module signedOut {
     s := inc
     b := s.asBits
 }
-println("=== 15b: signedOut (SInt / Bits output reg) ===")
+println("=== 17b: signedOut (SInt / Bits output reg) ===")
 println(moduleTreeVL(signedOut.create.tree))
 
 module bodyOutReg {
@@ -3027,7 +3042,7 @@ module bodyOutReg {
     output reg r = UInt[8] init 3
     r := a
 }
-println("=== 15c: bodyOutReg (体内 output reg —— Expr 宏) ===")
+println("=== 17c: bodyOutReg (体内 output reg —— Expr 宏) ===")
 println(moduleTreeVL(bodyOutReg.create.tree))
 
 module autoOutRegDemo {
@@ -3037,16 +3052,25 @@ module autoOutRegDemo {
     c := v
     w := true
 }
-println("=== 15d: autoOutRegDemo (auto*OutReg 自动命名) ===")
+println("=== 17d: autoOutRegDemo (auto*OutReg 自动命名) ===")
 println(moduleTreeVL(autoOutRegDemo.create.tree))
 
 `
           ),
-          (e.file_hdl_16_utils =
+          (e.file_hdl_18_utils =
             `
 
 // ============================================================
-// HDL Example 16: utils — 组合逻辑工具（SpinalHDL lib/Utils 复刻）
+// HDL Example 18: utils — 组合逻辑工具（SpinalHDL lib/Utils 复刻）
+//
+//   reverse / propagateOnes            位反转、前缀传播
+//   countOne / countOneUInt / clz / ctz / majorityVote
+//   uintToOh / ohToUInt / ohIsLegal / ohMaskingFirst / ohMaskingLast
+//   priorityMux / muxOH / ohMuxOr / min / max / clamp
+//   toGray / fromGray / endiannessSwap
+//   delay / history / delayEvent / timeout
+//   counterMod / counterIncMod / counterUpDown / downCounter /
+//   oneHotCounter / johnsonCounter
 // ============================================================
 
 module utilsRev {
@@ -3061,7 +3085,7 @@ module utilsRev {
     let p2 = Bits[8]
     p2 := propagateOnes(a, true)
 }
-println("=== 16a: reverse / propagateOnes ===")
+println("=== 18a: reverse / propagateOnes ===")
 println(moduleTreeVL(utilsRev.create.tree))
 
 module utilsCount {
@@ -3071,7 +3095,6 @@ module utilsCount {
     let u = UInt[8]
     let cu = UInt[4]
     cu := countOneUInt(u)
-    let bs = cons(Bool.mk(None, a.zz_expr), nil)
     let v = UInt[4]
     v := countOne(a)
     let cl = UInt[4]
@@ -3081,7 +3104,7 @@ module utilsCount {
     let mv = Bool
     mv := majorityVote(a)
 }
-println("=== 16b: countOne / clz / ctz / majorityVote ===")
+println("=== 18b: countOne / clz / ctz / majorityVote ===")
 println(moduleTreeVL(utilsCount.create.tree))
 
 module utilsOh {
@@ -3097,7 +3120,7 @@ module utilsOh {
     let last = Bits[8]
     last := ohMaskingLast(oh)
 }
-println("=== 16c: uintToOh / ohToUInt / ohIsLegal / ohMasking ===")
+println("=== 18c: uintToOh / ohToUInt / ohIsLegal / ohMasking ===")
 println(moduleTreeVL(utilsOh.create.tree))
 
 module utilsMux {
@@ -3120,7 +3143,7 @@ module utilsMux {
     let cl = UInt[8]
     cl := clamp(a, b, c)
 }
-println("=== 16d: priorityMux / muxOH / ohMuxOr / min / max / clamp ===")
+println("=== 18d: priorityMux / muxOH / ohMuxOr / min / max / clamp ===")
 println(moduleTreeVL(utilsMux.create.tree))
 
 module utilsGray {
@@ -3135,7 +3158,7 @@ module utilsGray {
     let swu = UInt[16]
     swu := endiannessSwapUInt(es.asUInt, 8)
 }
-println("=== 16e: gray / endiannessSwap ===")
+println("=== 18e: gray / endiannessSwap ===")
 println(moduleTreeVL(utilsGray.create.tree))
 
 module utilsReg {
@@ -3151,7 +3174,7 @@ module utilsReg {
     let ts = Bool
     ts := tm.state
 }
-println("=== 16f: delay / history / delayEvent / timeout ===")
+println("=== 18f: delay / history / delayEvent / timeout ===")
 println(moduleTreeVL(utilsReg.create.tree))
 
 module utilsCounters {
@@ -3173,16 +3196,16 @@ module utilsCounters {
     let udv = UInt[4]
     udv := ud.value
 }
-println("=== 16g: counter 家族 ===")
+println("=== 18g: counter 家族 ===")
 println(moduleTreeVL(utilsCounters.create.tree))
 
 `
           ),
-          (e.file_hdl_17_stream =
+          (e.file_hdl_19_stream =
             `
 
 // ============================================================
-// HDL Example 17: Stream 框架（SpinalHDL lib/Stream 复刻）
+// HDL Example 19: Stream 框架（SpinalHDL lib/Stream 复刻）
 //   m2sPipe / s2mPipe / halfPipe / throwWhen / haltWhen
 //   StreamFifo / StreamMux / StreamDemux / StreamArbiter / StreamFork
 //   Fragment（last）/ Flow
@@ -3206,7 +3229,7 @@ module streamPipe {
     let hwValid = Bool
     hwValid := hw.valid
 }
-println("=== 17a: 管线原语 ===")
+println("=== 19a: 管线原语 ===")
 println(moduleTreeVL(streamPipe.create.tree))
 
 module streamFifoEx {
@@ -3221,7 +3244,7 @@ module streamFifoEx {
     let occ = UInt[3]
     occ := streamFifoConnect[8][3][3](4, push, pop)
 }
-println("=== 17b: StreamFifo ===")
+println("=== 19b: StreamFifo ===")
 println(moduleTreeVL(streamFifoEx.create.tree))
 
 module streamMuxEx {
@@ -3242,7 +3265,7 @@ module streamMuxEx {
     let mReady = Bool
     m.ready := mReady
 }
-println("=== 17c: StreamMux ===")
+println("=== 19c: StreamMux ===")
 println(moduleTreeVL(streamMuxEx.create.tree))
 
 module streamDemuxEx {
@@ -3259,7 +3282,7 @@ module streamDemuxEx {
     let o1Valid = Bool
     o1Valid := outs.at(1, si).valid
 }
-println("=== 17d: StreamDemux ===")
+println("=== 19d: StreamDemux ===")
 println(moduleTreeVL(streamDemuxEx.create.tree))
 
 module streamArbEx {
@@ -3279,7 +3302,7 @@ module streamArbEx {
     let mReady = Bool
     m.ready := mReady
 }
-println("=== 17e: StreamArbiter ===")
+println("=== 19e: StreamArbiter ===")
 println(moduleTreeVL(streamArbEx.create.tree))
 
 module streamForkEx {
@@ -3295,7 +3318,7 @@ module streamForkEx {
     o1Valid := outs.at(1, si).valid
     o0Data := outs.at(0, si).payload
 }
-println("=== 17f: StreamFork ===")
+println("=== 19f: StreamFork ===")
 println(moduleTreeVL(streamForkEx.create.tree))
 
 module streamFragEx {
@@ -3312,7 +3335,7 @@ module streamFragEx {
     let backValid = Bool
     backValid := back.valid
 }
-println("=== 17g: Fragment ===")
+println("=== 19g: Fragment ===")
 println(moduleTreeVL(streamFragEx.create.tree))
 
 module flowEx {
@@ -3329,17 +3352,22 @@ module flowEx {
     mValid := m.valid
     mData := m.payload
 }
-println("=== 17h: FlowMux ===")
+println("=== 19h: FlowMux ===")
 println(moduleTreeVL(flowEx.create.tree))
 
 `
           ),
-          (e.file_hdl_18_misc =
+          (e.file_hdl_20_misc =
             `
 
 // ============================================================
-// HDL Example 18: misc — io/math/logic/fsm/bus/crossclock
-//   (Wave 3/4/5/6 复刻组件)
+// HDL Example 20: misc — io/math/logic/fsm/bus/crossclock
+//   （Wave 3/4/5/6 复刻组件）
+//
+//   TriState / Gpio / Bcd / Divider           IO 与数学组件
+//   StateMachine / Prescaler / Timer / InterruptCtrl / Watchdog
+//   Apb3 / AxiLite4 / Wishbone / AvalonST / Axi4Stream   总线
+//   BufferCC                                  单拍采样跨时钟
 // ============================================================
 
 module miscTriState {
@@ -3348,7 +3376,7 @@ module miscTriState {
     let r = Bits[8]
     r := m.read
 }
-println("=== 18a: TriState ===")
+println("=== 20a: TriState ===")
 println(moduleTreeVL(miscTriState.create.tree))
 
 module miscGpio {
@@ -3363,7 +3391,7 @@ module miscGpio {
     let irq = Bits[4]
     irq := io.interrupts
 }
-println("=== 18b: Gpio ===")
+println("=== 20b: Gpio ===")
 println(moduleTreeVL(miscGpio.create.tree))
 
 module miscBcd {
@@ -3378,7 +3406,7 @@ module miscBcd {
     let isz = Bool
     isz := bcdIsZero(Bcd.mk[2](newBitsNamed("bcd_d", 8)))
 }
-println("=== 18c: Bcd ===")
+println("=== 20c: Bcd ===")
 println(moduleTreeVL(miscBcd.create.tree))
 
 module miscDivider {
@@ -3395,7 +3423,7 @@ module miscDivider {
     let busy = Bool
     busy := fsm.busy
 }
-println("=== 18d: Divider ===")
+println("=== 20d: Divider ===")
 println(moduleTreeVL(miscDivider.create.tree))
 
 module miscFsm {
@@ -3409,7 +3437,7 @@ module miscFsm {
         let _d = stateGoto(sm, 1)
     }
 }
-println("=== 18e: StateMachine ===")
+println("=== 20e: StateMachine ===")
 println(moduleTreeVL(miscFsm.create.tree))
 
 module miscPrescaler {
@@ -3423,7 +3451,7 @@ module miscPrescaler {
     tf := t.full
     tv := t.value
 }
-println("=== 18f: Prescaler / Timer ===")
+println("=== 20f: Prescaler / Timer ===")
 println(moduleTreeVL(miscPrescaler.create.tree))
 
 module miscInterrupts {
@@ -3435,7 +3463,7 @@ module miscInterrupts {
     let wd = Bool
     wd := watchdog(Bool.mk(None, literal(0)), UInt.mk[4](None, literal(7)))
 }
-println("=== 18g: InterruptCtrl / Watchdog ===")
+println("=== 20g: InterruptCtrl / Watchdog ===")
 println(moduleTreeVL(miscInterrupts.create.tree))
 
 module busApb3 {
@@ -3451,7 +3479,7 @@ module busApb3 {
     let r0v = UInt[32]
     r0v := r0
 }
-println("=== 18h: APB3 + 寄存器组 ===")
+println("=== 20h: APB3 + 寄存器组 ===")
 println(moduleTreeVL(busApb3.create.tree))
 
 module busAxiLite {
@@ -3469,7 +3497,7 @@ module busAxiLite {
     let awReady = Bool
     awReady := bus.aw.ready
 }
-println("=== 18i: AxiLite4 ===")
+println("=== 20i: AxiLite4 ===")
 println(moduleTreeVL(busAxiLite.create.tree))
 
 module busWb {
@@ -3489,7 +3517,7 @@ module busWb {
     let last = Bool
     last := sm.last
 }
-println("=== 18j: Wishbone / AvalonST / Axi4Stream ===")
+println("=== 20j: Wishbone / AvalonST / Axi4Stream ===")
 println(moduleTreeVL(busWb.create.tree))
 
 module ccBuffer {
@@ -3498,16 +3526,16 @@ module ccBuffer {
     let asyncB = Bool
     let syncB = bufferCCBool2(asyncB)
 }
-println("=== 18k: BufferCC ===")
+println("=== 20k: BufferCC ===")
 println(moduleTreeVL(ccBuffer.create.tree))
 
 `
           ),
-          (e.file_hdl_19_crossclock =
+          (e.file_hdl_21_crossclock =
             `
 
 // ============================================================
-// HDL Example 19: 真跨时钟域（每寄存器时钟域扩展）
+// HDL Example 21: 真跨时钟域（每寄存器时钟域扩展）
 //   PulseCCByToggle / CCByToggle / BufferCC(cd) / StreamFifoCC
 // ============================================================
 
@@ -3530,7 +3558,7 @@ module ccPulse[inCd] {
     let s2 = UInt[8]
     s2 := synced
 }
-println("=== 19a: PulseCCByToggle / CCByToggle / BufferCC-cd ===")
+println("=== 21a: PulseCCByToggle / CCByToggle / BufferCC-cd ===")
 println(moduleTreeVL(ccPulse.create[inCd].tree))
 
 module ccFifo[inCd] {
@@ -3546,16 +3574,19 @@ module ccFifo[inCd] {
     let pd = UInt[8]
     pd := io.popData
 }
-println("=== 19b: StreamFifoCC ===")
+println("=== 21b: StreamFifoCC ===")
 println(moduleTreeVL(ccFifo.create[inCd].tree))
 
 `
           ),
-          (e.file_hdl_20_widthadapter =
+          (e.file_hdl_22_widthadapter =
             `
 
 // ============================================================
-// HDL Example 20: Vec 硬件索引 + StreamWidthAdapter（字节重排）
+// HDL Example 22: Vec 硬件索引 + StreamWidthAdapter（字节重排）
+//
+//   vecAtUInt(vec, sel, default)   Vec 硬件索引 → 平衡 mux 树
+//   streamWidth                    2→3 字节收集/重排（寄存器缓冲）
 // ============================================================
 
 module vecIndex {
@@ -3565,11 +3596,11 @@ module vecIndex {
     let out = UInt[8]
     out := picked
 }
-println("=== 20a: vecAtUInt（Vec 硬件索引平衡 mux 树）===")
+println("=== 22a: vecAtUInt（Vec 硬件索引平衡 mux 树）===")
 println(moduleTreeVL(vecIndex.create.tree))
 
 // StreamWidthAdapter-lite：2 字节输入 → 3 字节输出（字节重排）
-// 输入 valid 时锁存两个字节；输出凑满 3 字节后 valid 一拍
+// 每拍锁存输入对；cnt 0->1->2 收集 3 字节后 valid 一拍并回绕
 module streamWidth {
     let inValid = Bool
     let inData0 = UInt[8]
@@ -3577,24 +3608,251 @@ module streamWidth {
     let outValid = Bool
     let outData = UInt[24]
     // 字节缓冲寄存器（主时钟）
-    let b0 = newUIntRegNamed("b0", 8)
-    let b1 = newUIntRegNamed("b1", 8)
-    let b2 = newUIntRegNamed("b2", 8)
-    let cnt = newUIntRegInitNatNamed("cnt", 2, 0)
-    // 每拍锁存输入对；cnt 0->1->2 收集 3 字节后输出
-    let _d = createSignalExpr("", regAssign(b0.zz_expr, inData0.zz_expr))
-    let _e = createSignalExpr("", regAssign(b1.zz_expr, inData1.zz_expr))
+    reg b0 = UInt[8]
+    reg b1 = UInt[8]
+    reg b2 = UInt[8]
+    reg cnt = UInt[2] init 0
+    // 每拍锁存输入对
+    b0 := inData0
+    b1 := inData1
+    b2 := inData0
     // 拼接输出（b0 b1 b2）
-    let cat = binary(binary(b0.zz_expr, "##", b1.zz_expr), "##", b2.zz_expr)
-    let _f = outData := UInt.mk(None, cat)
-    // 每拍收集，满 3 字节后 valid
-    let full = binary(cnt.zz_expr, "==", literal(2))
-    let _g = outValid := Bool.mk(None, full)
-    let _h = createSignalExpr("", regAssign(b2.zz_expr, inData0.zz_expr))
-    let _i = createSignalExpr("", regAssign(cnt.zz_expr, Expr.mux(full, literal(0), binary(cnt.zz_expr, "+", literal(1)))))
+    outData := b0 ## b1 ## b2
+    // 满 3 字节后回绕
+    outValid := cnt === 2
+    when cnt === 2 {
+        cnt := 0
+    } otherwise {
+        cnt := cnt + 1
+    }
 }
-println("=== 20b: StreamWidthAdapter-lite（字节收集 + 重排）===")
+println("=== 22b: StreamWidthAdapter-lite（字节收集 + 重排）===")
 println(moduleTreeVL(streamWidth.create.tree))
+
+`
+          ),
+          (e.file_hdl_23_verilog_compat =
+            `
+
+// ============================================================
+// HDL Example 23: Verilog 语法兼容层 (Verilog Syntax Compat)
+//
+//   常用 Verilog 语法可以直接写在 .typort 文件里：module 宏有一条
+//   Verilog 臂匹配 \`module top(input clk, ...); <语句> endmodule\`，
+//   体内语句经 VExpr 语句表转写为与 typort HDL 完全相同的工厂调用
+//   （newUInt / newUIntReg / whenBegin / ...），elaboration、Verilog
+//   代码生成、LSP 全部复用。
+//
+//   - module top(ANSI 端口头); ... endmodule
+//   - input clk / reset / rst_n 折叠进时钟域（rst_n → ActiveLow），并生成真实端口
+//   - wire/reg [msb:lsb] 声明、assign、if/else、begin/end
+//   - always @(posedge clk [or negedge rst_n]) begin q <= d; end
+//   - always @(*) 组合块（reg 被组合驱动 → HDV002 提示）
+//   - 子模块实例化 add8 u1 (.a(x), .sum(s));（方向自动判定）
+//   - 8'hFF / 5'd10 / 4'b1010 sized 字面量、a == b / a != b
+//
+//   本例是最小骨架（对应 M1）。M2 的位选/部分选、拼接 {a,b}、归约 &|^、
+//   case/endcase 见 24-verilog-practice.typort；M3 的显式复位分支与带时钟
+//   子模块层次见 25-verilog-reset.typort。仍未支持：parameter 头 / for /
+//   initial / generate / $display / 延迟。完整映射表见 docs/verilog-compat.md。
+// ============================================================
+
+// ---- 加法器：Verilog 写法 ----
+module vAdd8(input [7:0] a, input [7:0] b, output [7:0] s);
+    assign s = a + b;
+endmodule
+
+// ---- 加法器：typort 写法（同一语义）----
+module tAdd8 {
+    input a = UInt[8]
+    input b = UInt[8]
+    output s = UInt[8]
+    s := a + b
+}
+
+// ---- 计数器：Verilog 写法（rst_n 折叠为 ActiveLow 复位）----
+module vCounter(input clk, input rst_n, input [7:0] d, output reg [7:0] q);
+    always @(posedge clk or negedge rst_n) begin
+        if (d == 8'hFF)
+            q <= 8'h00;
+        else
+            q <= d + 8'h01;
+    end
+endmodule
+
+// ---- 计数器：typort 写法 ----
+module tCounter {
+    input d = UInt[8]
+    output reg q = UInt[8] init 0
+    when d === 255 {
+        q := 0
+    } otherwise {
+        q := d + 1
+    }
+}
+
+// ---- 组合逻辑 + 实例化：Verilog 写法 ----
+module vSub(input [7:0] x, output [7:0] y);
+    assign y = ~x;
+endmodule
+module vTop(input [7:0] a, output [7:0] b);
+    wire [7:0] w;
+    vSub u1 (.x(a), .y(w));
+    assign b = w & 8'h0F;
+endmodule
+
+println("=== 23a: vAdd8 (Verilog 写法) ===")
+println(moduleTreeVL(vAdd8.create.tree))
+println("=== 23b: tAdd8 (typort 写法，输出应与 23a 逐字节一致) ===")
+println(moduleTreeVL(tAdd8.create.tree))
+println("=== 23c: vCounter (negedge rst_n → ActiveLow) ===")
+println(moduleTreeVL(vCounter.create.tree))
+println("=== 23d: tCounter (typort 写法) ===")
+println(moduleTreeVL(tCounter.create.tree))
+println("=== 23e: vTop (实例化 .x(a)/.y(w) 方向自动判定) ===")
+println(moduleTreeVL(vTop.create.tree))
+
+`
+          ),
+          (e.file_hdl_24_verilog_practice =
+            `
+
+// ============================================================
+// HDL Example 24: Verilog 语法实践（M2）
+//
+//   23-verilog-compat 演示了 M1 的骨架（module 头 / wire / assign /
+//   always @(posedge clk) / if / 实例化 / sized 字面量）。本例演示 M2
+//   补齐的常用 Verilog 写法：
+//
+//   - 位选 a[3] 与部分选 a[7:4]（读、写两侧都支持）
+//   - 拼接 {a, b}（可嵌套，常量操作数保留自身位宽：{4'h3, b} → {4'd3, b}）
+//   - 归约 &a / |a / ^a（结果 Bool，即 1 bit）
+//   - case / endcase（default 标签；转写为互斥的 when 链）
+//   - always @(*) 组合块（不再多出多余的 clk 端口）
+//   - 复位值：模块体内 \`reg q = <init>;\` 与头部的 \`output reg q\`
+//     同名时自动去重（端口行声明存储，init 进复位分支）
+//   - sized 字面量带位宽输出（8'hFF → 8'd255）
+//
+//   M2 仍未覆盖：parameter 头、generate、initial、延迟、$display、
+//   always 体内手写复位分支（复位值请用 \`reg q = <init>;\` 表达）。
+//   完整映射表见 docs/verilog-compat.md。
+// ============================================================
+
+// ---- 字节序交换：部分选 + 拼接 ----
+module vByteSwap(input [15:0] w, output [15:0] y);
+    assign y = {w[7:0], w[15:8]};
+endmodule
+
+// ---- 归约运算：奇偶 / 全一 / 任意一 ----
+module vReduce(input [7:0] a, output p, output allOne, output anyOne);
+    assign p = ^a;
+    assign allOne = &a;
+    assign anyOne = |a;
+endmodule
+
+// ---- case/endcase 组合逻辑 ----
+module vAlu(input [1:0] op, input [7:0] a, input [7:0] b, output reg [7:0] y);
+    always @(*) begin
+        case (op)
+            2'b00: y = a + b;
+            2'b01: y = a & b;
+            2'b10: y = {a[3:0], b[3:0]};
+            default: y = {7'b0, ^a};
+        endcase
+    end
+endmodule
+
+// ---- 时序：移位寄存器（拼接 + 位选），复位值用 reg init ----
+module vShift(input clk, input [7:0] d, output reg [7:0] q);
+    reg [7:0] q = 0;
+    always @(posedge clk) begin
+        q <= {q[6:0], d[0]};
+    end
+endmodule
+
+// ---- 层次：实例化组合子模块（方向由 .port(sig) 自动判定）----
+module vTop(input [15:0] w, input [1:0] op, input [7:0] a, input [7:0] b,
+            output [15:0] swapped, output [7:0] alu);
+    wire [15:0] sw;
+    wire [7:0] al;
+    vByteSwap u_swap (.w(w), .y(sw));
+    vAlu u_alu (.op(op), .a(a), .b(b), .y(al));
+    assign swapped = sw;
+    assign alu = al;
+endmodule
+
+println("=== 24a: vByteSwap (部分选 + 拼接) ===")
+println(moduleTreeVL(vByteSwap.create.tree))
+println("=== 24b: vReduce (归约 & | ^) ===")
+println(moduleTreeVL(vReduce.create.tree))
+println("=== 24c: vAlu (case/endcase, always @(*)) ===")
+println(moduleTreeVL(vAlu.create.tree))
+println("=== 24d: vShift (时序 + reg init 复位) ===")
+println(moduleTreeVL(vShift.create.tree))
+println("=== 24e: vTop (实例化组合子模块) ===")
+println(moduleTreeVL(vTop.create.tree))
+
+`
+          ),
+          (e.file_hdl_25_verilog_reset =
+            `
+
+// ============================================================
+// HDL Example 25: Verilog 复位与时钟层次（M3）
+//
+//   23/24 演示了 M1/M2 的语法骨架与表达式。本例演示 M3 打通的两件事：
+//
+//   - 折叠端口成为真实端口：\`input clk\` / \`input reset\` / \`input rst_n\`
+//     现在既折叠进 ClockDomain（rst_n → ActiveLow），又生成真实端口，
+//     模块体内可以直接引用（此前被静默丢弃）。
+//   - always 体内手写复位分支：
+//       if (!rst_n) q <= 8'h00; else q <= d;
+//     转写为互斥 when 链，复位沿由折叠的复位极性决定。
+//   - 带时钟域子模块的实例化：折叠的 clk / rst_n 现在是可连的端口，
+//     父模块用 \`.clk(clk)\` / \`.rst_n(rst_n)\` 连接（此前无法连接）。
+//
+//   复位两种风格都在：
+//   - vCntAsync：异步复位（always 敏感表带 negedge rst_n）
+//   - vCntSync ：同步复位（只在 posedge clk 内判 rst，端口名非魔法名）
+//
+//   完整映射表见 docs/verilog-compat.md。
+// ============================================================
+
+// ---- 异步复位计数器（显式复位分支）----
+module vCntAsync(input clk, input rst_n, input [7:0] d, output reg [7:0] q);
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            q <= 8'h00;
+        else
+            q <= d + 8'h01;
+    end
+endmodule
+
+// ---- 同步复位计数器（端口名任意；只在时钟沿内判复位）----
+module vCntSync(input clk, input rst, input [7:0] d, output reg [7:0] q);
+    always @(posedge clk) begin
+        if (rst)
+            q <= 8'h00;
+        else
+            q <= d;
+    end
+endmodule
+
+// ---- 层次：两级流水线，实例化带时钟域的子模块 ----
+module vPipe(input clk, input rst_n, input [7:0] d, output [7:0] q);
+    wire [7:0] s1;
+    wire [7:0] s2;
+    vCntAsync u1 (.clk(clk), .rst_n(rst_n), .d(d), .q(s1));
+    vCntAsync u2 (.clk(clk), .rst_n(rst_n), .d(s1), .q(s2));
+    assign q = s2;
+endmodule
+
+println("=== 25a: vCntAsync (异步复位，显式复位分支) ===")
+println(moduleTreeVL(vCntAsync.create.tree))
+println("=== 25b: vCntSync (同步复位) ===")
+println(moduleTreeVL(vCntSync.create.tree))
+println("=== 25c: vPipe (带时钟子模块的层次实例化) ===")
+println(moduleTreeVL(vPipe.create.tree))
 
 `
           ),
