@@ -1304,9 +1304,9 @@ println(moduleTreeVL(mod2.tree))
 // Use a.apply[N] to extract a single bit from a UInt/Bits/SInt
 // ============================================================
 module bitExtract {
-    let a = UInt[8]
-    let bit0 = Bool
-    let bit7 = Bool
+    input a = UInt[8]
+    output bit0 = Bool
+    output bit7 = Bool
     bit0 := a.apply[0]
     bit7 := a.apply[7]
 }
@@ -1317,9 +1317,9 @@ println(moduleTreeVL(bitExtract.create.tree))
 // Example 2: Bracket sugar a[N] (desugars to a.apply[N])
 // ============================================================
 module bracketSugar {
-    let a = UInt[8]
-    let lsb = Bool
-    let msb = Bool
+    input a = UInt[8]
+    output lsb = Bool
+    output msb = Bool
     lsb := a[0]
     msb := a[7]
 }
@@ -1331,9 +1331,9 @@ println(moduleTreeVL(bracketSugar.create.tree))
 // Returns a narrower type of width (hi - lo + 1)
 // ============================================================
 module sliceExample {
-    let a = UInt[8]
-    let low_nibble = UInt[4]
-    let high_nibble = UInt[4]
+    input a = UInt[8]
+    output low_nibble = UInt[4]
+    output high_nibble = UInt[4]
     low_nibble := a.slice[3, 0]
     high_nibble := a.slice[7, 4]
 }
@@ -1344,12 +1344,12 @@ println(moduleTreeVL(sliceExample.create.tree))
 // Example 4: Bool logic operators (&&, ||, !, ^)
 // ============================================================
 module boolOps {
-    let a = Bool
-    let b = Bool
-    let and_result = Bool
-    let or_result = Bool
-    let not_result = Bool
-    let xor_result = Bool
+    input a = Bool
+    input b = Bool
+    output and_result = Bool
+    output or_result = Bool
+    output not_result = Bool
+    output xor_result = Bool
     and_result := a && b
     or_result := a || b
     not_result := !a
@@ -1363,8 +1363,8 @@ println(moduleTreeVL(boolOps.create.tree))
 // t[N] := x desugars to t.apply[N] := x on the LHS
 // ============================================================
 module lhsBitsel {
-    let t = UInt[8]
-    let x = Bool
+    output t = UInt[8]
+    input x = Bool
     t[0] := x
     t[7] := x
 }
@@ -1375,11 +1375,11 @@ println(moduleTreeVL(lhsBitsel.create.tree))
 // Example 6: Combining apply, slice, and comparisons
 // ============================================================
 module comparator {
-    let a = UInt[8]
-    let b = UInt[8]
-    let msb_a = Bool
-    let msb_b = Bool
-    let eq = Bool
+    input a = UInt[8]
+    input b = UInt[8]
+    output msb_a = Bool
+    output msb_b = Bool
+    output eq = Bool
     msb_a := a[7]
     msb_b := b[7]
     eq := a === b
@@ -1389,20 +1389,30 @@ println(moduleTreeVL(comparator.create.tree))
 
 // ============================================================
 // Example 7: Sub-module instantiation
-// Define a reusable adder and instantiate it in a top module
+// Define a reusable adder and instantiate it in a top module.
+// Ports are declared in the module header so the instance exposes
+// subSignal handles: \`_adder.a := a\` wires the parent's ports into
+// the child (SpinalHDL-style hierarchical connection), and
+// \`sum := _adder.sum\` reads the child's output. The raw mkInstance
+// demo (u_adder) is deliberately left unconnected.
 // ============================================================
-module myAdder[w: Nat] {
+module myAdder[w: Nat]
     input a = UInt[w]
     input b = UInt[w]
     output sum = UInt[w + 1]
+{
     sum := a +^ b
 }
 
 module topWithAdder {
     input a = UInt[8]
     input b = UInt[8]
+    output sum = UInt[9]
     let _adder = myAdder.create[8]
     let inst = mkInstance("u_adder", "myAdder")
+    _adder.a := a
+    _adder.b := b
+    sum := _adder.sum
 }
 println("=== Example 7: Sub-module instantiation ===")
 println(moduleTreeVL(topWithAdder.create.tree))
@@ -1411,15 +1421,15 @@ println(moduleTreeVL(topWithAdder.create.tree))
 // Example 8: Bit concatenation (##) — SpinalHDL style
 // ============================================================
 module concatExample {
-    let a = Bits[4]
-    let b = Bits[4]
-    let cat_bb = Bits[8]
-    let flag = Bool
-    let cat_flag = Bits[5]
-    let x = UInt[8]
-    let y = UInt[8]
-    let cat_uu = UInt[16]
-    let cat_ub = UInt[12]
+    input a = Bits[4]
+    input b = Bits[4]
+    output cat_bb = Bits[8]
+    input flag = Bool
+    output cat_flag = Bits[5]
+    input x = UInt[8]
+    input y = UInt[8]
+    output cat_uu = UInt[16]
+    output cat_ub = UInt[12]
     cat_bb := a ## b
     cat_flag := flag ## a
     cat_uu := x ## y
@@ -1451,15 +1461,18 @@ println(moduleTreeVL(concatExample.create.tree))
 // ============================================================
 
 module basicDecls[w: Nat] {
-    let a = UInt[w]
-    let b = Bits[w]
-    let c = SInt[w]
-    let d = Bool
+    input a = UInt[w]
+    output b = Bits[w]
+    output c = SInt[w]
+    output d = Bool
     input x = UInt[w]
     output y = UInt[w]
-    reg r = UInt[w]
+    output reg r = UInt[w]
     y := a + x
     r := y
+    b := a.asBits
+    c := a.asSInt
+    d := a > x
 }
 println("=== 01a: basicDecls (参数化宽度 + 各类声明) ===")
 println(moduleTreeVL(basicDecls.create[8].tree))
@@ -1483,6 +1496,9 @@ module autoNames {
     let myinit = autoUIntRegInit(8, 5)
     let mybool = autoBool
     let myoutput = autoUIntOutput(8)
+    mywire := myinput + 1
+    mybool := mywire > myinput
+    myinit := mywire
     myreg := mywire + myinput
     myoutput := mybool.mux(myreg, myinit)
 }
@@ -1505,15 +1521,15 @@ println(moduleTreeVL(autoNames.create.tree))
 // ============================================================
 
 module arithmeticUInt {
-    let a = UInt[8]
-    let b = UInt[8]
-    let sum = UInt[8]
-    let diff = UInt[8]
-    let carry = UInt[9]
-    let borrow = UInt[9]
-    let prod = UInt[16]
-    let add_nat = UInt[8]
-    let mul_nat = UInt[8]
+    input a = UInt[8]
+    input b = UInt[8]
+    output sum = UInt[8]
+    output diff = UInt[8]
+    output carry = UInt[9]
+    output borrow = UInt[9]
+    output prod = UInt[16]
+    output add_nat = UInt[8]
+    output mul_nat = UInt[8]
     sum := a + b
     diff := a - b
     carry := a +^ b
@@ -1526,11 +1542,11 @@ println("=== 02a: arithmeticUInt (+ - +^ -^ * 与 Nat 字面量) ===")
 println(moduleTreeVL(arithmeticUInt.create.tree))
 
 module arithmeticSInt {
-    let a = SInt[8]
-    let b = SInt[8]
-    let sum = SInt[8]
-    let carry = SInt[9]
-    let neg = SInt[8]
+    input a = SInt[8]
+    input b = SInt[8]
+    output sum = SInt[8]
+    output carry = SInt[9]
+    output neg = SInt[8]
     sum := a + b
     carry := a +^ b
     neg := a.neg
@@ -1552,17 +1568,17 @@ println(moduleTreeVL(arithmeticSInt.create.tree))
 // ============================================================
 
 module bitwiseOps {
-    let a = Bits[8]
-    let b = Bits[8]
-    let and_r = Bits[8]
-    let or_r = Bits[8]
-    let xor_r = Bits[8]
-    let not_r = Bits[8]
-    let shl = Bits[8]
-    let shr = Bits[8]
-    let all_ones = Bool
-    let any_one = Bool
-    let parity = Bool
+    input a = Bits[8]
+    input b = Bits[8]
+    output and_r = Bits[8]
+    output or_r = Bits[8]
+    output xor_r = Bits[8]
+    output not_r = Bits[8]
+    output shl = Bits[8]
+    output shr = Bits[8]
+    output all_ones = Bool
+    output any_one = Bool
+    output parity = Bool
     and_r := a & b
     or_r := a | b
     xor_r := a ^ b
@@ -1577,10 +1593,10 @@ println("=== 03a: bitwiseOps (按位 + 移位 + 归约) ===")
 println(moduleTreeVL(bitwiseOps.create.tree))
 
 module bitwiseUInt {
-    let a = UInt[8]
-    let b = UInt[8]
-    let and_r = UInt[8]
-    let not_r = UInt[8]
+    input a = UInt[8]
+    input b = UInt[8]
+    output and_r = UInt[8]
+    output not_r = UInt[8]
     and_r := a & b
     not_r := ~a
 }
@@ -1602,14 +1618,14 @@ println(moduleTreeVL(bitwiseUInt.create.tree))
 // ============================================================
 
 module compareUInt {
-    let a = UInt[8]
-    let b = UInt[8]
-    let lt = Bool
-    let le = Bool
-    let gt = Bool
-    let ge = Bool
-    let eq = Bool
-    let ne = Bool
+    input a = UInt[8]
+    input b = UInt[8]
+    output lt = Bool
+    output le = Bool
+    output gt = Bool
+    output ge = Bool
+    output eq = Bool
+    output ne = Bool
     lt := a < b
     le := a <= b
     gt := a > b
@@ -1621,10 +1637,10 @@ println("=== 04a: compareUInt (UInt 比较) ===")
 println(moduleTreeVL(compareUInt.create.tree))
 
 module compareNat {
-    let a = UInt[8]
-    let eq42 = Bool
-    let lt100 = Bool
-    let ne0 = Bool
+    input a = UInt[8]
+    output eq42 = Bool
+    output lt100 = Bool
+    output ne0 = Bool
     eq42 := a === 42
     lt100 := a < 100
     ne0 := a =/= 0
@@ -1633,10 +1649,10 @@ println("=== 04b: compareNat (与 Nat 字面量比较) ===")
 println(moduleTreeVL(compareNat.create.tree))
 
 module compareSInt {
-    let a = SInt[8]
-    let b = SInt[8]
-    let lt = Bool
-    let eq = Bool
+    input a = SInt[8]
+    input b = SInt[8]
+    output lt = Bool
+    output eq = Bool
     lt := a < b
     eq := a === b
 }
@@ -1658,12 +1674,12 @@ println(moduleTreeVL(compareSInt.create.tree))
 // ============================================================
 
 module boolLogic {
-    let a = Bool
-    let b = Bool
-    let and_r = Bool
-    let or_r = Bool
-    let not_r = Bool
-    let xor_r = Bool
+    input a = Bool
+    input b = Bool
+    output and_r = Bool
+    output or_r = Bool
+    output not_r = Bool
+    output xor_r = Bool
     and_r := a && b
     or_r := a || b
     not_r := !a
@@ -1673,30 +1689,30 @@ println("=== 05a: boolLogic (&& || ! ^) ===")
 println(moduleTreeVL(boolLogic.create.tree))
 
 module boolMux {
-    let sel = Bool
-    let a = UInt[8]
-    let b = UInt[8]
-    let out = UInt[8]
+    input sel = Bool
+    input a = UInt[8]
+    input b = UInt[8]
+    output out = UInt[8]
     out := sel.mux(a, b)
 }
 println("=== 05b: boolMux (三目选择) ===")
 println(moduleTreeVL(boolMux.create.tree))
 
 module boolTernary {
-    let cond = Bool
-    let x = UInt[8]
-    let y = UInt[8]
-    let out = UInt[8]
+    input cond = Bool
+    input x = UInt[8]
+    input y = UInt[8]
+    output out = UInt[8]
     out := cond ? x : y
 }
 println("=== 05c: boolTernary (C 风格三目 ? :) ===")
 println(moduleTreeVL(boolTernary.create.tree))
 
 module boolCast {
-    let c = Bool
-    let b = Bits[1]
-    let u = UInt[1]
-    let s = SInt[1]
+    input c = Bool
+    output b = Bits[1]
+    output u = UInt[1]
+    output s = SInt[1]
     b := c.asBits
     u := c.asUInt
     s := c.asSInt
@@ -1719,11 +1735,11 @@ println(moduleTreeVL(boolCast.create.tree))
 // ============================================================
 
 module bitSelect {
-    let a = UInt[8]
-    let bit0 = Bool
-    let bit7 = Bool
-    let low4 = UInt[4]
-    let hi4 = UInt[4]
+    input a = UInt[8]
+    output bit0 = Bool
+    output bit7 = Bool
+    output low4 = UInt[4]
+    output hi4 = UInt[4]
     bit0 := a.apply[0]
     bit7 := a[7]
     low4 := a.slice[3, 0]
@@ -1733,8 +1749,8 @@ println("=== 06a: bitSelect (apply / 方括号 / slice) ===")
 println(moduleTreeVL(bitSelect.create.tree))
 
 module lhsBitsel {
-    let t = UInt[8]
-    let x = Bool
+    output t = UInt[8]
+    input x = Bool
     t[0] := x
     t[7] := x
 }
@@ -1742,15 +1758,15 @@ println("=== 06b: lhsBitsel (LHS 位选赋值) ===")
 println(moduleTreeVL(lhsBitsel.create.tree))
 
 module concat {
-    let a = Bits[4]
-    let b = Bits[4]
-    let f = Bool
-    let x = UInt[8]
-    let r_bb = Bits[8]
-    let r_bf = Bits[5]
-    let r_fb = Bits[5]
-    let r_uu = UInt[16]
-    let r_xf = UInt[9]
+    input a = Bits[4]
+    input b = Bits[4]
+    input f = Bool
+    input x = UInt[8]
+    output r_bb = Bits[8]
+    output r_bf = Bits[5]
+    output r_fb = Bits[5]
+    output r_uu = UInt[16]
+    output r_xf = UInt[9]
     r_bb := a ## b
     r_bf := a ## f
     r_fb := f ## a
@@ -1768,61 +1784,76 @@ println(moduleTreeVL(concat.create.tree))
 // ============================================================
 // HDL Example 07: 寄存器 (Registers)
 //
-//   reg x = UInt[8]         普通寄存器（自动加 clk 端口）
-//   reg x = UInt[8] init 42 带异步复位初值（自动加 reset 端口）
-//   regNext(value)      延迟一拍（任意 Data，SpinalHDL 风格）
-//   regNextWhen(v, cond) 条件延迟
+//   output reg x = UInt[8]         普通寄存器（结果作 output 端口，自动加 clk 端口）
+//   output reg x = UInt[8] init 42 带异步复位初值（结果作 output 端口，自动加 reset 端口）
+//   regNext(value)      延迟一拍（任意 Data，SpinalHDL 风格；内部寄存器由 output 端口送出）
+//   regNextWhen(v, cond) 条件延迟（同上）
 //   when 块内的 :=          条件寄存器赋值
 // ============================================================
 
 module regBasic {
-    reg r = UInt[8]
-    let a = UInt[8]
+    output reg r = UInt[8]
+    input a = UInt[8]
     r := a
 }
 println("=== 07a: regBasic (普通寄存器) ===")
 println(moduleTreeVL(regBasic.create.tree))
 
 module regInit {
-    reg r = UInt[8] init 42
-    let a = UInt[8]
+    output reg r = UInt[8] init 42
+    input a = UInt[8]
     r := a + 1
 }
 println("=== 07b: regInit (复位初值 42) ===")
 println(moduleTreeVL(regInit.create.tree))
 
 module regNextDemo {
-    let a = UInt[8]
+    input a = UInt[8]
     let d = regNext(a)
+    // 延迟结果经 output 端口送出（regNext 内部寄存器保持名字 d）
+    output q = UInt[8]
+    q := d
 }
 println("=== 07c: regNextDemo (延迟一拍) ===")
 println(moduleTreeVL(regNextDemo.create.tree))
 
 module regNextAny {
-    let a = UInt[8]
-    let b = Bits[8]
-    let c = Bool
-    let e = SInt[4]
+    input a = UInt[8]
+    input b = Bits[8]
+    input c = Bool
+    input e = SInt[4]
     let da = regNext(a)
     let db = regNext(b)
     let dc = regNext(c)
     let de = regNext(e)
+    // 四种 Data 的延迟结果分别经 output 端口送出
+    output qa = UInt[8]
+    output qb = Bits[8]
+    output qc = Bool
+    output qe = SInt[4]
+    qa := da
+    qb := db
+    qc := dc
+    qe := de
 }
 println("=== 07d: regNextAny (任意 Data 类型) ===")
 println(moduleTreeVL(regNextAny.create.tree))
 
 module regNextWhenDemo {
-    let a = UInt[8]
-    let en = Bool
+    input a = UInt[8]
+    input en = Bool
     let d = regNextWhen(a, en)
+    // 条件延迟结果经 output 端口送出（寄存器保持名字 d）
+    output q = UInt[8]
+    q := d
 }
 println("=== 07e: regNextWhenDemo (条件延迟) ===")
 println(moduleTreeVL(regNextWhenDemo.create.tree))
 
 module regInWhen {
-    reg r = UInt[8]
-    let a = UInt[8]
-    let en = Bool
+    output reg r = UInt[8]
+    input a = UInt[8]
+    input en = Bool
     when en {
         r := a
     }
@@ -1851,10 +1882,10 @@ println(moduleTreeVL(regInWhen.create.tree))
 // ============================================================
 
 module whenExample {
-    let a = UInt[8]
-    let b = UInt[8]
-    let sel = Bool
-    let out = UInt[8]
+    input a = UInt[8]
+    input b = UInt[8]
+    input sel = Bool
+    output out = UInt[8]
     when sel {
         out := a
     } otherwise {
@@ -1865,11 +1896,11 @@ println("=== 08a: whenExample (when/otherwise) ===")
 println(moduleTreeVL(whenExample.create.tree))
 
 module whenElseWhen {
-    let a = UInt[8]
-    let b = UInt[8]
-    let c = UInt[8]
-    let sel = UInt[2]
-    let out = UInt[8]
+    input a = UInt[8]
+    input b = UInt[8]
+    input c = UInt[8]
+    input sel = UInt[2]
+    output out = UInt[8]
     when sel === 0 {
         out := a
     } elsewhen sel === 1 {
@@ -1882,11 +1913,11 @@ println("=== 08b: whenElseWhen (elsewhen 链) ===")
 println(moduleTreeVL(whenElseWhen.create.tree))
 
 module switchExample {
-    let sel = UInt[4]
-    let a = UInt[4]
-    let b = UInt[4]
-    let c = UInt[4]
-    let result = UInt[4]
+    input sel = UInt[4]
+    input a = UInt[4]
+    input b = UInt[4]
+    input c = UInt[4]
+    output result = UInt[4]
     switch sel {
         is 0 { result := a }
         is 1 { result := b }
@@ -1900,7 +1931,7 @@ println(moduleTreeVL(switchExample.create.tree))
 // for i in lo until hi { ... } — 编译期循环展开
 //
 //   • 半开区间 [lo, hi)：hi <= lo 时一次都不展开（无信号生成）
-//   • 每次迭代展开一份循环体，体内 let 声明的信号自动带索引后缀：
+//   • 每次迭代展开一份循环体，体内 let/output 声明的信号自动带索引后缀：
 //     x → x_0, x_1, ...；嵌套时 名_i_j
 //   • 循环索引是当次迭代的 Nat 常量，可直接参与位宽表达式
 // ============================================================
@@ -1908,7 +1939,8 @@ println(moduleTreeVL(switchExample.create.tree))
 module forUnroll {
     input a = UInt[8]
     for i in 0 until 4 {
-        let x = UInt[8]
+        // 每次迭代的副本作为 output 端口送出（x_i := a 驱动）
+        output x = UInt[8]
         x := a
     }
 }
@@ -1916,8 +1948,12 @@ println("=== 08d: forUnroll (展开命名：x_0..x_3) ===")
 println(moduleTreeVL(forUnroll.create.tree))
 
 module forWidths {
+    input a = UInt[8]
     for w in 0 until 3 {
-        let v = UInt[w + 2]
+        // 迭代信号 v 作 output 端口，由 a 的 w+2 位切片驱动
+        // （切片上界 w + 1 同样体现索引参与位宽）
+        output v = UInt[w + 2]
+        v := a.slice[w + 1, 0]
     }
 }
 println("=== 08e: forWidths (索引参与位宽：[1:0]/[2:0]/[3:0]) ===")
@@ -1927,7 +1963,8 @@ module forNested {
     input a = UInt[8]
     for i in 0 until 2 {
         for j in 0 until 2 {
-            let cell = UInt[8]
+            // 嵌套展开的每份副本作为 output 端口送出
+            output cell = UInt[8]
             cell := a
         }
     }
@@ -1959,12 +1996,13 @@ module myAdder[w: Nat]
     output sum = UInt[w]
     input en = Bool
 {
-    sum := a + b
+    // en 必须被真实读取（否则 HDL002）：使能为真输出 a+b，否则输出 a
+    sum := en.mux(a + b, a)
 }
 
 module topWithAdder {
-    input a = UInt[8]
-    input b = UInt[8]
+    // a/b 在本演示中从未被读取（实例刻意保持完全不连接 myAdder u ();），
+    // 方向修复对死声明无效（未用 input 仍报 HDL002）→ 直接删除这两个输入
     let u = myAdder.create[8]
 }
 println("=== 09a: topWithAdder (自动实例化) ===")
@@ -2042,10 +2080,15 @@ impl IMasterSlave for AxiLite {
         this
 }
 
+// 10a:方向化端口上的批量赋值 —— 正向 \`master := slave\` 灌 payload,
+// 反向 \`slave := master\` 补反向 ready;:= 自动跳过 input 端口 LHS
+// (header 第 1 条),所以每个叶子只被驱动一次、无环。10c 用 \`<>\`
+// 把这两句合并成一句。
 module bundleTop {
-    let master = AxiLite.create
-    let slave = AxiLite.create
+    let master = AxiLite.create.asMaster
+    let slave = AxiLite.create.asSlave
     master := slave
+    slave := master
 }
 println("=== 10a: bundleTop (derive(Bundle) 批量赋值) ===")
 println(moduleTreeVL(bundleTop.create.tree))
@@ -2057,9 +2100,20 @@ struct MyBus[w: Nat] {
     valid: Bool
 }
 
+// 参数化 Bundle 同样能方向化:impl 上绑定宽度参数,derive 校验要求
+// impl[w: Nat] 与 struct 的隐式参数一一对应。MyBus 没有反向字段 ——
+// master 视角两个字段全是 out,asSlave 自动翻转为全 in,单向
+// bus1 := bus2 两侧刚好互补(payload 从 bus2 灌进 bus1)。
+impl[w: Nat] IMasterSlave for MyBus[w] {
+    def asMaster: MyBus[w] =
+        let _ = out(this.data);
+        let _ = out(this.valid);
+        this
+}
+
 module bundleParam {
-    let bus1 = MyBus.create[8]
-    let bus2 = MyBus.create[8]
+    let bus1 = MyBus.create[8].asMaster
+    let bus2 = MyBus.create[8].asSlave
     bus1 := bus2
 }
 println("=== 10b: bundleParam (参数化 Bundle) ===")
@@ -2095,17 +2149,11 @@ struct OuterBus {
     ready: Bool
 }
 
-module bundleNested {
-    let outer1 = OuterBus.create
-    let outer2 = OuterBus.create
-    outer1 := outer2
-}
-println("=== 10d: bundleNested (嵌套 Bundle) ===")
-println(moduleTreeVL(bundleNested.create.tree))
-
 // 嵌套方向化(Axi4 ⊃ Axi4AW 风格):子 bundle 自己实现 IMasterSlave,
 // 父的 asMaster 里 out(this.inner) 让整个子 bundle 按自己的 asMaster
 // 方向创建、in(this.ready) 反之;命名链延续(master_value 等)。
+// 10d 用它把两侧建成方向互补的端口(两次单向 := 即全连通),
+// 10e 再用 <> 合成一句。
 impl IMasterSlave for InnerBus {
     def asMaster: InnerBus =
         let _ = out(this.value);
@@ -2119,6 +2167,15 @@ impl IMasterSlave for OuterBus {
         let _ = in(this.ready);
         this
 }
+
+module bundleNested {
+    let outer1 = OuterBus.create.asMaster
+    let outer2 = OuterBus.create.asSlave
+    outer1 := outer2
+    outer2 := outer1
+}
+println("=== 10d: bundleNested (嵌套 Bundle) ===")
+println(moduleTreeVL(bundleNested.create.tree))
 
 module bundleNestedMasterSlave {
     let master = OuterBus.create.asMaster
@@ -2526,51 +2583,63 @@ println("=== adder_proof.typort loaded ===")
 // ============================================================
 
 module memWriteRead {
+    input addr = UInt[8]
+    input d = UInt[8]
+    input en = Bool
+    output out = UInt[8]
     let myRam = memUInt(8, 64)
-    let addr = UInt[8]
-    let d = UInt[8]
-    let en = Bool
     myRam.write(addr, d, en)
     let rd = myRam.readSync(addr)
+    // 同步读结果引到输出端口（否则 rd 是没人读的死信号）
+    out := rd
 }
 println("=== 12a: memWriteRead (同步写 + 同步读) ===")
 println(moduleTreeVL(memWriteRead.create.tree))
 
 module memAsyncRead {
+    input addr = UInt[8]
+    output out = UInt[8]
     let myRam = memUInt(8, 32)
-    let addr = UInt[8]
     let rd = myRam.readAsync(addr)
-    let out = UInt[8]
     out := rd
 }
 println("=== 12b: memAsyncRead (组合读) ===")
 println(moduleTreeVL(memAsyncRead.create.tree))
 
 module memMixedTypes {
+    input baddr = UInt[8]
+    input bd = Bits[4]
+    input faddr = UInt[8]
+    input fd = Bool
+    input fen = Bool
+    // 两种内存的同步读结果都引到输出端口（否则 brd/frd 是死信号）
+    output bout = Bits[4]
+    output fout = Bool
     let myBits = memBits(4, 16)
-    let baddr = UInt[8]
-    let bd = Bits[4]
     myBits.write(baddr, bd, Bool.mk(None, literal(1)))
     let brd = myBits.readSync(baddr)
+    bout := brd
 
     let myFlag = memBool(16)
-    let faddr = UInt[8]
-    let fd = Bool
-    let fen = Bool
     myFlag.write(faddr, fd, fen)
     let frd = myFlag.readSync(faddr)
+    fout := frd
 }
 println("=== 12c: memMixedTypes (Bits/Bool 内存) ===")
 println(moduleTreeVL(memMixedTypes.create.tree))
 
 module memReadInWhen {
+    input addr = UInt[8]
+    input d = UInt[8]
+    input en = Bool
+    output out = UInt[8]
     let myRam = memUInt(8, 16)
-    let addr = UInt[8]
-    let d = UInt[8]
-    let en = Bool
     when en {
         myRam.write(addr, d, en)
     }
+    // 内存必须被读一次（否则是死内存）：组合读出 when 内写入的数据
+    let rd = myRam.readAsync(addr)
+    out := rd
 }
 println("=== 12d: memReadInWhen (when 内写内存) ===")
 println(moduleTreeVL(memReadInWhen.create.tree))
@@ -2653,15 +2722,15 @@ def adder_tree[width: Nat, len: Nat](x: Vec[UInt[width]] (len + 1)): UInt[width 
 // ============================================================
 
 module adderTree8 {
-    let a0 = UInt[8]
-    let a1 = UInt[8]
-    let a2 = UInt[8]
-    let a3 = UInt[8]
-    let a4 = UInt[8]
-    let a5 = UInt[8]
-    let a6 = UInt[8]
-    let a7 = UInt[8]
-    let sum = UInt[11]
+    input a0 = UInt[8]
+    input a1 = UInt[8]
+    input a2 = UInt[8]
+    input a3 = UInt[8]
+    input a4 = UInt[8]
+    input a5 = UInt[8]
+    input a6 = UInt[8]
+    input a7 = UInt[8]
+    output sum = UInt[11]
     sum := adder_tree (a0 :: a1 :: a2 :: a3 :: a4 :: a5 :: a6 :: a7 :: nil)
 }
 println("=== 13a: adderTree8 (8 x UInt[8] -> UInt[11]) ===")
@@ -2669,11 +2738,11 @@ println(moduleTreeVL(adderTree8.create.tree))
 
 // 4 个 UInt[16] 输入 → UInt[16 + log2Up 4] = UInt[18]
 module adderTree4 {
-    let b0 = UInt[16]
-    let b1 = UInt[16]
-    let b2 = UInt[16]
-    let b3 = UInt[16]
-    let sum = UInt[18]
+    input b0 = UInt[16]
+    input b1 = UInt[16]
+    input b2 = UInt[16]
+    input b3 = UInt[16]
+    output sum = UInt[18]
     sum := adder_tree (b0 :: b1 :: b2 :: b3 :: nil)
 }
 println("=== 13b: adderTree4 (4 x UInt[16] -> UInt[18]) ===")
@@ -2681,10 +2750,10 @@ println(moduleTreeVL(adderTree4.create.tree))
 
 // 3 个 UInt[8] 输入（奇数个，触发 widenOne 路径）→ UInt[8 + log2Up 3] = UInt[10]
 module adderTree3 {
-    let c0 = UInt[8]
-    let c1 = UInt[8]
-    let c2 = UInt[8]
-    let sum = UInt[10]
+    input c0 = UInt[8]
+    input c1 = UInt[8]
+    input c2 = UInt[8]
+    output sum = UInt[10]
     sum := adder_tree (c0 :: c1 :: c2 :: nil)
 }
 println("=== 13c: adderTree3 (3 x UInt[8] -> UInt[10], 奇数个元素) ===")
@@ -2706,7 +2775,7 @@ println(8 + (log2Up 3))
 // 在三层嵌套下练习 Bundle 的三种能力（与 10-bundle 的 10d/10e 一层
 // 嵌套对应）：
 //   1. 命名全路径化：嵌套工厂把绑定名前缀沿字段路径逐级下推，
-//      \`let m = Axi4.create\` 得到 m_aw_lane_data / m_w_lane_data ——
+//      \`let m = Axi4.create.asMaster\` 得到 m_aw_lane_data / m_w_lane_data ——
 //      即便 aw/w 两个通道的叶子字段同名也不会冲突（3 层以上必须有
 //      全路径名，否则重复 wire/端口）。
 //   2. 参数沿链下传：Bus.create[32] → Channel[32] → Lane[32]。
@@ -2720,7 +2789,9 @@ println(8 + (log2Up 3))
 
 // 三层嵌套 (SpinalHDL Axi4 ⊃ AxiChannel ⊃ AxiLane 风格):工厂递归逐级创建,
 // 绑定名前缀沿字段路径下推,每个叶子得到唯一全路径名——m_aw_lane_data /
-// m_w_lane_data 不冲突(即便 aw/w 两个通道的叶子字段同名)。
+// m_w_lane_data 不冲突(即便 aw/w 两个通道的叶子字段同名)。方向由下方
+// IMasterSlave 提供:正向 m := s 灌 payload、反向 s := m 补 ready(:= 自动
+// 跳过 input 端口 LHS),每个叶子只被驱动一次(无环);11c 用 <> 合成一句。
 #[derive(Bundle)]
 struct AxiLane {
     data: UInt[8]
@@ -2740,10 +2811,37 @@ struct Axi4 {
     ready: Bool
 }
 
+// 三层方向化 (完整 Axi4):子 bundle 各自实现 IMasterSlave,父级用
+// out(this.aw)/out(this.w) 把整个通道按自己的 asMaster 方向建、in(this.ready)
+// 反之;asSlave 全链翻转。端口名带全路径:master_aw_lane_data (output) vs
+// slave_aw_lane_data (input),互不冲突。
+impl IMasterSlave for AxiLane {
+    def asMaster: AxiLane =
+        let _ = out(this.data);
+        let _ = out(this.last);
+        this
+}
+
+impl IMasterSlave for AxiChannel {
+    def asMaster: AxiChannel =
+        let _ = out(this.lane);
+        let _ = out(this.valid);
+        this
+}
+
+impl IMasterSlave for Axi4 {
+    def asMaster: Axi4 =
+        let _ = out(this.aw);
+        let _ = out(this.w);
+        let _ = in(this.ready);
+        this
+}
+
 module bundleDeep {
-    let m = Axi4.create
-    let s = Axi4.create
+    let m = Axi4.create.asMaster
+    let s = Axi4.create.asSlave
     m := s
+    s := m
 }
 println("=== 11a: bundleDeep (三层嵌套命名) ===")
 println(moduleTreeVL(bundleDeep.create.tree))
@@ -2771,38 +2869,27 @@ struct Bus[w: Nat] {
 module bundleParamDeep {
     let m = Bus.create[32]
     let s = Bus.create[32]
+    // 悬空叶子补方向(方向注解助手 in_u/out_u 重建同名端口,工厂 wire 被
+    // 端口遮蔽丢弃):m 侧只被 := 驱动 → 全部 output;s 侧只被 := 读取 →
+    // 全部 input,单向 m := s 两侧刚好互补。参数化嵌套链不在调用点走
+    // asMaster 分派:impl 参数宽度经嵌套分派会冻结退化成 1 位(HDL004,
+    // 见 docs/l13-typeclass-instance-nat-param-bug.md);助手直接取
+    // create[32] 实参宽度,[31:0] 得以保留。
+    let _ = out_u(m.aw.lane.data)
+    let _ = out_bool(m.aw.lane.last)
+    let _ = out_bool(m.aw.valid)
+    let _ = out_bool(m.ready)
+    let _ = in_u(s.aw.lane.data)
+    let _ = in_bool(s.aw.lane.last)
+    let _ = in_bool(s.aw.valid)
+    let _ = in_bool(s.ready)
     m := s
 }
 println("=== 11b: bundleParamDeep (参数化三层嵌套) ===")
 println(moduleTreeVL(bundleParamDeep.create.tree))
 
-// 三层方向化 (完整 Axi4):子 bundle 各自实现 IMasterSlave,父级用
-// out(this.aw)/out(this.w) 把整个通道按自己的 asMaster 方向建、in(this.ready)
-// 反之;asSlave 全链翻转。\`master <> slave\` 单向一次连通全部叶子,且只驱动
-// 可驱动端口。端口名带全路径:master_aw_lane_data (output) vs slave_aw_lane_data
-// (input),互不冲突。
-impl IMasterSlave for AxiLane {
-    def asMaster: AxiLane =
-        let _ = out(this.data);
-        let _ = out(this.last);
-        this
-}
-
-impl IMasterSlave for AxiChannel {
-    def asMaster: AxiChannel =
-        let _ = out(this.lane);
-        let _ = out(this.valid);
-        this
-}
-
-impl IMasterSlave for Axi4 {
-    def asMaster: Axi4 =
-        let _ = out(this.aw);
-        let _ = out(this.w);
-        let _ = in(this.ready);
-        this
-}
-
+// 11c:方向化后的 \`master <> slave\` 单向一次连通全部叶子(等价于 11a 的
+// 两次 :=),且只驱动可驱动端口。
 module bundleDeepMS {
     let master = Axi4.create.asMaster
     let slave  = Axi4.create.asSlave
@@ -2829,15 +2916,15 @@ println(moduleTreeVL(bundleDeepMS.create.tree))
 // ============================================================
 
 module divMod {
-    let a = UInt[8]
-    let b = UInt[8]
-    let q = UInt[8]
-    let r = UInt[8]
-    let sa = SInt[8]
-    let sb = SInt[8]
-    let sq = SInt[8]
-    let srm = SInt[8]
-    let q3 = UInt[8]
+    input a = UInt[8]
+    input b = UInt[8]
+    output q = UInt[8]
+    output r = UInt[8]
+    input sa = SInt[8]
+    input sb = SInt[8]
+    output sq = SInt[8]
+    output srm = SInt[8]
+    output q3 = UInt[8]
     q := a / b
     r := a % b
     sq := sa / sb
@@ -2848,16 +2935,16 @@ println("=== 14a: divMod (除法/取模) ===")
 println(moduleTreeVL(divMod.create.tree))
 
 module varShift {
-    let a = UInt[8]
-    let sh = UInt[4]
-    let b = Bits[8]
-    let sa = SInt[8]
-    let u1 = UInt[8]
-    let u2 = UInt[8]
-    let b1 = Bits[8]
-    let b2 = Bits[8]
-    let s1 = SInt[8]
-    let s2 = SInt[8]
+    input a = UInt[8]
+    input sh = UInt[4]
+    input b = Bits[8]
+    input sa = SInt[8]
+    output u1 = UInt[8]
+    output u2 = UInt[8]
+    output b1 = Bits[8]
+    output b2 = Bits[8]
+    output s1 = SInt[8]
+    output s2 = SInt[8]
     u1 := a |<< sh
     u2 := a |>> sh
     b1 := b |<< sh
@@ -2869,10 +2956,10 @@ println("=== 14b: varShift (|<< / |>> 宽度保持变量移位) ===")
 println(moduleTreeVL(varShift.create.tree))
 
 module absExpand {
-    let sa = SInt[8]
-    let a = UInt[8]
-    let ue = UInt[9]
-    let se = SInt[9]
+    input sa = SInt[8]
+    output a = UInt[8]
+    output ue = UInt[9]
+    output se = SInt[9]
     a := sa.abs
     ue := sa.asUInt.expand
     se := sa.expand
@@ -2896,8 +2983,9 @@ println(moduleTreeVL(absExpand.create.tree))
 //
 //  Bundle 的 inout 方向在 impl IMasterSlave 的 asMaster 里用
 //  inout(this.<field>) 声明：asMaster / asSlave 两侧都生成真正的 inout
-//  端口（不再按 input 处理）；\`master := slave\` 仍跳过 inout LHS
-//  （模块不驱动自己的双向引脚 —— 三态驱动不在本模型内）。
+//  端口（不再按 input 处理）；\`master <> slave\` 对连仍跳过 inout/input
+//  LHS（模块不驱动自己的双向引脚 —— 三态驱动不在本模型内），只有
+//  dir 字段以 master_dir(input) → slave_dir(output) 直通相连。
 // ============================================================
 
 module inoutPorts {
@@ -2916,7 +3004,8 @@ println(moduleTreeVL(inoutPorts.create.tree))
 module inoutAuto {
     let myio = autoUIntInOut(8)
     let myflag = autoBoolInOut
-    let readback = autoUInt(8)
+    // readback 引到输出端口（内部线无人读取会报 HDL002 死信号）
+    let readback = autoUIntOutput(8)
     readback := myio
 }
 println("=== 15b: inoutAuto (auto*InOut 自动命名) ===")
@@ -2940,7 +3029,7 @@ impl IMasterSlave for TriBus {
 module bundleInOut {
     let master = TriBus.create.asMaster
     let slave = TriBus.create.asSlave
-    master := slave
+    master <> slave
 }
 println("=== 15c: bundleInOut (Bundle inout 字段) ===")
 println(moduleTreeVL(bundleInOut.create.tree))
@@ -2961,8 +3050,8 @@ println(moduleTreeVL(bundleInOut.create.tree))
 
 module counterFree {
     let cnt = counter(8)
-    let wrap = Bool
-    let doubled = UInt[9]
+    output wrap = Bool
+    output doubled = UInt[9]
     wrap := cnt.willOverflow
     doubled := cnt.value +^ cnt.value
 }
@@ -2970,9 +3059,9 @@ println("=== 16a: counterFree (自增计数器) ===")
 println(moduleTreeVL(counterFree.create.tree))
 
 module counterGated {
-    let en = Bool
+    input en = Bool
     let cnt = counterInc(8, en)
-    let wrap = Bool
+    output wrap = Bool
     wrap := cnt.willOverflow
 }
 println("=== 16b: counterGated (使能计数) ===")
@@ -2982,7 +3071,7 @@ module counterChain {
     // 两计数器串接：低位满 256 后驱动高位使能
     let lo = counter(8)
     let hi = counterInc(8, lo.willOverflow)
-    let count = UInt[16]
+    output count = UInt[16]
     count := hi.value ## lo.value
 }
 println("=== 16c: counterChain (计数器串接) ===")
@@ -3049,6 +3138,8 @@ module autoOutRegDemo {
     output reg c = UInt[8]
     let v = autoUIntOutReg(8)
     let w = autoBoolOutReg
+    // v 须有真实驱动（output reg 未驱动会报 HDL003）
+    v := v + 1
     c := v
     w := true
 }
@@ -3074,104 +3165,110 @@ println(moduleTreeVL(autoOutRegDemo.create.tree))
 // ============================================================
 
 module utilsRev {
-    let a = Bits[8]
-    let r = Bits[8]
+    input a = Bits[8]
+    output r = Bits[8]
+    input u = UInt[8]
+    output ru = UInt[8]
+    output p = Bits[8]
+    output p2 = Bits[8]
     r := reverse(a)
-    let u = UInt[8]
-    let ru = UInt[8]
     ru := reverse(u)
-    let p = Bits[8]
     p := propagateOnes(a, false)
-    let p2 = Bits[8]
     p2 := propagateOnes(a, true)
 }
 println("=== 18a: reverse / propagateOnes ===")
 println(moduleTreeVL(utilsRev.create.tree))
 
 module utilsCount {
-    let a = Bits[8]
-    let c = UInt[4]
+    input a = Bits[8]
+    output c = UInt[4]
+    input u = UInt[8]
+    output cu = UInt[4]
+    output v = UInt[4]
+    output cl = UInt[4]
+    output ct = UInt[4]
+    output mv = Bool
     c := countOne(a)
-    let u = UInt[8]
-    let cu = UInt[4]
     cu := countOneUInt(u)
-    let v = UInt[4]
     v := countOne(a)
-    let cl = UInt[4]
     cl := countLeadingZeroes(a)
-    let ct = UInt[4]
     ct := countTrailingZeroes(a)
-    let mv = Bool
     mv := majorityVote(a)
 }
 println("=== 18b: countOne / clz / ctz / majorityVote ===")
 println(moduleTreeVL(utilsCount.create.tree))
 
 module utilsOh {
-    let a = Bits[8]
+    input a = Bits[8]
     let oh = Bits[8]
+    output idx = UInt[3]
+    output legal = Bool
+    output first = Bits[8]
+    output last = Bits[8]
     oh := uintToOh(a.slice[2, 0].asUInt)
-    let idx = UInt[3]
     idx := ohToUInt(oh)
-    let legal = Bool
     legal := ohIsLegal(oh)
-    let first = Bits[8]
     first := ohMaskingFirst(oh)
-    let last = Bits[8]
     last := ohMaskingLast(oh)
 }
 println("=== 18c: uintToOh / ohToUInt / ohIsLegal / ohMasking ===")
 println(moduleTreeVL(utilsOh.create.tree))
 
 module utilsMux {
-    let sel = Bits[4]
-    let a = UInt[8]
-    let b = UInt[8]
-    let c = UInt[8]
-    let d = UInt[8]
-    let dflt = UInt[8]
-    let pm = UInt[8]
+    input sel = Bits[4]
+    input a = UInt[8]
+    input b = UInt[8]
+    input c = UInt[8]
+    input d = UInt[8]
+    input dflt = UInt[8]
+    output pm = UInt[8]
+    output m = UInt[8]
+    output o = UInt[8]
+    output mn = UInt[8]
+    output mx = UInt[8]
+    output cl = UInt[8]
     pm := priorityMux(sel, cons(a, cons(b, cons(c, cons(d, nil)))), dflt)
-    let m = UInt[8]
     m := muxOH(sel, cons(a, cons(b, cons(c, cons(d, nil)))))
-    let o = UInt[8]
     o := ohMuxOr(sel, cons(a, cons(b, cons(c, cons(d, nil)))))
-    let mn = UInt[8]
     mn := min(a, b)
-    let mx = UInt[8]
     mx := max(a, b)
-    let cl = UInt[8]
     cl := clamp(a, b, c)
 }
 println("=== 18d: priorityMux / muxOH / ohMuxOr / min / max / clamp ===")
 println(moduleTreeVL(utilsMux.create.tree))
 
 module utilsGray {
-    let x = UInt[8]
+    input x = UInt[8]
     let g = Bits[8]
+    output back = UInt[8]
+    input es = Bits[16]
+    output sw = Bits[16]
+    output swu = UInt[16]
     g := toGray(x)
-    let back = UInt[8]
     back := fromGray(g)
-    let es = Bits[16]
-    let sw = Bits[16]
     sw := endiannessSwap(es, 8)
-    let swu = UInt[16]
     swu := endiannessSwapUInt(es.asUInt, 8)
 }
 println("=== 18e: gray / endiannessSwap ===")
 println(moduleTreeVL(utilsGray.create.tree))
 
 module utilsReg {
-    let a = UInt[8]
-    let d1 = UInt[8]
-    d1 := delayUInt(a, 2)
-    let h = UInt[8]
-    h := historyUInt(a, 3).at(0, UInt.mk(None, literal(0)))
-    let ev = Bool
-    let de = Bool
-    de := delayEvent(ev, 4)
+    input a = UInt[8]
+    output d1 = UInt[8]
+    output h = UInt[8]
+    input ev = Bool
+    output de = Bool
+    // historyUInt 内部多产生一级最深延迟寄存器 history_1（不进入返回 Vec），
+    // 以同名 output reg 端口取出该内部寄存器，避免死寄存器
+    output reg history_1 = UInt[8]
     let tm = timeout(8)
-    let ts = Bool
+    output ts = Bool
+    d1 := delayUInt(a, 2)
+    // 触发 history 移位链生成（history_3 / history_2 / history_1）
+    let hv = historyUInt(a, 3)
+    // h 直接观测链上最深一级：a 延迟 3 拍
+    h := history_1
+    de := delayEvent(ev, 4)
     ts := tm.state
 }
 println("=== 18f: delay / history / delayEvent / timeout ===")
@@ -3179,21 +3276,21 @@ println(moduleTreeVL(utilsReg.create.tree))
 
 module utilsCounters {
     let cm = counterMod(10)
-    let cmv = UInt[4]
-    cmv := cm.value
+    output cmv = UInt[4]
     let cmo = Bool
-    cmo := cm.willOverflow
-    let en = Bool
+    input en = Bool
     let ci = counterIncMod(10, en)
     let ud = counterUpDown(10, en, cmo)
     let dc = downCounter(10)
     let ohc = oneHotCounter(4)
     let jc = johnsonCounter(4)
-    let jv = Bits[4]
+    output jv = Bits[4]
+    output ohv = Bits[4]
+    output udv = UInt[4]
+    cmv := cm.value
+    cmo := cm.willOverflow
     jv := jc.value
-    let ohv = Bits[4]
     ohv := ohc.value
-    let udv = UInt[4]
     udv := ud.value
 }
 println("=== 18g: counter 家族 ===")
@@ -3209,111 +3306,156 @@ println(moduleTreeVL(utilsCounters.create.tree))
 //   m2sPipe / s2mPipe / halfPipe / throwWhen / haltWhen
 //   StreamFifo / StreamMux / StreamDemux / StreamArbiter / StreamFork
 //   Fragment（last）/ Flow
+//
+// 信号方向约定：valid/payload 流出模块 → output，ready 流入 → input；
+// 模块驱动的 ready（反压）→ output。仅在级联中间传递的线网保持 let。
 // ============================================================
 
+// 19a-1：m2sPipe → s2mPipe 级联。
+//   push 是输入流：valid/data 从外部进入，ready 由 m2sPipe 驱动后输出；
+//   p2 是末级输出流，其 ready 由下游（外部）输入。
 module streamPipe {
-    let push = Stream.mk(newBoolNamed("push_valid"), newBoolNamed("push_ready"), newUIntNamed("push_data", 8))
+    input push_valid = Bool
+    output push_ready = Bool
+    input push_data = UInt[8]
+    // 与 s2mPipe 内部创建的同名线网同名：端口声明优先，遮蔽内部 wire
+    input p2_ready = Bool
+    let push = Stream.mk(push_valid, push_ready, push_data)
     let p1 = streamM2sPipeUInt(push)
     let p2 = streamS2mPipeUInt(p1)
-    let outValid = Bool
-    let outData = UInt[8]
+    output outValid = Bool
+    output outData = UInt[8]
     outValid := p2.valid
     outData := p2.payload
+}
+
+// 19a-2：halfPipe → throwWhen → haltWhen 级联。
+//   各级 ready 只有一个驱动源（若并联作用在同一个 push 上，
+//   push_ready 会被多个工具无条件驱动，产生多驱动冲突）；
+//   hw 是末级输出流，其 ready（hw_ready）由下游（外部）输入。
+module streamHalfPipeEx {
+    input push_valid = Bool
+    output push_ready = Bool
+    input push_data = UInt[8]
+    input cond = Bool
+    // 与 haltWhen 内部创建的同名线网同名：端口声明优先，遮蔽内部 wire
+    input hw_ready = Bool
+    let push = Stream.mk(push_valid, push_ready, push_data)
     let h1 = streamHalfPipeUInt(push)
-    let hValid = Bool
+    let tw = streamThrowWhenUInt(h1, cond)
+    let hw = streamHaltWhenUInt(tw, cond)
+    output hValid = Bool
+    output twValid = Bool
+    output hwValid = Bool
+    output outData = UInt[8]
     hValid := h1.valid
-    let tw = streamThrowWhenUInt(push, hValid)
-    let twValid = Bool
     twValid := tw.valid
-    let hw = streamHaltWhenUInt(push, hValid)
-    let hwValid = Bool
     hwValid := hw.valid
+    outData := hw.payload
 }
 println("=== 19a: 管线原语 ===")
 println(moduleTreeVL(streamPipe.create.tree))
+println(moduleTreeVL(streamHalfPipeEx.create.tree))
 
+// 19b：push 侧 valid/data 输入、ready 输出（反压）；
+//      pop 侧 valid/data 输出、ready 输入；occupancy 输出。
 module streamFifoEx {
-    let pushValid = Bool
-    let pushReady = Bool
-    let pushData = UInt[8]
-    let popValid = Bool
-    let popReady = Bool
-    let popData = UInt[8]
+    input pushValid = Bool
+    output pushReady = Bool
+    input pushData = UInt[8]
+    output popValid = Bool
+    input popReady = Bool
+    output popData = UInt[8]
+    output occ = UInt[3]
     let push = Stream.mk(pushValid, pushReady, pushData)
     let pop = Stream.mk(popValid, popReady, popData)
-    let occ = UInt[3]
     occ := streamFifoConnect[8][3][3](4, push, pop)
 }
 println("=== 19b: StreamFifo ===")
 println(moduleTreeVL(streamFifoEx.create.tree))
 
+// 19c：a/b 两路为输入流，mux 输出 m 也是流；
+//      aReady/bReady 由 mux 反压驱动 → 输出，mReady 来自下游 → 输入。
 module streamMuxEx {
-    let aValid = Bool
-    let aReady = Bool
-    let aData = UInt[8]
-    let bValid = Bool
-    let bReady = Bool
-    let bData = UInt[8]
-    let sel = UInt[1]
+    input aValid = Bool
+    output aReady = Bool
+    input aData = UInt[8]
+    input bValid = Bool
+    output bReady = Bool
+    input bData = UInt[8]
+    input sel = UInt[1]
+    input mReady = Bool
+    output mValid = Bool
+    output mData = UInt[8]
     let sa = Stream.mk(aValid, aReady, aData)
     let sb = Stream.mk(bValid, bReady, bData)
     let m = streamMuxUInt(sel, cons(sa, cons(sb, nil)))
-    let mValid = Bool
-    let mData = UInt[8]
     mValid := m.valid
     mData := m.payload
-    let mReady = Bool
     m.ready := mReady
 }
 println("=== 19c: StreamMux ===")
 println(moduleTreeVL(streamMuxEx.create.tree))
 
+// 19d：si 为输入流；demux 内部由 inReady 推出各分支 ready
+//      （demux_ready_0/1 为级联中间线网，保持 let），
+//      分支 ready/valid/payload 均观测为输出。
 module streamDemuxEx {
-    let inValid = Bool
-    let inReady = Bool
-    let inData = UInt[8]
-    let sel = UInt[1]
+    input inValid = Bool
+    input inReady = Bool
+    input inData = UInt[8]
+    input sel = UInt[1]
+    output o0Valid = Bool
+    output o0Data = UInt[8]
+    output o0Ready = Bool
+    output o1Valid = Bool
+    output o1Ready = Bool
     let si = Stream.mk(inValid, inReady, inData)
     let outs = streamDemuxUInt(si, sel, 2)
-    let o0Valid = Bool
-    let o0Data = UInt[8]
     o0Valid := outs.at(0, si).valid
     o0Data := outs.at(0, si).payload
-    let o1Valid = Bool
+    o0Ready := outs.at(0, si).ready
     o1Valid := outs.at(1, si).valid
+    o1Ready := outs.at(1, si).ready
 }
 println("=== 19d: StreamDemux ===")
 println(moduleTreeVL(streamDemuxEx.create.tree))
 
+// 19e：与 19c 同构：两路请求输入、仲裁结果输出。
 module streamArbEx {
-    let aValid = Bool
-    let aReady = Bool
-    let aData = UInt[8]
-    let bValid = Bool
-    let bReady = Bool
-    let bData = UInt[8]
+    input aValid = Bool
+    output aReady = Bool
+    input aData = UInt[8]
+    input bValid = Bool
+    output bReady = Bool
+    input bData = UInt[8]
+    input mReady = Bool
+    output mValid = Bool
+    output mData = UInt[8]
     let sa = Stream.mk(aValid, aReady, aData)
     let sb = Stream.mk(bValid, bReady, bData)
     let m = streamArbiterLowerPriorityUInt(cons(sa, cons(sb, nil)))
-    let mValid = Bool
-    let mData = UInt[8]
     mValid := m.valid
     mData := m.payload
-    let mReady = Bool
     m.ready := mReady
 }
 println("=== 19e: StreamArbiter ===")
 println(moduleTreeVL(streamArbEx.create.tree))
 
+// 19f：si 为输入流；fork 要求各分支 ready 同时为真，
+//      fork_ready_0/1 是各分支回传的 ready（外部输入，端口优先遮蔽内部线网），
+//      inReady 由 fork 汇聚驱动 → 输出（反压）。
 module streamForkEx {
-    let inValid = Bool
-    let inReady = Bool
-    let inData = UInt[8]
+    input inValid = Bool
+    output inReady = Bool
+    input inData = UInt[8]
+    input fork_ready_0 = Bool
+    input fork_ready_1 = Bool
+    output o0Valid = Bool
+    output o1Valid = Bool
+    output o0Data = UInt[8]
     let si = Stream.mk(inValid, inReady, inData)
     let outs = streamForkUInt[2](si)
-    let o0Valid = Bool
-    let o1Valid = Bool
-    let o0Data = UInt[8]
     o0Valid := outs.at(0, si).valid
     o1Valid := outs.at(1, si).valid
     o0Data := outs.at(0, si).payload
@@ -3321,34 +3463,41 @@ module streamForkEx {
 println("=== 19f: StreamFork ===")
 println(moduleTreeVL(streamForkEx.create.tree))
 
+// 19g：Stream → Fragment → Stream 往返；
+//      str_ready 是回转后流的 ready（下游外部输入，端口优先遮蔽内部线网），
+//      backData 把 payload 完整带回（否则 inData 无人读取）。
 module streamFragEx {
-    let inValid = Bool
-    let inReady = Bool
-    let inData = UInt[8]
+    input inValid = Bool
+    output inReady = Bool
+    input inData = UInt[8]
+    input str_ready = Bool
+    output fragValid = Bool
+    output fragLast = Bool
+    output backValid = Bool
+    output backData = UInt[8]
     let si = Stream.mk(inValid, inReady, inData)
     let frag = streamToFragmentUInt(si)
-    let fragValid = Bool
-    let fragLast = Bool
     fragValid := frag.valid
     fragLast := frag.last
     let back = fragmentToStreamUInt(frag)
-    let backValid = Bool
     backValid := back.valid
+    backData := back.payload
 }
 println("=== 19g: Fragment ===")
 println(moduleTreeVL(streamFragEx.create.tree))
 
+// 19h：两路 Flow 与 select 均来自外部 → 输入；合并结果 → 输出。
 module flowEx {
-    let fv = Bool
-    let fd = UInt[8]
-    let gv = Bool
-    let gd = UInt[8]
-    let sel = UInt[1]
+    input fv = Bool
+    input fd = UInt[8]
+    input gv = Bool
+    input gd = UInt[8]
+    input sel = UInt[1]
+    output mValid = Bool
+    output mData = UInt[8]
     let fa = Flow.mk(fd, fv)
     let fb = Flow.mk(gd, gv)
     let m = flowMuxUInt(sel, cons(fa, cons(fb, nil)))
-    let mValid = Bool
-    let mData = UInt[8]
     mValid := m.valid
     mData := m.payload
 }
@@ -3375,62 +3524,79 @@ module miscTriState {
     let m = triStateAsMasterBits(t)
     let r = Bits[8]
     r := m.read
+    // master 视角的 write/writeEnable 由本模块驱动：读回值回环写出、恒使能
+    m.write := r
+    m.writeEnable := true
 }
 println("=== 20a: TriState ===")
 println(moduleTreeVL(miscTriState.create.tree))
 
 module miscGpio {
-    let pinRead = Bits[4]
-    let pinWrite = Bits[4]
-    let pinWE = Bits[4]
-    let clr = Bits[4]
-    let io = GpioIO.mk(pinRead, pinWrite, pinWE, newBitsNamed("g_in", 4), newBitsNamed("g_out", 4), newBitsNamed("g_oe", 4), newBitsNamed("g_int", 4))
+    // 只被逻辑读取、从未驱动 → input 端口（HDL001）
+    input pinRead = Bits[4]
+    input clr = Bits[4]
+    // gpioCtrl 要读的输出寄存器：模块内无配置逻辑，作为 input 供其读取
+    input g_out = Bits[4]
+    input g_oe = Bits[4]
+    // 只被驱动、模块内无人读取 → output 端口（HDL002）
+    output pinWrite = Bits[4]
+    output pinWE = Bits[4]
+    output sampled = Bits[4]
+    output irq = Bits[4]
+    let io = GpioIO.mk(pinRead, pinWrite, pinWE, newBitsNamed("g_in", 4), g_out, g_oe, newBitsNamed("g_int", 4))
     let _d = gpioCtrl(io, clr)
-    let sampled = Bits[4]
     sampled := io.input
-    let irq = Bits[4]
     irq := io.interrupts
 }
 println("=== 20b: Gpio ===")
 println(moduleTreeVL(miscGpio.create.tree))
 
 module miscBcd {
-    let a = UInt[4]
-    let b = UInt[4]
-    let cin = Bool
+    // 只被加法/判零逻辑读取、从未驱动 → input 端口（HDL001）
+    input a = UInt[4]
+    input b = UInt[4]
+    input cin = Bool
+    input bcd_d = Bits[8]
+    // 只被驱动、模块内无人读取 → output 端口（HDL002）
+    output s = UInt[4]
+    output co = Bool
+    output isz = Bool
     let r = bcdAddDigit(a, b, cin)
-    let s = UInt[4]
-    let co = Bool
     s := r.sum
     co := r.carry
-    let isz = Bool
-    isz := bcdIsZero(Bcd.mk[2](newBitsNamed("bcd_d", 8)))
+    isz := bcdIsZero(Bcd.mk[2](bcd_d))
 }
 println("=== 20c: Bcd ===")
 println(moduleTreeVL(miscBcd.create.tree))
 
 module miscDivider {
-    let cmdValid = Bool
-    let cmdReady = Bool
-    let num = UInt[8]
-    let den = UInt[8]
-    let rspValid = Bool
-    let quo = UInt[8]
-    let rem = UInt[8]
+    // 除法命令 valid/numerator/denominator 来自外部 → input 端口（HDL001）
+    input cmdValid = Bool
+    input num = UInt[8]
+    input den = UInt[8]
+    // 命令握手回压、运算结果与忙状态由核心计算 → output 端口（HDL002）
+    output cmdReady = Bool
+    output rspValid = Bool
+    output quo = UInt[8]
+    output rem = UInt[8]
+    output busy = Bool
     let cmd = DividerCmd.mk(cmdValid, num, den, cmdReady)
     let rsp = DividerRsp.mk(rspValid, quo, rem)
     let fsm = dividerCore(cmd, rsp)
-    let busy = Bool
+    // cmd.ready 由核心的 !busy 反压真实驱动
+    cmd.ready := fsm.cmdReady
     busy := fsm.busy
 }
 println("=== 20d: Divider ===")
 println(moduleTreeVL(miscDivider.create.tree))
 
 module miscFsm {
-    let go = Bool
+    // go 只被状态转移条件读取、从未驱动 → input 端口（HDL001）
+    input go = Bool
     let sm = stateMachine[2](4)
-    let s0 = Bool
-    let s1 = Bool
+    // 状态观察口只被驱动、无人读取 → output 端口（HDL002）
+    output s0 = Bool
+    output s1 = Bool
     s0 := stateIs(sm, 0)
     s1 := stateIs(sm, 1)
     when go {
@@ -3441,13 +3607,15 @@ println("=== 20e: StateMachine ===")
 println(moduleTreeVL(miscFsm.create.tree))
 
 module miscPrescaler {
-    let lim = UInt[8]
+    // 分频/定时限值只被计数逻辑读取、从未驱动 → input 端口（HDL001）
+    input lim = UInt[8]
     let p = prescaler(lim)
-    let ov = Bool
-    ov := p.overflow
     let t = timer(Bool.mk(None, literal(1)), Bool.mk(None, literal(0)), lim)
-    let tf = Bool
-    let tv = UInt[8]
+    // 溢出脉冲 / 到期标志 / 计数值只被驱动 → output 端口（HDL002）
+    output ov = Bool
+    output tf = Bool
+    output tv = UInt[8]
+    ov := p.overflow
     tf := t.full
     tv := t.value
 }
@@ -3455,47 +3623,95 @@ println("=== 20f: Prescaler / Timer ===")
 println(moduleTreeVL(miscPrescaler.create.tree))
 
 module miscInterrupts {
-    let inputs = Bits[4]
-    let clears = Bits[4]
-    let masks = Bits[4]
-    let pend = Bits[4]
+    // 中断源 / 清除 / 掩码只被控制器读取、从未驱动 → input 端口（HDL001）
+    input inputs = Bits[4]
+    input clears = Bits[4]
+    input masks = Bits[4]
+    // 挂起向量与看门狗超时只被驱动、无人读取 → output 端口（HDL002）
+    output pend = Bits[4]
+    output wd = Bool
     pend := interruptCtrl(inputs, clears, masks)
-    let wd = Bool
     wd := watchdog(Bool.mk(None, literal(0)), UInt.mk[4](None, literal(7)))
 }
 println("=== 20g: InterruptCtrl / Watchdog ===")
 println(moduleTreeVL(miscInterrupts.create.tree))
 
 module busApb3 {
+    // 寄存器读回观察口：只被驱动、无人读取 → output 端口（HDL002）
+    output r0v = UInt[32]
     let bus = Apb3.mk(newUIntNamed("PADDR", 32), newBitsNamed("PSEL", 1), newBoolNamed("PENABLE"),
                       newBoolNamed("PREADY"), newBoolNamed("PWRITE"), newBitsNamed("PWDATA", 32),
                       newBitsNamed("PRDATA", 32), newBoolNamed("PSLVERROR"))
-    let mbus = apb3AsMaster(bus)
     let sbus = apb3AsSlave(bus)
+    // 本模块即从端：恒就绪、无从端错误（从端视角的输出必须有真实驱动）
+    sbus.PREADY := true
+    sbus.PSLVERROR := false
     let r0 = newUIntRegNamed("r0", 32)
     let bank = Apb3RegBank.mk(sbus)
     let _d = bank.regReadWrite(0, r0)
     let _d = bank.readDefault()
-    let r0v = UInt[32]
     r0v := r0
 }
 println("=== 20h: APB3 + 寄存器组 ===")
 println(moduleTreeVL(busApb3.create.tree))
 
 module busAxiLite {
-    let ax = AxiLite4Ax.mk(newUIntNamed("ax_addr", 32), newBitsNamed("ax_prot", 3))
-    let w = AxiLite4W.mk(newBitsNamed("w_data", 32), newBitsNamed("w_strb", 4))
-    let b = AxiLite4B.mk(newBitsNamed("b_resp", 2))
-    let r = AxiLite4R.mk(newBitsNamed("r_data", 32), newBitsNamed("r_resp", 2))
-    let bus = AxiLite4.mk(Stream.mk(newBoolNamed("aw_v"), newBoolNamed("aw_r"), ax),
-                          Stream.mk(newBoolNamed("w_v"), newBoolNamed("w_r"), w),
-                          Stream.mk(newBoolNamed("b_v"), newBoolNamed("b_r"), b),
-                          Stream.mk(newBoolNamed("ar_v"), newBoolNamed("ar_r"), ax),
-                          Stream.mk(newBoolNamed("r_v"), newBoolNamed("r_r"), r))
-    let ok = Bits[2]
-    ok := axiRespOkay
-    let awReady = Bool
+    // 五个通道的载荷 / 握手来自外部总线、被观察逻辑读取 → input 端口（HDL001/002）
+    input ax_addr = UInt[32]
+    input ax_prot = Bits[3]
+    input w_data = Bits[32]
+    input w_strb = Bits[4]
+    input b_resp = Bits[2]
+    input r_data = Bits[32]
+    input r_resp = Bits[2]
+    input aw_v = Bool
+    input aw_r = Bool
+    input w_v = Bool
+    input w_r = Bool
+    input b_v = Bool
+    input b_r = Bool
+    input ar_v = Bool
+    input ar_r = Bool
+    input r_v = Bool
+    input r_r = Bool
+    let ax = AxiLite4Ax.mk(ax_addr, ax_prot)
+    let w = AxiLite4W.mk(w_data, w_strb)
+    let b = AxiLite4B.mk(b_resp)
+    let r = AxiLite4R.mk(r_data, r_resp)
+    let bus = AxiLite4.mk(Stream.mk(aw_v, aw_r, ax),
+                          Stream.mk(w_v, w_r, w),
+                          Stream.mk(b_v, b_r, b),
+                          Stream.mk(ar_v, ar_r, ax),
+                          Stream.mk(r_v, r_r, r))
+    // 观察输出：握手对 / 载荷只被驱动、无人读取 → output 端口（HDL002）
+    output awHs = Bits[2]
+    output awAddr = UInt[32]
+    output awProt = Bits[3]
+    output wHs = Bits[2]
+    output wData = Bits[32]
+    output wStrb = Bits[4]
+    output bHs = Bits[2]
+    output bResp = Bits[2]
+    output arHs = Bits[2]
+    output rHs = Bits[2]
+    output rData = Bits[32]
+    output rResp = Bits[2]
+    output awReady = Bool
+    output ok = Bits[2]
+    awHs := bus.aw.valid ## bus.aw.ready
+    awAddr := bus.aw.payload.addr
+    awProt := bus.aw.payload.prot
+    wHs := bus.w.valid ## bus.w.ready
+    wData := bus.w.payload.data
+    wStrb := bus.w.payload.strb
+    bHs := bus.b.valid ## bus.b.ready
+    bResp := bus.b.payload.resp
+    arHs := bus.ar.valid ## bus.ar.ready
+    rHs := bus.r.valid ## bus.r.ready
+    rData := bus.r.payload.data
+    rResp := bus.r.payload.resp
     awReady := bus.aw.ready
+    ok := axiRespOkay
 }
 println("=== 20i: AxiLite4 ===")
 println(moduleTreeVL(busAxiLite.create.tree))
@@ -3505,26 +3721,57 @@ module busWb {
                          newBoolNamed("WE"), newUIntNamed("ADR", 32), newBitsNamed("DAT_MISO", 32),
                          newBitsNamed("DAT_MOSI", 32), newBitsNamed("SEL", 4))
     let m = wishboneAsMaster(wb)
-    let cyc = Bool
+    // master 视角输出由本模块驱动：恒定单周期读事务（CYC/STB 有效、WE 关断）
+    m.CYC := true
+    m.STB := true
+    m.WE := false
+    m.ADR := 0
+    m.DAT_MOSI := Bits.mk(None, literal(0))
+    m.SEL := Bits.mk(None, literal(0))
+    // 从端返回的 ACK / DAT_MISO 被读出 → output 观察口（HDL002）
+    output cyc = Bool
+    output wbAck = Bool
+    output wbRData = Bits[32]
     cyc := m.CYC
+    wbAck := m.ACK
+    wbRData := m.DAT_MISO
     let av = AvalonST.mk(newBitsNamed("av_data", 8), newBoolNamed("av_valid"), newBoolNamed("av_ready"),
                          newBitsNamed("av_empty", 1), newBoolNamed("av_sop"), newBoolNamed("av_eop"))
     let am = avalonSTAsMaster(av)
-    let sop = Bool
+    // AvalonST master：恒 valid 的单拍数据流（sop/eop 同拍置位）
+    am.data := Bits.mk(None, literal(0))
+    am.valid := true
+    am.empty := Bits.mk(None, literal(0))
+    am.startOfPacket := true
+    am.endOfPacket := true
+    // 从端反压 av_ready 被读出 → output 观察口（HDL002）
+    output avReady = Bool
+    output sop = Bool
+    avReady := am.ready
     sop := am.startOfPacket
     let st = Axi4Stream.mk(newBitsNamed("s_data", 8), newBitsNamed("s_strb", 1), newBoolNamed("s_last"))
     let sm = axi4StreamAsMaster(st)
-    let last = Bool
+    // Axi4Stream master：恒 last 的单拍输出
+    sm.data := Bits.mk(None, literal(0))
+    sm.strb := Bits.mk(None, literal(0))
+    sm.last := false
+    output last = Bool
     last := sm.last
 }
 println("=== 20j: Wishbone / AvalonST / Axi4Stream ===")
 println(moduleTreeVL(busWb.create.tree))
 
 module ccBuffer {
-    let asyncIn = UInt[8]
+    // 异步输入只被同步链读取、从未驱动 → input 端口（HDL001）
+    input asyncIn = UInt[8]
+    input asyncB = Bool
+    // 同步链末端寄存器导出为观察口（读出 _sync 末端寄存器，HDL002）
+    output syncedOut = UInt[8]
+    output syncBOut = Bool
     let synced = bufferCCUInt2(asyncIn)
-    let asyncB = Bool
     let syncB = bufferCCBool2(asyncB)
+    syncedOut := synced
+    syncBOut := syncB
 }
 println("=== 20k: BufferCC ===")
 println(moduleTreeVL(ccBuffer.create.tree))
@@ -3544,18 +3791,20 @@ def inCd: ClockDomain = ClockDomain.mk "clkA" "rstA" Async RisingEdge ActiveHigh
 def outCd: ClockDomain = ClockDomain.mk "clkB" "rstB" Async RisingEdge ActiveHigh
 
 module ccPulse[inCd] {
-    let pulseIn = Bool
-    let pulseOut = Bool
+    // 只被逻辑读取、从未驱动 → input 端口（HDL001）
+    input pulseIn = Bool
+    input data = UInt[8]
+    // 只被驱动、模块内无人读取 → output 端口（HDL002）
+    output pulseOut = Bool
+    output oValid = Bool
+    output oData = UInt[8]
+    output s2 = UInt[8]
     pulseOut := pulseCCByToggle(pulseIn, inCd, outCd)
-    let data = UInt[8]
     let ccin = CcByToggleIO.mk(Bool.mk(None, literal(1)), data)
     let ccOut = ccByToggleUInt(ccin.valid, ccin.payload, inCd, outCd)
-    let oValid = Bool
-    let oData = UInt[8]
     oValid := ccOut.valid
     oData := ccOut.payload
     let synced = bufferCCUIntCd(data, 2, outCd)
-    let s2 = UInt[8]
     s2 := synced
 }
 println("=== 21a: PulseCCByToggle / CCByToggle / BufferCC-cd ===")
@@ -3563,15 +3812,22 @@ println(moduleTreeVL(ccPulse.create[inCd].tree))
 
 module ccFifo[inCd] {
     // 写域（clkA 主时钟）推入，读域（clkB）弹出
+    // 推入信号被 FIFO 逻辑读取、从未驱动 → input 端口（HDL001）
+    input pushValid = Bool
+    input pushData = UInt[8]
+    // FIFO 反压/占用数：被 FIFO 驱动、模块内无人读取 → output 端口（HDL002）
+    output pushReady = Bool
+    output occ = UInt[3]
+    // 读域弹出侧观测：只被驱动、无人读取 → output 端口（HDL002）
+    output pv = Bool
+    output pd = UInt[8]
     let io = StreamFifoCCIO.mk[8, 4](
-        newBoolNamed("pushValid"), newBoolNamed("pushReady"),
-        newUIntNamed("pushData", 8),
+        pushValid, pushReady,
+        pushData,
         newBoolNamed("popValid"), newUIntNamed("popData", 8),
-        newUIntNamed("occ", 3))
+        occ)
     let _d = streamFifoCC[8][4](io, inCd, outCd)
-    let pv = Bool
     pv := io.popValid
-    let pd = UInt[8]
     pd := io.popData
 }
 println("=== 21b: StreamFifoCC ===")
@@ -3590,32 +3846,42 @@ println(moduleTreeVL(ccFifo.create[inCd].tree))
 // ============================================================
 
 module vecIndex {
-    let arr = cons (newUIntNamed("a0", 8)) (cons (newUIntNamed("a1", 8)) (cons (newUIntNamed("a2", 8)) (cons (newUIntNamed("a3", 8)) nil)))
-    let sel = UInt[2]
+    // Vec 元素与索引只被 mux 树读取、从未驱动 → input 端口（HDL001）
+    input a0 = UInt[8]
+    input a1 = UInt[8]
+    input a2 = UInt[8]
+    input a3 = UInt[8]
+    input sel = UInt[2]
+    let arr = cons a0 (cons a1 (cons a2 (cons a3 nil)))
     let picked = vecAtUInt(arr, sel, UInt.mk(None, literal(0)))
-    let out = UInt[8]
+    // out 只被驱动、模块内无人读取 → output 端口（HDL002）
+    output out = UInt[8]
     out := picked
 }
 println("=== 22a: vecAtUInt（Vec 硬件索引平衡 mux 树）===")
 println(moduleTreeVL(vecIndex.create.tree))
 
 // StreamWidthAdapter-lite：2 字节输入 → 3 字节输出（字节重排）
-// 每拍锁存输入对；cnt 0->1->2 收集 3 字节后 valid 一拍并回绕
+// inValid 有效时锁存输入对；cnt 0->1->2 收集 3 字节后 valid 一拍并回绕
 module streamWidth {
-    let inValid = Bool
-    let inData0 = UInt[8]
-    let inData1 = UInt[8]
-    let outValid = Bool
-    let outData = UInt[24]
+    // 输入流只被读取（inValid 作锁存使能）、从未驱动 → input 端口（HDL001）
+    input inValid = Bool
+    input inData0 = UInt[8]
+    input inData1 = UInt[8]
+    // 输出流只被驱动、模块内无人读取 → output 端口（HDL002）
+    output outValid = Bool
+    output outData = UInt[24]
     // 字节缓冲寄存器（主时钟）
     reg b0 = UInt[8]
     reg b1 = UInt[8]
     reg b2 = UInt[8]
     reg cnt = UInt[2] init 0
-    // 每拍锁存输入对
-    b0 := inData0
-    b1 := inData1
-    b2 := inData0
+    // inValid 有效时锁存输入对（否则字节缓冲保持）
+    when inValid {
+        b0 := inData0
+        b1 := inData1
+        b2 := inData0
+    }
     // 拼接输出（b0 b1 b2）
     outData := b0 ## b1 ## b2
     // 满 3 字节后回绕
@@ -3658,7 +3924,11 @@ println(moduleTreeVL(streamWidth.create.tree))
 // ============================================================
 
 // ---- 加法器：Verilog 写法 ----
-module vAdd8(input [7:0] a, input [7:0] b, output [7:0] s);
+module vAdd8(
+    input [7:0] a,
+    input [7:0] b,
+    output [7:0] s
+);
     assign s = a + b;
 endmodule
 
@@ -3671,7 +3941,12 @@ module tAdd8 {
 }
 
 // ---- 计数器：Verilog 写法（rst_n 折叠为 ActiveLow 复位）----
-module vCounter(input clk, input rst_n, input [7:0] d, output reg [7:0] q);
+module vCounter(
+    input clk,
+    input rst_n,
+    input [7:0] d,
+    output reg [7:0] q
+);
     always @(posedge clk or negedge rst_n) begin
         if (d == 8'hFF)
             q <= 8'h00;
@@ -3692,10 +3967,16 @@ module tCounter {
 }
 
 // ---- 组合逻辑 + 实例化：Verilog 写法 ----
-module vSub(input [7:0] x, output [7:0] y);
+module vSub(
+    input [7:0] x,
+    output [7:0] y
+);
     assign y = ~x;
 endmodule
-module vTop(input [7:0] a, output [7:0] b);
+module vTop(
+    input [7:0] a,
+    output [7:0] b
+);
     wire [7:0] w;
     vSub u1 (.x(a), .y(w));
     assign b = w & 8'h0F;
@@ -3739,19 +4020,32 @@ println(moduleTreeVL(vTop.create.tree))
 // ============================================================
 
 // ---- 字节序交换：部分选 + 拼接 ----
-module vByteSwap(input [15:0] w, output [15:0] y);
+module vByteSwap(
+    input [15:0] w,
+    output [15:0] y
+);
     assign y = {w[7:0], w[15:8]};
 endmodule
 
 // ---- 归约运算：奇偶 / 全一 / 任意一 ----
-module vReduce(input [7:0] a, output p, output allOne, output anyOne);
+module vReduce(
+    input [7:0] a,
+    output p,
+    output allOne,
+    output anyOne
+);
     assign p = ^a;
     assign allOne = &a;
     assign anyOne = |a;
 endmodule
 
 // ---- case/endcase 组合逻辑 ----
-module vAlu(input [1:0] op, input [7:0] a, input [7:0] b, output reg [7:0] y);
+module vAlu(
+    input [1:0] op,
+    input [7:0] a,
+    input [7:0] b,
+    output reg [7:0] y
+);
     always @(*) begin
         case (op)
             2'b00: y = a + b;
@@ -3763,7 +4057,11 @@ module vAlu(input [1:0] op, input [7:0] a, input [7:0] b, output reg [7:0] y);
 endmodule
 
 // ---- 时序：移位寄存器（拼接 + 位选），复位值用 reg init ----
-module vShift(input clk, input [7:0] d, output reg [7:0] q);
+module vShift(
+    input clk,
+    input [7:0] d,
+    output reg [7:0] q
+);
     reg [7:0] q = 0;
     always @(posedge clk) begin
         q <= {q[6:0], d[0]};
@@ -3771,8 +4069,14 @@ module vShift(input clk, input [7:0] d, output reg [7:0] q);
 endmodule
 
 // ---- 层次：实例化组合子模块（方向由 .port(sig) 自动判定）----
-module vTop(input [15:0] w, input [1:0] op, input [7:0] a, input [7:0] b,
-            output [15:0] swapped, output [7:0] alu);
+module vTop(
+    input [15:0] w,
+    input [1:0] op,
+    input [7:0] a,
+    input [7:0] b,
+    output [15:0] swapped,
+    output [7:0] alu
+);
     wire [15:0] sw;
     wire [7:0] al;
     vByteSwap u_swap (.w(w), .y(sw));
@@ -3819,7 +4123,12 @@ println(moduleTreeVL(vTop.create.tree))
 // ============================================================
 
 // ---- 异步复位计数器（显式复位分支）----
-module vCntAsync(input clk, input rst_n, input [7:0] d, output reg [7:0] q);
+module vCntAsync(
+    input clk,
+    input rst_n,
+    input [7:0] d,
+    output reg [7:0] q
+);
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             q <= 8'h00;
@@ -3829,7 +4138,12 @@ module vCntAsync(input clk, input rst_n, input [7:0] d, output reg [7:0] q);
 endmodule
 
 // ---- 同步复位计数器（端口名任意；只在时钟沿内判复位）----
-module vCntSync(input clk, input rst, input [7:0] d, output reg [7:0] q);
+module vCntSync(
+    input clk,
+    input rst,
+    input [7:0] d,
+    output reg [7:0] q
+);
     always @(posedge clk) begin
         if (rst)
             q <= 8'h00;
@@ -3839,7 +4153,12 @@ module vCntSync(input clk, input rst, input [7:0] d, output reg [7:0] q);
 endmodule
 
 // ---- 层次：两级流水线，实例化带时钟域的子模块 ----
-module vPipe(input clk, input rst_n, input [7:0] d, output [7:0] q);
+module vPipe(
+    input clk,
+    input rst_n,
+    input [7:0] d,
+    output [7:0] q
+);
     wire [7:0] s1;
     wire [7:0] s2;
     vCntAsync u1 (.clk(clk), .rst_n(rst_n), .d(d), .q(s1));
