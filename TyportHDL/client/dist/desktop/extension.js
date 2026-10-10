@@ -270,7 +270,7 @@ var require_messages = __commonJS({
       }
     };
     exports2.RequestType0 = RequestType0;
-    var RequestType2 = class extends AbstractMessageSignature {
+    var RequestType3 = class extends AbstractMessageSignature {
       constructor(method, _parameterStructures = ParameterStructures.auto) {
         super(method, 1);
         __publicField(this, "_parameterStructures");
@@ -284,7 +284,7 @@ var require_messages = __commonJS({
         return this._parameterStructures;
       }
     };
-    exports2.RequestType = RequestType2;
+    exports2.RequestType = RequestType3;
     var RequestType1 = class extends AbstractMessageSignature {
       constructor(method, _parameterStructures = ParameterStructures.auto) {
         super(method, 1);
@@ -310,7 +310,7 @@ var require_messages = __commonJS({
       }
     };
     exports2.RequestType2 = RequestType22;
-    var RequestType3 = class extends AbstractMessageSignature {
+    var RequestType32 = class extends AbstractMessageSignature {
       constructor(method) {
         super(method, 3);
         /**
@@ -319,7 +319,7 @@ var require_messages = __commonJS({
         __publicField(this, "_");
       }
     };
-    exports2.RequestType3 = RequestType3;
+    exports2.RequestType3 = RequestType32;
     var RequestType4 = class extends AbstractMessageSignature {
       constructor(method) {
         super(method, 4);
@@ -3429,7 +3429,7 @@ var init_main = __esm({
       }
       uinteger2.is = is;
     })(uinteger || (uinteger = {}));
-    (function(Position3) {
+    (function(Position4) {
       function create(line, character) {
         if (line === Number.MAX_VALUE) {
           line = uinteger.MAX_VALUE;
@@ -3439,12 +3439,12 @@ var init_main = __esm({
         }
         return { line, character };
       }
-      Position3.create = create;
+      Position4.create = create;
       function is(value) {
         const candidate = value;
         return Is.objectLiteral(candidate) && Is.uinteger(candidate.line) && Is.uinteger(candidate.character);
       }
-      Position3.is = is;
+      Position4.is = is;
     })(Position || (Position = {}));
     (function(Range2) {
       function create(one, two, three, four) {
@@ -23021,6 +23021,29 @@ async function activate2(context) {
         restart: () => restartCliClient(),
         showLog: () => logChannel?.show()
       });
+    }));
+    const ExpandMacroRequest = new import_node2.RequestType("typort-hdl/expandMacro");
+    context.subscriptions.push(import_vscode3.commands.registerCommand("typort-hdl.expandMacro", async () => {
+      const editor = import_vscode3.window.activeTextEditor;
+      if (!editor || !client2) {
+        return;
+      }
+      const uri = client2.code2ProtocolConverter.asUri(editor.document.uri);
+      const position = editor.selection.active;
+      try {
+        const result = await client2.sendRequest(ExpandMacroRequest, { uri, position });
+        if (result) {
+          const doc = await import_vscode3.workspace.openTextDocument({
+            content: result.expanded_text,
+            language: "typort"
+          });
+          await import_vscode3.window.showTextDocument(doc, { preview: true });
+        } else {
+          import_vscode3.window.showInformationMessage("No macro expansion found at cursor position.");
+        }
+      } catch (error) {
+        import_vscode3.window.showErrorMessage(`Expand macro failed: ${error}`);
+      }
     }));
   } else {
     await activate(context, { canUseCli: true });

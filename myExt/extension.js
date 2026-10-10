@@ -477,6 +477,16 @@
                 n.Uri.parse('memfs:/sample-folder/hdl/25-verilog-reset.typort'),
                 a.encode(s.file_hdl_25_verilog_reset),
                 { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/26-assert.typort'),
+                a.encode(s.file_hdl_26_assert),
+                { create: !0, overwrite: !0 }
+              ),
+              this.writeFile(
+                n.Uri.parse('memfs:/sample-folder/hdl/27-blackbox.typort'),
+                a.encode(s.file_hdl_27_blackbox),
+                { create: !0, overwrite: !0 }
               );
 
           }
@@ -945,12 +955,13 @@ def subst_eg_calc: Eq(5 + 0, 5) =
 
 println(subst_eg_calc)
 
-// The \`calc\` block swallows the newline after its closing \`}\` (the macro
-// literal-token matcher skips one EndLine, see docs/calc-reasoning-design.md
-// 9.3), so the declaration loop cannot sync on a trailing println at EOF.
-// Re-printing the original (its println now sits directly above) here gives
-// the parser its final sync point and verifies that the calc variant
-// prints exactly the same value.
+// The \`calc\` block used to swallow the newline after its closing \`}\` (the
+// macro literal-token matcher skips one EndLine, see docs/calc-reasoning-design.md
+// 9.3), which silently dropped a trailing println at EOF — the re-print below
+// worked around it. The parser-side fix (p_raw trailing-newline handling, see
+// docs/hdl-def-body-hardware-statements.md fix 2) closed that hole; the extra
+// println is no longer required and is kept as a regression check that the
+// calc variant prints exactly the same value.
 
 println(subst_eg)
 
@@ -3045,7 +3056,9 @@ println(moduleTreeVL(bundleInOut.create.tree))
 //   let cnt = counter(8)         自增计数器：每周期 cnt := cnt + 1
 //   let cnt = counterInc(8, en)  使能计数：when(en) { cnt := cnt + 1 }
 //   cnt.value         计数值（reg [w-1:0]，按 let 绑定名自动命名）
-//   cnt.willOverflow  组合信号：value 全 1（(~value == 0)，下一周期回绕）
+//   cnt.willOverflow  组合信号：value 全 1（(~value == 0)，下一周期回绕）。
+//                     counterInc(8, en) 额外按 enable 门控：en && (~value == 0)，
+//                     即未使能的周期不会误报回绕（2026-10 一致性修复）。
 // ============================================================
 
 module counterFree {
@@ -4172,6 +4185,143 @@ println("=== 25b: vCntSync (同步复位) ===")
 println(moduleTreeVL(vCntSync.create.tree))
 println("=== 25c: vPipe (带时钟子模块的层次实例化) ===")
 println(moduleTreeVL(vPipe.create.tree))
+
+`
+          ),
+          (e.file_hdl_26_assert =
+            `
+
+// ============================================================
+// HDL Example 26: 仿真断言（assert 全链，docs/hdl-blackbox-sim-design.md §3/§7）
+//
+//   assert(cond, "msg")           默认 ERROR 级，主时钟域
+//   assertInfo/assertWarning/     严重级别变体
+//   assertFatal(cond, "msg")      ERROR 标记行 + $finish
+//   assertCd(cond, "msg", cd)     额外时钟域断言（clk 端口自动合成）
+//
+// 产码：\`// synthesis translate_off\` 包裹的 \`always @(posedge clk)\` 块，
+// 每条断言一条 \`if (!(cond)) begin $display("TYPORT_ASSERT_<SEV> %0t %m:
+// msg", $time); end\`；when 内断言折叠成嵌套 if。仿真闭环验收（断言触发 →
+// Dut 捕获）见 tests/sim_tests.rs 的 typort_assert_* 用例。
+//
+// NOTE: 用 moduleTreeVL 而非设计文档 §7.1 草图的 designVL：测试引擎
+// (run_with_prelude) 对 designVL 的 def-replay 参数引用存在既有 lvl2ix
+// quote 限制，单模块场景两者产码一致（designVL 只在多模块闭包时有差异）。
+// ============================================================
+
+// --- 26a: 顶层断言 + when 内断言（设计文档 §7.1 验收用例） ---
+module aCounter {
+    input en = Bool
+    output reg count = UInt[8] init 0
+    when en {
+        count := count + 1
+    }
+    assert(count < 100, "count overflow")
+    when (count >= 50) {
+        assert(count < 100, "half-way guard")
+    }
+}
+println("=== 26a: aCounter (顶层 + when 内断言) ===")
+println(moduleTreeVL(aCounter.create.tree))
+
+// --- 26b: 严重级别 INFO / WARNING / FATAL ---
+module aSevs {
+    input a = Bool
+    assertInfo(a, "a is high")
+    assertWarning(!a, "a is low")
+    assertFatal(a, "fatal stop")
+}
+println("=== 26b: aSevs (严重级别 INFO/WARNING/FATAL) ===")
+println(moduleTreeVL(aSevs.create.tree))
+
+// --- 26c: 额外时钟域断言（设计文档 §7.3 回归用例） ---
+// NOTE: cd 用体内内联的 ClockDomain.mk。设计文档 §7.3 草图的"顶层 def cd2
+// / 模块参数"写法会踩测试引擎同款 lvl2ix quote 限制（CLI 引擎可正常产码）。
+module aCounterCd {
+    input en = Bool
+    output reg count = UInt[8] init 0
+    when en { count := count + 1 }
+    assertCd(count < 100, "cd2 overflow", ClockDomain.mk "clk2" "reset2" Async RisingEdge ActiveHigh)
+}
+println("=== 26c: aCounterCd (额外时钟域断言) ===")
+println(moduleTreeVL(aCounterCd.create.tree))
+
+`
+          ),
+          (e.file_hdl_27_blackbox =
+            `
+
+// ============================================================
+// HDL Example 27: BlackBox 代码生成全链（docs/hdl-blackbox-sim-design.md §4/§7.2）
+//
+//   blackbox Name[T: Nat, ...]   vendor 原语声明（SpinalHDL BlackBox 对应物）
+//     generic K = v              → Verilog parameter K（实例化时 #(.K(实参))）
+//     input/output 端口区        → 与 module 宏同一条 createPortExpr 路径
+//   { }                          黑盒无体
+//
+// 产码：\`ifndef TYPORT_BB_<Name> 守卫的空 module stub（#(parameter ...) 头 +
+// 端口声明 + endmodule）——行为模型文件首行写 \`define TYPORT_BB_<Name> 即可
+// 顶替 stub（经仿真后端 extra_args 加入编译，见 tests/sim_tests.rs）。实例化
+// 零新变体：\`SyncRam.create[depth, w]\` 走 mkInstanceIfParent → instance 节点，
+// collectInstHelp 查 BlackBoxRegistry 注入 #(.WIDTH(8), .DEPTH(64))。
+// 自检：端口表照常注册（HDL020/021/022/025 覆盖黑盒实例），黑盒本体的体规则
+// （HDL001/002/003/010-013/023）被门控。
+// ============================================================
+
+// --- 27a: blackbox 声明（设计文档 §7.2 验收用例的 SyncRam） ---
+blackbox SyncRam[depth: Nat, w: Nat]
+    generic WIDTH = w
+    generic DEPTH = depth
+    input  clk  = Bool
+    input  we   = Bool
+    input  addr = UInt[log2Up depth]
+    input  din  = UInt[w]
+    output dout = UInt[w]
+{
+}
+println("=== 27a: SyncRam stub (ifndef 守卫 + parameter 头 + 端口) ===")
+println(moduleTreeVL(SyncRam.create[64, 8].tree))
+
+// --- 27b: 黑盒实例化（参数注入） + 普通 module 混合层次 ---
+// NOTE: 用 moduleTreeVL 打印两个 def，而非设计文档 §7.2 草图的 designVL：
+// 测试引擎（run_with_prelude）对 designVL 的 def-replay 参数引用存在既有
+// lvl2ix quote 限制，**任何**多模块 designVL 闭包都触发（与黑盒无关，已用纯
+// 双 module 设计复现；examples/26-assert 对单模块场景有同款 NOTE）；测试引擎
+// 下 designVL 的发射路径因此不可用，逐 def moduleTreeVL 的产码逐字节一致
+// （黑盒 stub 是独立 def，实例行在父模块文本内）。CLI/emit 后端不受影响。
+// NOTE: 普通子模块 inverter 的端口声明在**宏头**（\`module n <ports> { body }\`）
+// —— 体内 \`input x = Bool\` 是模块内信号、没有可连接的 u.x 句柄（module 宏
+// 文档语义）；黑盒宏无体内端口臂，端口恒在头，故 uRam.port := 可用。
+module inverter
+    input a = Bool
+    output y = Bool
+{
+    y := !a
+}
+
+module ramWrap[depth: Nat, w: Nat] {
+    input clk = Bool
+    input we = Bool
+    input a = Bool
+    input addr = UInt[log2Up depth]
+    input din = UInt[w]
+    output dout = UInt[w]
+    output inv = Bool
+    let uInv = inverter.create
+    uInv.a := a
+    inv := uInv.y
+    let ram = SyncRam.create[depth, w]
+    ram.clk := clk
+    ram.we := we
+    ram.addr := addr
+    ram.din := din
+    dout := ram.dout
+}
+println("=== 27b: ramWrap[64, 8] + SyncRam[64, 8] (带参实例 + 普通子模块) ===")
+println(moduleTreeVL(ramWrap.create[64, 8].tree))
+println(moduleTreeVL(inverter.create.tree))
+println("=== 27c: SyncRam 黑盒 def 的 guarded stub ===")
+println(moduleTreeVL(SyncRam.create[64, 8].tree))
 
 `
           ),

@@ -1,6 +1,6 @@
 {
 	"name": "TyportHDL",
-	"description": "VS Code extension for the Typort language: LSP-powered hover, completion, diagnostics and HDL code generation.",
+	"description": "VS Code extension for the Typort language: LSP-powered hover, completion, diagnostics and macro expansion.",
 	"author": "TyportHDL contributors",
 	"license": "MIT",
 	"version": "1.0.0",
@@ -21,7 +21,7 @@
 		"Verilog"
 	],
 	"engines": {
-		"vscode": "^1.88.0"
+		"vscode": "^1.89.0"
 	},
 	"main": "./client/dist/desktop/extension",
 	"browser": "./client/dist/web/extension",
@@ -37,6 +37,10 @@
 			{
 				"command": "typort-hdl.expandMacro",
 				"title": "TyportHDL: Expand Macro"
+			},
+			{
+				"command": "typort-hdl.showServerActions",
+				"title": "TyportHDL: Show Server Actions"
 			}
 		],
 		"languages": [
@@ -103,11 +107,10 @@
 							"twin"
 						],
 						"enumDescriptions": [
-							"Reference elaborator (baseline; lower memory). Debug escape hatch for all hosts, including web.",
-							"L13 twin elaborator (default): ~3.8x faster per edit and faster startup, at ~2x memory. Files with project imports or twin-unsupported constructs fall back automatically."
+							"Reference elaborator (default on the web/wasm backend; lower memory). Available as a debug escape hatch on all hosts.",
+							"L13 twin elaborator (default on the desktop CLI backend): ~3.8x faster per edit and faster startup, at ~2x memory. Files with project imports or twin-unsupported constructs fall back automatically."
 						],
-						"default": "twin",
-						"markdownDescription": "Elaboration engine (sets `TYPORT_LSP_ENGINE`). Defaults to `twin` on both backends; `reference` is a baseline escape hatch for debugging."
+						"markdownDescription": "Elaboration engine (sets `TYPORT_LSP_ENGINE`). The default depends on the host: `twin` on the desktop CLI backend, `reference` on the web/wasm backend (the twin's resident state can exceed the wasm 2 GiB linear-memory ceiling and silently kill the server). An explicit setting here overrides the host default in both directions."
 					}
 				}
 			}
@@ -136,7 +139,7 @@
 		"vscode:prepublish": "npm run build",
 		"build": "cd client && npm run compile && cd ../.. && cargo rustc --release --bin elaboration-zoo-lsp --target wasm32-wasip1-threads -- -Clink-arg=--initial-memory=134217728 -Clink-arg=--max-memory=2147483648 -Clink-arg=-zstack-size=67108864 && cp -f target/wasm32-wasip1-threads/release/elaboration-zoo-lsp.wasm vscode_extension/client/server.wasm",
 		"lint": "cd client && npm run lint && cd ..",
-		"esbuild": "node ./bin/esbuild.js",
+		"esbuild": "cd client && node ./bin/esbuild.js",
 		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem"
 	}
 }
