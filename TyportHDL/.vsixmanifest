@@ -3,13 +3,13 @@
 		<Metadata>
 			<Identity Language="en-US" Id="TyportHDL" Version="1.0.0" Publisher="TyportHDL" />
 			<DisplayName>TyportHDL</DisplayName>
-			<Description xml:space="preserve">VS Code extension for the Typort language: LSP-powered hover, completion, diagnostics and HDL code generation.</Description>
+			<Description xml:space="preserve">VS Code extension for the Typort language: LSP-powered hover, completion, diagnostics and macro expansion.</Description>
 			<Tags>LSP,Language Server,dependent types,HDL,Verilog,typort,__ext_typort,__web_extension</Tags>
 			<Categories></Categories>
 			<GalleryFlags>Public</GalleryFlags>
 			
 			<Properties>
-				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.88.0" />
+				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.89.0" />
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="ms-vscode.wasm-wasi-core" />
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
 				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="workspace,web" />
@@ -38,6 +38,7 @@
 		<Dependencies/>
 		<Assets>
 			<Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
-			<Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.txt" Addressable="true" />
+			<Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />
+<Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.txt" Addressable="true" />
 		</Assets>
 	</PackageManifest>
